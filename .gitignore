@@ -18,6 +18,11 @@ production_settings.py
 db.sqlite3
 *.sqlite
 
+# IDE and Editor Configuration
+.github/
+.vscode/
+.idea/
+
 # API Keys and Secrets
 **/secrets/
 secrets/
