@@ -1,0 +1,204 @@
+# Django Security & Environment Files
+# These files contain sensitive information like API keys, passwords, and secrets
+
+# Environment variables files
+.env
+.env.*
+!.env.example
+!.env.docker.example
+.envrc
+
+# Django secret key and settings
+local_settings.py
+production_settings.py
+
+# Database files (contains user data)
+*.db
+*.sqlite3
+db.sqlite3
+*.sqlite
+
+# API Keys and Secrets
+**/secrets/
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+*.cert
+*.crt
+*.csr
+api_keys.txt
+credentials.json
+service_account.json
+
+# OAuth and Authentication
+oauth_config.json
+client_secrets.json
+*.oauth2
+
+# Email and External Service Configuration
+sendgrid.json
+mailgun.json
+smtp_config.json
+
+# Cloud Provider Credentials
+.aws/
+.gcp/
+.azure/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+
+# Django Media Files (may contain user uploads)
+media/
+uploads/
+user_uploads/
+
+# Django Static Files (generated)
+staticfiles/
+static/
+collected_static/
+
+# Django Cache and Sessions
+django_cache/
+sessions/
+
+# Logs and Debug Files
+*.log
+logs/
+debug.log
+error.log
+access.log
+celery.log
+
+# Python Files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+.virtualenv
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing and Coverage
+.coverage
+.pytest_cache/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+htmlcov/
+.cache
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+.docker/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*.tmp
+
+# Development temporary files
+temp/
+tmp/
+.temp/
+.tmp/
+
+# Node.js (if any frontend build tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Jupyter Notebooks (may contain sensitive data)
+.ipynb_checkpoints
+
+# Package managers
+poetry.lock
+Pipfile.lock
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Security scan results
+.bandit
+security_scan_results.json
+
+# Monitoring and profiling
+.profile
+*.prof
+
+# SSL/TLS certificates
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+ssl/
+certs/
+certificates/
+
+# Configuration overrides (may contain sensitive settings)
+config_override.py
+local_config.py
+override_settings.py
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Redis dump
+dump.rdb
+
+# Backup and migration data
+backup/
+migrations_backup/
+data_dumps/
+
+# Documentation (build artifacts only, not source docs)
+docs/_build/
+docs/build/

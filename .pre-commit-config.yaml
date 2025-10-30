@@ -1,0 +1,118 @@
+# Pre-commit hooks for security and code quality
+# Run before each commit to prevent sensitive data from being committed
+
+repos:
+  # Secret scanning - prevents API keys, passwords, etc.
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: |
+          (?x)^(
+              \.secrets\.baseline|
+              \.env\.example|
+              \.env\.docker\.example|
+              requirements/.*\.txt|
+              .*test.*\.py
+          )$
+
+  # General security and safety checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: ['-r', '.', '-f', 'json', '-o', '.bandit-report.json']
+        exclude: |
+          (?x)^(
+              .*/tests/.*|
+              .*/test_.*\.py|
+              manage\.py|
+              .*/migrations/.*
+          )$
+
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent large files
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      
+      # Check for private key files
+      - id: detect-private-key
+      
+      # Prevent committing directly to main/master
+      - id: no-commit-to-branch
+        args: ['--branch', 'main', '--branch', 'master']
+      
+      # Check file formats
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      
+      # Fix line endings
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+
+  # Environment file validation
+  - repo: local
+    hooks:
+      # Check that .env files are not accidentally added
+      - id: check-env-files
+        name: Check for .env files
+        entry: bash -c 'if git diff --cached --name-only | grep -E "^\.env$|^\.env\.local$|^\.env\.production$"; then echo "ERROR: .env files should not be committed! Use .env.example instead."; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # Verify secret key is not default
+      - id: check-secret-key
+        name: Check SECRET_KEY is not default
+        entry: bash -c 'if git diff --cached --name-only | grep -E "settings.*\.py$" | xargs grep -l "SECRET_KEY.*=.*your-secret-key-here" 2>/dev/null; then echo "ERROR: Default SECRET_KEY found in settings! Please change it."; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # Check for hardcoded passwords or API keys in Python files
+      - id: check-hardcoded-secrets
+        name: Check for hardcoded secrets
+        entry: bash -c 'if git diff --cached --name-only | grep "\.py$" | xargs grep -iE "(password|api_key|secret_key|private_key|access_token)\s*=\s*[\"'"'"'][^\"'"'"']*[\"'"'"']" 2>/dev/null | grep -v "# nosec" | grep -v "test" | grep -v "example"; then echo "ERROR: Potential hardcoded secrets found! Use environment variables instead."; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Python code quality and security
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # Django specific checks
+  - repo: local
+    hooks:
+      # Check Django migrations
+      - id: django-check-migrations
+        name: Check Django migrations
+        entry: bash -c 'cd /Users/gnimoh001/Desktop/vineyard-group-fellowship/backend && python manage.py makemigrations --dry-run --check'
+        language: system
+        pass_filenames: false
+        files: '(models|admin)\.py$'
+
+      # Django system check
+      - id: django-system-check
+        name: Django system check
+        entry: bash -c 'cd /Users/gnimoh001/Desktop/vineyard-group-fellowship/backend && python manage.py check --deploy --fail-level WARNING'
+        language: system
+        pass_filenames: false
+        files: 'settings.*\.py$'
+
+# Configuration for detect-secrets
+fail_fast: false
+default_stages: [commit]
