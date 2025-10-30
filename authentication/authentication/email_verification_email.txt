@@ -1,0 +1,33 @@
+{% load i18n %}{% trans "Verify Your Email Address" %} - {{ site_name }}
+
+{% blocktrans with name=user.get_full_name|default:user.username %}Hello {{ name }},{% endblocktrans %}
+
+{% trans "Thank you for joining Vineyard Group Fellowship! To complete your registration and start your recovery journey, please verify your email address." %}
+
+{% trans "Verification Link:" %}
+{{ verification_url }}
+
+{% trans "Once verified, you'll be able to:" %}
+• {% trans "Access your personal recovery dashboard" %}
+• {% trans "Join supportive community discussions" %}
+• {% trans "Track your progress and milestones" %}
+• {% trans "Connect with others on similar journeys" %}
+
+{% trans "SECURITY NOTICE:" %}
+{% blocktrans with hours=token_expiry_hours %}• This verification link will expire in {{ hours }} hours{% endblocktrans %}
+• {% trans "If you didn't create an account with us, please ignore this email" %}
+• {% trans "Never share this verification link with anyone" %}
+• {% trans "Our team will never ask for your password via email" %}
+
+{% trans "If you have any questions or need assistance, don't hesitate to reach out to our support team at" %} {{ support_email }}.
+
+{% trans "Best regards," %}
+{% trans "The Vineyard Group Fellowship Team" %}
+
+---
+{% trans "This email was sent to" %} {{ user.email }}
+{% blocktrans with site=site_name year=current_year %}© {{ year }} {{ site }}. All rights reserved.{% endblocktrans %}
+
+{% trans "Support:" %} {{ support_email }}
+{% trans "Privacy Policy:" %} https://Vineyard Group Fellowship.com/privacy
+{% trans "Terms of Service:" %} https://Vineyard Group Fellowship.com/terms

@@ -7,7 +7,7 @@ This guide ensures that sensitive information like API keys, passwords, and secr
 ## ⚠️ Critical Security Rules
 
 1. **NEVER commit `.env` files** - they contain real secrets
-2. **NEVER commit database files** - they contain user data  
+2. **NEVER commit database files** - they contain user data
 3. **NEVER commit API keys or passwords** - use environment variables
 4. **ALWAYS use `.env.example`** - for configuration templates
 5. **ALWAYS run security checks** - before pushing to git
@@ -134,7 +134,7 @@ Create these in your `.env` file (NEVER commit):
 SECRET_KEY=your-actual-secret-key-here-make-it-long-and-random
 DEBUG=True  # False in production
 
-# Database Credentials  
+# Database Credentials
 DB_NAME=vineyard_group_fellowship
 DB_USER=your_db_user
 DB_PASSWORD=your_secure_db_password
@@ -262,7 +262,7 @@ Add to `.vscode/settings.json`:
 
 Never put real secrets in:
 - VS Code launch configurations
-- PyCharm run configurations  
+- PyCharm run configurations
 - Jupyter notebook cells
 - Debug configurations
 

@@ -1,0 +1,34 @@
+# Vineyard Group Fellowship Django Backend - Development Requirements
+# This file contains all dependencies needed for development
+# Install with: pip install -r requirements-dev.txt
+# This includes all production requirements plus development tools
+
+# === PRODUCTION REQUIREMENTS ===
+-r requirements.txt
+
+# === TESTING FRAMEWORK ===
+pytest==7.4.3
+pytest-django==4.8.0
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-xdist==3.5.0
+
+# === TEST UTILITIES ===
+factory-boy==3.3.0
+model-bakery==1.15.0
+Faker==37.8.0
+freezegun==1.2.2
+responses==0.24.1
+coverage==7.10.7
+
+# === CODE QUALITY & TYPE CHECKING ===
+mypy==1.8.0
+django-stubs==4.2.7
+
+# === DEVELOPMENT UTILITIES ===
+rich==14.1.0
+ipython==8.26.0
+django-debug-toolbar==4.4.6
+
+# === DEPENDENCY MANAGEMENT ===
+pip-tools==7.4.1

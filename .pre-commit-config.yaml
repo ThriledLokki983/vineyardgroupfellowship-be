@@ -38,22 +38,22 @@ repos:
       # Prevent large files
       - id: check-added-large-files
         args: ['--maxkb=500']
-      
+
       # Check for private key files
       - id: detect-private-key
-      
+
       # Prevent committing directly to main/master
       - id: no-commit-to-branch
         args: ['--branch', 'main', '--branch', 'master']
-      
+
       # Check file formats
       - id: check-yaml
       - id: check-json
       - id: check-toml
-      
+
       # Check for merge conflicts
       - id: check-merge-conflict
-      
+
       # Fix line endings
       - id: end-of-file-fixer
       - id: trailing-whitespace

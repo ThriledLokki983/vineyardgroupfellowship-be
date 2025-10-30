@@ -175,7 +175,7 @@ if [ -n "$VIRTUAL_ENV" ] || [ -d ".venv" ]; then
     else
         PIP_CMD="pip"
     fi
-    
+
     # Install security tools
     $PIP_CMD install --quiet bandit detect-secrets pre-commit safety
     print_status "Security tools installed"
@@ -200,7 +200,7 @@ cat > SECURITY_CHECKLIST.md << 'EOF'
 ## Before First Git Commit
 
 - [ ] `.gitignore` file is properly configured
-- [ ] `.env` files are in `.gitignore` 
+- [ ] `.env` files are in `.gitignore`
 - [ ] `.env.example` template exists (without real secrets)
 - [ ] Django `SECRET_KEY` is not the default value
 - [ ] Database credentials are in environment variables, not hardcoded

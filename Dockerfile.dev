@@ -1,0 +1,142 @@
+# Multi-stage Dockerfile for development with file watching
+FROM python:3.13-slim as base
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    libmagic1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create django user for security
+RUN groupadd -r django && useradd -r -g django django
+
+# Set work directory
+WORKDIR /app
+
+# ============================================================================
+# DEVELOPMENT STAGE
+# ============================================================================
+FROM base as development
+
+# Install additional development tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    gcc \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# Install Python dependencies
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --upgrade pip && \
+    pip install -r requirements-dev.txt
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/staticfiles /app/logs
+
+# Set ownership for development (allows file editing)
+RUN chown -R django:django /app
+
+# Switch to django user
+USER django
+
+# Expose port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8001/health/ || exit 1
+
+# Default development command (can be overridden in docker-compose)
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8001"]
+
+# ============================================================================
+# PRODUCTION STAGE (from original Dockerfile)
+# ============================================================================
+FROM python:3.13-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create virtual environment
+RUN python -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# Install dependencies
+COPY requirements/ ./requirements/
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements/production.txt
+
+# ============================================================================
+# PRODUCTION STAGE
+# ============================================================================
+FROM python:3.13-slim as production
+
+# Security: Create non-root user
+RUN groupadd -r django && useradd -r -g django django
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+WORKDIR /app
+
+# Copy virtual environment from builder
+COPY --from=builder /app/venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# Copy application code
+COPY . .
+
+# Create directories and set permissions
+RUN mkdir -p /app/staticfiles /app/logs \
+    && chown -R django:django /app
+
+# Set build-time environment variables for collectstatic
+# nosec - These are dummy values only used for build-time static collection
+ENV SECRET_KEY="build-time-secret-key-only" \
+    DB_NAME="dummy" \
+    DB_USER="dummy" \
+    DB_PASSWORD="dummy" \
+    DB_HOST="dummy" \
+    EMAIL_HOST_PASSWORD="dummy"
+
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Switch to non-root user
+USER django
+
+# Expose port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8001/health/ || exit 1
+
+# Production command
+CMD ["gunicorn", "--bind", "0.0.0.0:8001", "--workers", "3", "--timeout", "120", "vineyard_group_fellowship.wsgi:application"]

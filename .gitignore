@@ -199,6 +199,25 @@ backup/
 migrations_backup/
 data_dumps/
 
-# Documentation (build artifacts only, not source docs)
+# Documentation - Build artifacts and temporary files
 docs/_build/
 docs/build/
+docs/site/
+
+# Exclude detailed project planning and audit files (too verbose for repo)
+PROJECT_AUDIT*.md
+IMPLEMENTATION_PLAN*.md
+
+# Exclude auto-generated or temporary markdown files
+**/temp*.md
+**/draft*.md
+**/notes*.md
+**/*-notes.md
+**/*-draft.md
+**/*-temp.md
+
+# Keep essential project documentation
+# - README.md (all levels)
+# - SECURITY_SETUP*.md (security is critical)
+# - CHANGELOG.md, CONTRIBUTING.md, LICENSE.md
+# - API documentation

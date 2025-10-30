@@ -1,0 +1,2783 @@
+openapi: 3.0.3
+info:
+  title: Vineyard Group Fellowship API
+  version: 1.0.0
+  description: REST API for Vineyard Group Fellowship platform
+paths:
+  /api/v1/auth/csrf/:
+    get:
+      operationId: auth_csrf_retrieve
+      description: DRF-compatible CSRF token endpoint.
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/email/resend/:
+    post:
+      operationId: auth_email_verification_resend
+      description: Resend email verification link
+      summary: Resend Verification Email
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationResendRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationResendRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationResendRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Verification email sent (if needed)
+        '429':
+          description: Rate limit exceeded
+  /api/v1/auth/email/verify/:
+    get:
+      operationId: auth_email_verify_retrieve
+      description: Handle GET requests for email verification links with exchange
+        token flow.
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerification'
+          description: ''
+    post:
+      operationId: auth_email_verify
+      description: Verify email address with token
+      summary: Verify Email
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Email verified successfully
+        '400':
+          description: Invalid token or already verified
+  /api/v1/auth/email/verify/{uidb64}/{token}/:
+    get:
+      operationId: auth_email_verify_retrieve_2
+      description: Handle GET requests for email verification links with exchange
+        token flow.
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: uidb64
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerification'
+          description: ''
+    post:
+      operationId: auth_email_verify_2
+      description: Verify email address with token
+      summary: Verify Email
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: uidb64
+        schema:
+          type: string
+        required: true
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Email verified successfully
+        '400':
+          description: Invalid token or already verified
+  /api/v1/auth/health/:
+    get:
+      operationId: health_check
+      description: "\n    Health checks and system status endpoints.\n\n    Check\
+        \ the comprehensive health status of the system including authentication service,\n\
+        \    database connectivity, cache status, and email backend. Returns detailed\
+        \ status\n    information for monitoring, debugging, and operational oversight.\n\
+        \n    This endpoint is public and does not require authentication.\n    "
+      summary: System health check
+      tags:
+      - System
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+              examples:
+                HealthCheck:
+                  value:
+                    status: healthy
+                    timestamp: '2025-10-30T06:40:00Z'
+                    services:
+                      database:
+                        status: healthy
+                        response_time: 12ms
+                      redis:
+                        status: healthy
+                        response_time: 2ms
+                      email:
+                        status: healthy
+                        response_time: 45ms
+                    version: 1.0.0
+                    uptime: 2d 14h 32m
+                  summary: Health Check
+                  description: Example of system health check response
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/login/:
+    post:
+      operationId: login_user
+      description: "\n    Authenticate user with email/username and password.\n\n\
+        \    Returns JWT access and refresh tokens. The refresh token is set as\n\
+        \    an httpOnly cookie for security.\n    Rate limiting: 25 login attempts\
+        \ per hour per IP address.\n    "
+      summary: User login
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '423':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: logout_user
+      description: "\n    Logout user and invalidate all tokens.\n\n    Invalidates\
+        \ the user's refresh token and clears the httpOnly cookie.\n    Requires authentication.\n\
+        \    "
+      summary: User logout
+      tags:
+      - Authentication
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/password/change/:
+    post:
+      operationId: change_password
+      description: "\n    Change password for authenticated user.\n\n    Requires\
+        \ current password for verification. Old password is stored in\n    password\
+        \ history to prevent reuse. All user sessions and tokens are\n    invalidated\
+        \ after password change.\n\n    Rate limiting: 10 password changes per hour\
+        \ per user.\n    "
+      summary: Change user password
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/password/reset/:
+    post:
+      operationId: request_password_reset
+      description: "\n    Request password reset for user account.\n\n    Sends password\
+        \ reset email with secure token. Always returns success\n    to prevent email\
+        \ enumeration attacks, even if email doesn't exist.\n\n    Rate limiting:\
+        \ 5 reset requests per hour per IP address.\n    "
+      summary: Request password reset
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/password/reset/confirm/:
+    post:
+      operationId: confirm_password_reset
+      description: "\n    Confirm password reset with token and set new password.\n\
+        \n    Uses secure token from reset email to verify identity. Token is\n  \
+        \  single-use and expires after 1 hour. All user sessions and tokens\n   \
+        \ are invalidated after password reset.\n\n    Rate limiting: 10 reset confirmations\
+        \ per hour per IP address.\n    "
+      summary: Confirm password reset
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/password/reset/confirm/{uidb64}/{token}/:
+    post:
+      operationId: confirm_password_reset_2
+      description: "\n    Confirm password reset with token and set new password.\n\
+        \n    Uses secure token from reset email to verify identity. Token is\n  \
+        \  single-use and expires after 1 hour. All user sessions and tokens\n   \
+        \ are invalidated after password reset.\n\n    Rate limiting: 10 reset confirmations\
+        \ per hour per IP address.\n    "
+      summary: Confirm password reset
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: uidb64
+        schema:
+          type: string
+        required: true
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/register/:
+    post:
+      operationId: register_user
+      description: "\n    Register a new user account with email verification.\n\n\
+        \    The account will be inactive until email verification is completed.\n\
+        \    Rate limiting: 5 registrations per hour per IP address.\n    "
+      summary: Register new user account
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/sessions/:
+    get:
+      operationId: list_user_sessions
+      description: "\n    Device sessions, security monitoring, and device management.\n\
+        \n    List all active sessions for the authenticated user with comprehensive\n\
+        \    security information including device details, IP addresses, locations,\n\
+        \    and activity timestamps. Helps users monitor account security and identify\n\
+        \    unauthorized access.\n\n    Rate limiting: 30 requests per hour per user.\n\
+        \    "
+      summary: List user sessions
+      tags:
+      - Session Management
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSession'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/sessions/terminate/:
+    delete:
+      operationId: terminate_session
+      description: "\n    Device sessions, security monitoring, and device management.\n\
+        \n    Terminate a specific user session by ID for enhanced security control.\n\
+        \    Immediately invalidates the session and associated tokens. Cannot be\n\
+        \    used to terminate the current session (use logout instead).\n\n    Rate\
+        \ limiting: 20 terminations per hour per user.\n    "
+      summary: Terminate specific session
+      tags:
+      - Session Management
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/sessions/terminate-all/:
+    post:
+      operationId: terminate_all_sessions
+      description: "\n    Device sessions, security monitoring, and device management.\n\
+        \n    Terminate all user sessions except the current one for enhanced security.\n\
+        \    Immediately invalidates all other sessions and associated tokens.\n \
+        \   Useful for security incidents or when user suspects unauthorized access.\n\
+        \n    Rate limiting: 5 terminations per hour per user.\n    "
+      summary: Terminate all user sessions
+      tags:
+      - Session Management
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/health/:
+    get:
+      operationId: health_check_2
+      description: "\n    Health checks and system status endpoints.\n\n    Check\
+        \ the comprehensive health status of the system including authentication service,\n\
+        \    database connectivity, cache status, and email backend. Returns detailed\
+        \ status\n    information for monitoring, debugging, and operational oversight.\n\
+        \n    This endpoint is public and does not require authentication.\n    "
+      summary: System health check
+      tags:
+      - System
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+              examples:
+                HealthCheck:
+                  value:
+                    status: healthy
+                    timestamp: '2025-10-30T06:40:00Z'
+                    services:
+                      database:
+                        status: healthy
+                        response_time: 12ms
+                      redis:
+                        status: healthy
+                        response_time: 2ms
+                      email:
+                        status: healthy
+                        response_time: 45ms
+                    version: 1.0.0
+                    uptime: 2d 14h 32m
+                  summary: Health Check
+                  description: Example of system health check response
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/monitoring/metrics/:
+    get:
+      operationId: monitoring_metrics_retrieve
+      description: |-
+        Get performance metrics for monitoring dashboards.
+
+        Returns aggregated performance data for analysis.
+      tags:
+      - monitoring
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/monitoring/metrics/clear/:
+    post:
+      operationId: monitoring_metrics_clear_create
+      description: |-
+        Clear old performance metrics to manage database size.
+
+        Removes metrics older than specified retention period.
+      tags:
+      - monitoring
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/monitoring/metrics/endpoints/:
+    get:
+      operationId: monitoring_metrics_endpoints_retrieve
+      description: |-
+        Get performance metrics grouped by API endpoint.
+
+        Returns aggregated performance data per endpoint.
+      tags:
+      - monitoring
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/monitoring/metrics/realtime/:
+    get:
+      operationId: monitoring_metrics_realtime_retrieve
+      description: |-
+        Get real-time performance metrics from cache.
+
+        Returns current performance data for monitoring dashboards.
+      tags:
+      - monitoring
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/privacy/gdpr/cleanup/:
+    get:
+      operationId: gdpr_cleanup_status
+      description: Get information about data that can be cleaned up
+      summary: Get Cleanup Status
+      tags:
+      - GDPR Compliance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Cleanup status information
+        '401':
+          description: Authentication required
+    post:
+      operationId: gdpr_data_cleanup
+      description: Request manual data cleanup or trigger automated cleanup
+      summary: GDPR Data Cleanup
+      tags:
+      - GDPR Compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GDPRDataCleanupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GDPRDataCleanupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GDPRDataCleanupRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Cleanup completed
+        '400':
+          description: Invalid cleanup request
+        '401':
+          description: Authentication required
+  /api/v1/privacy/gdpr/consent/:
+    get:
+      operationId: gdpr_consent_status
+      description: Retrieve current consent status for all data processing types
+      summary: Get Consent Status
+      tags:
+      - GDPR Compliance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Current consent status
+        '401':
+          description: Authentication required
+    post:
+      operationId: gdpr_consent_management
+      description: Manage data processing consent in compliance with GDPR Article
+        7
+      summary: GDPR Consent Management
+      tags:
+      - GDPR Compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConsentUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConsentUpdateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Consent updated successfully
+        '400':
+          description: Invalid consent request
+        '401':
+          description: Authentication required
+  /api/v1/privacy/gdpr/dashboard/:
+    get:
+      operationId: gdpr_privacy_dashboard
+      description: Get comprehensive privacy dashboard with GDPR compliance information
+      summary: GDPR Privacy Dashboard
+      tags:
+      - GDPR Compliance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacyDashboard'
+          description: ''
+        '401':
+          description: Authentication required
+  /api/v1/privacy/gdpr/erasure/:
+    post:
+      operationId: gdpr_data_erasure
+      description: Request account deletion in compliance with GDPR Article 17 (Right
+        to Erasure)
+      summary: GDPR Data Erasure
+      tags:
+      - GDPR Compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GDPRDataErasureRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GDPRDataErasureRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GDPRDataErasureRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Erasure request processed
+        '400':
+          description: Invalid erasure request
+        '401':
+          description: Authentication required
+        '429':
+          description: Rate limit exceeded
+  /api/v1/privacy/gdpr/export/:
+    post:
+      operationId: gdpr_data_export
+      description: Export user data in compliance with GDPR Article 20 (Right to Data
+        Portability)
+      summary: GDPR Data Export
+      tags:
+      - GDPR Compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GDPRDataExportRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GDPRDataExportRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GDPRDataExportRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Data export file
+        '400':
+          description: Invalid export request
+        '401':
+          description: Authentication required
+        '429':
+          description: Rate limit exceeded
+  /api/v1/privacy/gdpr/retention/:
+    get:
+      operationId: gdpr_retention_info
+      description: Get current data retention policies and schedules
+      summary: Get Data Retention Info
+      tags:
+      - GDPR Compliance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Current retention policies
+        '401':
+          description: Authentication required
+    post:
+      operationId: gdpr_data_retention
+      description: Manage data retention policies and view retention information
+      summary: GDPR Data Retention
+      tags:
+      - GDPR Compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GDPRDataRetentionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GDPRDataRetentionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GDPRDataRetentionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Retention policy updated
+        '400':
+          description: Invalid retention request
+        '401':
+          description: Authentication required
+  /api/v1/profiles/{user_id}/:
+    get:
+      operationId: get_public_profile
+      description: Get a user's public profile information (respects privacy settings).
+      summary: Get public profile
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        description: User ID or "me" for current user
+        required: true
+      tags:
+      - Profiles
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfilePublic'
+          description: ''
+  /api/v1/profiles/me/:
+    get:
+      operationId: get_current_user_profile
+      description: Get the current authenticated user's profile information.
+      summary: Get current user profile
+      tags:
+      - Profiles
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileBasic'
+          description: ''
+    put:
+      operationId: update_current_user_profile
+      description: Update the current authenticated user's profile information.
+      summary: Update current user profile
+      tags:
+      - Profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileBasicRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserProfileBasicRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserProfileBasicRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileBasic'
+          description: ''
+    patch:
+      operationId: partial_update_current_user_profile
+      description: Partially update the current authenticated user's profile information.
+      summary: Update current user profile
+      tags:
+      - Profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileBasicRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileBasicRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileBasicRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileBasic'
+          description: ''
+  /api/v1/profiles/me/completeness/:
+    get:
+      operationId: get_profile_completeness
+      description: Get the current user's profile completeness status and recommendations.
+      summary: Get profile completeness
+      tags:
+      - Profiles
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileCompleteness'
+          description: ''
+  /api/v1/profiles/me/completeness/refresh/:
+    post:
+      operationId: refresh_profile_completeness
+      description: Recalculate the current user's profile completeness status.
+      summary: Refresh profile completeness
+      tags:
+      - Profiles
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileCompleteness'
+          description: ''
+  /api/v1/profiles/me/photo/:
+    get:
+      operationId: get_profile_photo
+      description: Get information about the current user's profile photo.
+      summary: Get profile photo info
+      tags:
+      - Profiles
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilePhoto'
+          description: ''
+  /api/v1/profiles/me/photo/delete/:
+    delete:
+      operationId: delete_profile_photo
+      description: Delete the current user's profile photo.
+      summary: Delete profile photo
+      tags:
+      - Profiles
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/profiles/me/photo/upload/:
+    post:
+      operationId: upload_profile_photo
+      description: Upload or replace the current user's profile photo.
+      summary: Upload profile photo
+      tags:
+      - Profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilePhotoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProfilePhotoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfilePhotoRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilePhoto'
+          description: ''
+    put:
+      operationId: replace_profile_photo
+      description: Replace the current user's profile photo.
+      summary: Replace profile photo
+      tags:
+      - Profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilePhotoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProfilePhotoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfilePhotoRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilePhoto'
+          description: ''
+  /api/v1/profiles/me/privacy/:
+    get:
+      operationId: get_privacy_settings
+      description: Get the current user's privacy settings.
+      summary: Get privacy settings
+      tags:
+      - Profiles
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilePrivacySettings'
+          description: ''
+  /api/v1/profiles/me/privacy/update/:
+    put:
+      operationId: update_privacy_settings
+      description: Update the current user's privacy settings.
+      summary: Update privacy settings
+      tags:
+      - Profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilePrivacySettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProfilePrivacySettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfilePrivacySettingsRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilePrivacySettings'
+          description: ''
+    patch:
+      operationId: patch_privacy_settings
+      description: Partially update the current user's privacy settings.
+      summary: Partially update privacy settings
+      tags:
+      - Profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfilePrivacySettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfilePrivacySettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfilePrivacySettingsRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilePrivacySettings'
+          description: ''
+  /api/v1/security/csp-report/:
+    post:
+      operationId: csp_violation_report
+      description: "\n    Security operations, audit logs, and threat monitoring.\n\
+        \n    Receives and processes Content Security Policy violation reports from\
+        \ browsers\n    to help identify security issues and policy violations. Part\
+        \ of comprehensive\n    security monitoring system.\n    "
+      summary: CSP Violation Report
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/security/incident/:
+    post:
+      operationId: security_incident_report
+      description: "\n    Security operations, audit logs, and threat monitoring.\n\
+        \n    Allows reporting of security incidents from client applications or automated\n\
+        \    security tools. Part of comprehensive security monitoring and threat\
+        \ detection system.\n    "
+      summary: Security Incident Report
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+              examples:
+                SecurityIncidentReport:
+                  value:
+                    incident_id: SEC-2025-001
+                    severity: medium
+                    type: suspicious_login
+                    timestamp: '2025-10-30T06:40:00Z'
+                    user_id: user123
+                    ip_address: 192.168.1.1
+                    details: Multiple failed login attempts from unknown location
+                  summary: Security Incident Report
+                  description: Example of security incident report
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/security/status/:
+    get:
+      operationId: security_status
+      description: "\n    Security operations, audit logs, and threat monitoring.\n\
+        \n    Provides comprehensive information about current security configuration,\n\
+        \    active threats, and system security status for monitoring and debugging\
+        \ purposes.\n    "
+      summary: Security Status
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+              examples:
+                SecurityStatus:
+                  value:
+                    status: secure
+                    last_scan: '2025-10-30T06:40:00Z'
+                    threats_detected: 0
+                    security_level: high
+                    active_sessions: 42
+                    suspicious_activities: []
+                  summary: Security Status
+                  description: Example of security status response
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /csp-report/:
+    post:
+      operationId: csp_violation_report_2
+      description: "\n    Security operations, audit logs, and threat monitoring.\n\
+        \n    Receives and processes Content Security Policy violation reports from\
+        \ browsers\n    to help identify security issues and policy violations. Part\
+        \ of comprehensive\n    security monitoring system.\n    "
+      summary: CSP Violation Report
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /incident/:
+    post:
+      operationId: security_incident_report_2
+      description: "\n    Security operations, audit logs, and threat monitoring.\n\
+        \n    Allows reporting of security incidents from client applications or automated\n\
+        \    security tools. Part of comprehensive security monitoring and threat\
+        \ detection system.\n    "
+      summary: Security Incident Report
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+              examples:
+                SecurityIncidentReport:
+                  value:
+                    incident_id: SEC-2025-001
+                    severity: medium
+                    type: suspicious_login
+                    timestamp: '2025-10-30T06:40:00Z'
+                    user_id: user123
+                    ip_address: 192.168.1.1
+                    details: Multiple failed login attempts from unknown location
+                  summary: Security Incident Report
+                  description: Example of security incident report
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /status/:
+    get:
+      operationId: security_status_2
+      description: "\n    Security operations, audit logs, and threat monitoring.\n\
+        \n    Provides comprehensive information about current security configuration,\n\
+        \    active threats, and system security status for monitoring and debugging\
+        \ purposes.\n    "
+      summary: Security Status
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+              examples:
+                SecurityStatus:
+                  value:
+                    status: secure
+                    last_scan: '2025-10-30T06:40:00Z'
+                    threats_detected: 0
+                    security_level: high
+                    active_sessions: 42
+                    suspicious_activities: []
+                  summary: Security Status
+                  description: Example of security status response
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+components:
+  schemas:
+    ActionEnum:
+      enum:
+      - given
+      - withdrawn
+      - updated
+      - expired
+      type: string
+      description: |-
+        * `given` - Consent Given
+        * `withdrawn` - Consent Withdrawn
+        * `updated` - Consent Updated
+        * `expired` - Consent Expired
+    AuthResponse:
+      type: object
+      description: Serializer for authentication response with tokens.
+      properties:
+        access:
+          type: string
+          description: JWT access token for API authentication
+        refresh:
+          type: string
+          description: JWT refresh token for token renewal
+        user:
+          type: string
+          readOnly: true
+          description: Basic user information
+      required:
+      - access
+      - user
+    CleanupTypeEnum:
+      enum:
+      - old_sessions
+      - expired_tokens
+      - audit_logs
+      type: string
+      description: |-
+        * `old_sessions` - Old Sessions
+        * `expired_tokens` - Expired Tokens
+        * `audit_logs` - Old Audit Logs
+    CompletionLevelEnum:
+      enum:
+      - minimal
+      - basic
+      - standard
+      - comprehensive
+      - complete
+      type: string
+      description: |-
+        * `minimal` - Minimal - Basic account setup
+        * `basic` - Basic - Essential information provided
+        * `standard` - Standard - Good profile coverage
+        * `comprehensive` - Comprehensive - Detailed profile
+        * `complete` - Complete - All optional fields filled
+    ConsentLog:
+      type: object
+      description: |-
+        Serializer for consent log entries.
+
+        Read-only serializer for GDPR audit trails.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        consent_type:
+          allOf:
+          - $ref: '#/components/schemas/ConsentLogConsentTypeEnum'
+          readOnly: true
+          description: |-
+            Type of consent being tracked
+
+            * `privacy_policy` - Privacy Policy
+            * `terms_of_service` - Terms of Service
+            * `data_processing` - Data Processing
+            * `marketing` - Marketing Communications
+            * `research` - Research Participation
+            * `cookies` - Cookie Usage
+            * `analytics` - Analytics Tracking
+        action:
+          allOf:
+          - $ref: '#/components/schemas/ActionEnum'
+          readOnly: true
+          description: |-
+            Action taken on consent
+
+            * `given` - Consent Given
+            * `withdrawn` - Consent Withdrawn
+            * `updated` - Consent Updated
+            * `expired` - Consent Expired
+        consent_given:
+          type: boolean
+          readOnly: true
+          description: Whether consent was given (True) or withdrawn (False)
+        version:
+          type: string
+          readOnly: true
+          description: Version of document/policy consented to
+        user_agent:
+          type: string
+          readOnly: true
+          description: Browser/device information when consent was recorded
+        reason:
+          type: string
+          readOnly: true
+          description: Reason for consent withdrawal or update
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When this consent expires (if applicable)
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When this consent action was recorded
+      required:
+      - action
+      - consent_given
+      - consent_type
+      - created_at
+      - expires_at
+      - id
+      - reason
+      - user_agent
+      - username
+      - version
+    ConsentLogConsentTypeEnum:
+      enum:
+      - privacy_policy
+      - terms_of_service
+      - data_processing
+      - marketing
+      - research
+      - cookies
+      - analytics
+      type: string
+      description: |-
+        * `privacy_policy` - Privacy Policy
+        * `terms_of_service` - Terms of Service
+        * `data_processing` - Data Processing
+        * `marketing` - Marketing Communications
+        * `research` - Research Participation
+        * `cookies` - Cookie Usage
+        * `analytics` - Analytics Tracking
+    ConsentUpdateConsentTypeEnum:
+      enum:
+      - marketing
+      - data_processing
+      - analytics
+      - third_party
+      type: string
+      description: |-
+        * `marketing` - Marketing Communications
+        * `data_processing` - Data Processing
+        * `analytics` - Analytics
+        * `third_party` - Third Party Sharing
+    ConsentUpdateRequest:
+      type: object
+      description: Serializer for updating specific consent preferences.
+      properties:
+        consent_type:
+          $ref: '#/components/schemas/ConsentUpdateConsentTypeEnum'
+        granted:
+          type: boolean
+      required:
+      - consent_type
+      - granted
+    ContactPreferencesEnum:
+      enum:
+      - no_contact
+      - email_only
+      - limited
+      - normal
+      - all
+      type: string
+      description: |-
+        * `no_contact` - No Contact - Don't contact me
+        * `email_only` - Email Only - Emergency notifications only
+        * `limited` - Limited - Important updates only
+        * `normal` - Normal - Regular communications
+        * `all` - All - All communications and updates
+    DataProcessingRecord:
+      type: object
+      description: |-
+        Serializer for data processing records.
+
+        Tracks what data is processed and why (GDPR Article 30).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        purpose:
+          allOf:
+          - $ref: '#/components/schemas/PurposeEnum'
+          description: |-
+            Purpose for processing this data
+
+            * `account_management` - Account Management
+            * `service_provision` - Service Provision
+            * `communication` - Communication
+            * `analytics` - Analytics
+            * `marketing` - Marketing
+            * `research` - Research
+            * `legal_compliance` - Legal Compliance
+            * `security` - Security
+            * `recovery_support` - Recovery Support
+        data_categories:
+          type: string
+          description: Categories of data being processed (JSON list)
+        legal_basis:
+          allOf:
+          - $ref: '#/components/schemas/LegalBasisEnum'
+          description: |-
+            Legal basis for processing under GDPR
+
+            * `consent` - Consent
+            * `contract` - Contract Performance
+            * `legal_obligation` - Legal Obligation
+            * `vital_interests` - Vital Interests
+            * `public_task` - Public Task
+            * `legitimate_interests` - Legitimate Interests
+        retention_period_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          description: How long this data will be retained (days)
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When processing started
+        ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When processing ended
+        is_active:
+          type: boolean
+          description: Whether processing is currently active
+        notes:
+          type: string
+          description: Additional notes about this processing activity
+      required:
+      - data_categories
+      - ended_at
+      - id
+      - legal_basis
+      - purpose
+      - started_at
+      - username
+    DataRetentionPreferenceEnum:
+      enum:
+      - minimal
+      - standard
+      - extended
+      - permanent
+      type: string
+      description: |-
+        * `minimal` - Minimal - 1 year retention
+        * `standard` - Standard - 3 years retention
+        * `extended` - Extended - 7 years retention
+        * `permanent` - Permanent - Keep until deletion request
+    EmailVerification:
+      type: object
+      description: Verify email address with token.
+      properties:
+        uidb64:
+          type: string
+        token:
+          type: string
+      required:
+      - token
+      - uidb64
+    EmailVerificationRequest:
+      type: object
+      description: Verify email address with token.
+      properties:
+        uidb64:
+          type: string
+          minLength: 1
+        token:
+          type: string
+          minLength: 1
+      required:
+      - token
+      - uidb64
+    EmailVerificationResendRequest:
+      type: object
+      description: Resend email verification.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    ExportFormatEnum:
+      enum:
+      - json
+      - csv
+      type: string
+      description: |-
+        * `json` - JSON
+        * `csv` - CSV
+    GDPRDataCleanupRequest:
+      type: object
+      description: Serializer for data cleanup operations.
+      properties:
+        cleanup_type:
+          $ref: '#/components/schemas/CleanupTypeEnum'
+        confirm:
+          type: boolean
+      required:
+      - cleanup_type
+      - confirm
+    GDPRDataErasureRequest:
+      type: object
+      description: |-
+        GDPR Article 17 - Right to be Forgotten.
+
+        Handles data erasure requests.
+      properties:
+        reason:
+          allOf:
+          - $ref: '#/components/schemas/ReasonEnum'
+          description: |-
+            Reason for data erasure request
+
+            * `no_longer_necessary` - Data no longer necessary for original purpose
+            * `withdraw_consent` - Withdrawing consent
+            * `unlawful_processing` - Data processed unlawfully
+            * `legal_compliance` - Erasure required for legal compliance
+            * `child_data` - Data collected from a child
+        confirm_understanding:
+          type: boolean
+          description: User confirms they understand the consequences of data erasure
+        confirm_irreversible:
+          type: boolean
+          description: User confirms they understand this action is irreversible
+      required:
+      - confirm_irreversible
+      - confirm_understanding
+      - reason
+    GDPRDataExportRequest:
+      type: object
+      description: |-
+        GDPR Article 20 - Right to Data Portability.
+
+        Handles data export requests.
+      properties:
+        export_format:
+          allOf:
+          - $ref: '#/components/schemas/ExportFormatEnum'
+          default: json
+          description: |-
+            Format for data export
+
+            * `json` - JSON
+            * `csv` - CSV
+        include_consent_history:
+          type: boolean
+          default: true
+          description: Include consent history in export
+        include_processing_records:
+          type: boolean
+          default: true
+          description: Include data processing records in export
+        privacy_notice_acknowledged:
+          type: boolean
+          description: User acknowledges they have read the privacy notice
+      required:
+      - privacy_notice_acknowledged
+    GDPRDataRetentionRequest:
+      type: object
+      description: Serializer for data retention settings.
+      properties:
+        retention_period:
+          type: integer
+          maximum: 3650
+          minimum: 30
+        auto_delete:
+          type: boolean
+          default: false
+      required:
+      - retention_period
+    HealthCheck:
+      type: object
+      description: Serializer for health check responses.
+      properties:
+        status:
+          type: string
+          description: Overall health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of health check
+        version:
+          type: string
+          description: Application version
+        checks:
+          type: object
+          additionalProperties: {}
+          description: Individual component health checks
+        uptime:
+          type: string
+          description: Application uptime
+      required:
+      - status
+      - timestamp
+    LegalBasisEnum:
+      enum:
+      - consent
+      - contract
+      - legal_obligation
+      - vital_interests
+      - public_task
+      - legitimate_interests
+      type: string
+      description: |-
+        * `consent` - Consent
+        * `contract` - Contract Performance
+        * `legal_obligation` - Legal Obligation
+        * `vital_interests` - Vital Interests
+        * `public_task` - Public Task
+        * `legitimate_interests` - Legitimate Interests
+    LoginRequest:
+      type: object
+      description: |-
+        User login with audit logging.
+
+        Supports login with username or email.
+      properties:
+        email_or_username:
+          type: string
+          minLength: 1
+          description: Username or email address
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        device_name:
+          type: string
+          minLength: 1
+          default: Unknown Device
+          description: Device name for session tracking
+        device_fingerprint:
+          type: string
+          minLength: 1
+          default: ''
+          description: Device fingerprint for security
+        remember_me:
+          type: boolean
+          default: false
+          description: Whether to remember this login
+      required:
+      - email_or_username
+      - password
+    PasswordChangeRequest:
+      type: object
+      description: Change password for authenticated users.
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        new_password_confirm:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - current_password
+      - new_password
+      - new_password_confirm
+    PasswordResetConfirmRequest:
+      type: object
+      description: Confirm password reset with token.
+      properties:
+        uidb64:
+          type: string
+          minLength: 1
+        token:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        new_password_confirm:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - new_password
+      - new_password_confirm
+      - token
+      - uidb64
+    PasswordResetRequestRequest:
+      type: object
+      description: Request password reset via email.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    PatchedProfilePrivacySettingsRequest:
+      type: object
+      description: Serializer for privacy settings management.
+      properties:
+        profile_visibility:
+          $ref: '#/components/schemas/ProfileVisibility6faEnum'
+        photo_visibility:
+          $ref: '#/components/schemas/PhotoVisibilityEnum'
+        show_email_to_community:
+          type: boolean
+          default: false
+        allow_direct_messages:
+          type: boolean
+          default: true
+        show_online_status:
+          type: boolean
+          default: true
+    PatchedUserProfileBasicRequest:
+      type: object
+      description: Serializer for basic user profile information.
+      properties:
+        display_name:
+          type: string
+          description: Optional public name shown to other users
+          maxLength: 50
+        bio:
+          type: string
+          description: Optional short description about yourself
+          maxLength: 1500
+        timezone:
+          type: string
+          minLength: 1
+          description: User timezone for date/time display
+          maxLength: 50
+        profile_visibility:
+          $ref: '#/components/schemas/ProfileVisibility6faEnum'
+    PhotoModerationStatusEnum:
+      enum:
+      - pending
+      - approved
+      - rejected
+      - flagged
+      type: string
+      description: |-
+        * `pending` - Pending Review
+        * `approved` - Approved
+        * `rejected` - Rejected
+        * `flagged` - Flagged for Review
+    PhotoVisibilityEnum:
+      enum:
+      - private
+      - supporters
+      - community
+      - public
+      type: string
+      description: |-
+        * `private` - Private - Only me
+        * `supporters` - Supporters only
+        * `community` - Community members
+        * `public` - Public
+    PrivacyDashboard:
+      type: object
+      description: |-
+        Read-only serializer for privacy dashboard.
+
+        Combines privacy profile, consent history, and data processing info.
+      properties:
+        profile:
+          allOf:
+          - $ref: '#/components/schemas/PrivacyProfile'
+          readOnly: true
+        recent_consent_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentLog'
+          readOnly: true
+        active_processing_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataProcessingRecord'
+          readOnly: true
+        data_summary:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+      required:
+      - active_processing_records
+      - data_summary
+      - profile
+      - recent_consent_changes
+    PrivacyProfile:
+      type: object
+      description: |-
+        Serializer for privacy profile and consent management.
+
+        Handles GDPR consent tracking and privacy preferences.
+      properties:
+        username:
+          type: string
+          readOnly: true
+        privacy_policy_accepted:
+          type: boolean
+          description: User has accepted the current privacy policy
+        privacy_policy_accepted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When user accepted privacy policy
+        privacy_policy_version:
+          type: string
+          description: Version of privacy policy accepted (e.g., '1.2')
+          maxLength: 10
+        terms_of_service_accepted:
+          type: boolean
+          description: User has accepted the current terms of service
+        terms_of_service_accepted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When user accepted terms of service
+        terms_of_service_version:
+          type: string
+          description: Version of terms of service accepted
+          maxLength: 10
+        data_processing_consent:
+          type: boolean
+          description: Consent for processing personal data
+        data_processing_consent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When data processing consent was given
+        marketing_consent:
+          type: boolean
+          description: Consent for marketing communications
+        marketing_consent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When marketing consent was given
+        research_participation_consent:
+          type: boolean
+          description: Consent for participation in research studies
+        research_participation_consent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When research consent was given
+        profile_visibility:
+          allOf:
+          - $ref: '#/components/schemas/PrivacyProfileProfileVisibilityEnum'
+          description: |-
+            Who can see user's profile information
+
+            * `private` - Private - Only visible to me
+            * `friends` - Friends - Visible to my connections
+            * `community` - Community - Visible to community members
+            * `public` - Public - Visible to everyone
+        recovery_info_visibility:
+          allOf:
+          - $ref: '#/components/schemas/RecoveryInfoVisibilityEnum'
+          description: |-
+            Who can see recovery information and progress
+
+            * `private` - Private - Only visible to me
+            * `friends` - Friends - Visible to my connections
+            * `supporters` - Supporters - Visible to verified supporters
+            * `community` - Community - Visible to community members
+        contact_preferences:
+          allOf:
+          - $ref: '#/components/schemas/ContactPreferencesEnum'
+          description: |-
+            Communication preferences for platform notifications
+
+            * `no_contact` - No Contact - Don't contact me
+            * `email_only` - Email Only - Emergency notifications only
+            * `limited` - Limited - Important updates only
+            * `normal` - Normal - Regular communications
+            * `all` - All - All communications and updates
+        data_retention_preference:
+          allOf:
+          - $ref: '#/components/schemas/DataRetentionPreferenceEnum'
+          description: |-
+            How long to retain user data
+
+            * `minimal` - Minimal - 1 year retention
+            * `standard` - Standard - 3 years retention
+            * `extended` - Extended - 7 years retention
+            * `permanent` - Permanent - Keep until deletion request
+        auto_delete_inactive_data:
+          type: boolean
+          description: Automatically delete data after retention period
+        deletion_requested:
+          type: boolean
+          description: User has requested account deletion
+        deletion_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When account deletion was requested
+        data_export_requested:
+          type: boolean
+          description: User has requested data export
+        data_export_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When data export was requested
+        anonymize_posts_on_deletion:
+          type: boolean
+          description: Anonymize posts instead of deleting them
+        anonymize_recovery_data:
+          type: boolean
+          description: Allow anonymized recovery data for research
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - data_export_requested_at
+      - data_processing_consent_at
+      - deletion_requested_at
+      - marketing_consent_at
+      - privacy_policy_accepted_at
+      - research_participation_consent_at
+      - terms_of_service_accepted_at
+      - updated_at
+      - username
+    PrivacyProfileProfileVisibilityEnum:
+      enum:
+      - private
+      - friends
+      - community
+      - public
+      type: string
+      description: |-
+        * `private` - Private - Only visible to me
+        * `friends` - Friends - Visible to my connections
+        * `community` - Community - Visible to community members
+        * `public` - Public - Visible to everyone
+    ProfileCompleteness:
+      type: object
+      description: Serializer for profile completeness tracking.
+      properties:
+        overall_completion_percentage:
+          type: integer
+          readOnly: true
+          description: Overall profile completion percentage (0-100)
+        completion_level:
+          allOf:
+          - $ref: '#/components/schemas/CompletionLevelEnum'
+          readOnly: true
+          description: |-
+            Current completion level based on percentage
+
+            * `minimal` - Minimal - Basic account setup
+            * `basic` - Basic - Essential information provided
+            * `standard` - Standard - Good profile coverage
+            * `comprehensive` - Comprehensive - Detailed profile
+            * `complete` - Complete - All optional fields filled
+        completion_level_display:
+          type: string
+          readOnly: true
+        basic_info_score:
+          type: integer
+          readOnly: true
+        contact_info_score:
+          type: integer
+          readOnly: true
+        recovery_info_score:
+          type: integer
+          readOnly: true
+        preferences_score:
+          type: integer
+          readOnly: true
+        profile_media_score:
+          type: integer
+          readOnly: true
+        has_basic_profile_badge:
+          type: boolean
+          readOnly: true
+        has_verified_email_badge:
+          type: boolean
+          readOnly: true
+        has_recovery_goals_badge:
+          type: boolean
+          readOnly: true
+        has_comprehensive_profile_badge:
+          type: boolean
+          readOnly: true
+        recommendations:
+          type: string
+          readOnly: true
+        last_calculated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - basic_info_score
+      - completion_level
+      - completion_level_display
+      - contact_info_score
+      - has_basic_profile_badge
+      - has_comprehensive_profile_badge
+      - has_recovery_goals_badge
+      - has_verified_email_badge
+      - last_calculated_at
+      - overall_completion_percentage
+      - preferences_score
+      - profile_media_score
+      - recommendations
+      - recovery_info_score
+    ProfilePhoto:
+      type: object
+      description: Serializer for profile photo upload and management.
+      properties:
+        photo:
+          type: string
+          format: uri
+          nullable: true
+          description: Profile photo (max 2MB)
+        thumbnail:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+          description: Auto-generated thumbnail (150x150)
+        photo_url:
+          type: string
+          readOnly: true
+        thumbnail_url:
+          type: string
+          readOnly: true
+        photo_filename:
+          type: string
+          readOnly: true
+          title: Original filename
+        photo_content_type:
+          type: string
+          readOnly: true
+          title: Content type
+        photo_size_bytes:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: File size in bytes
+        photo_visibility:
+          $ref: '#/components/schemas/PhotoVisibilityEnum'
+        photo_moderation_status:
+          allOf:
+          - $ref: '#/components/schemas/PhotoModerationStatusEnum'
+          readOnly: true
+          title: Moderation status
+        has_photo:
+          type: boolean
+          description: Check if user has uploaded a photo.
+          readOnly: true
+        is_approved:
+          type: boolean
+          description: Check if photo is approved for display.
+          readOnly: true
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - has_photo
+      - is_approved
+      - photo_content_type
+      - photo_filename
+      - photo_moderation_status
+      - photo_size_bytes
+      - photo_url
+      - thumbnail
+      - thumbnail_url
+      - updated_at
+      - uploaded_at
+    ProfilePhotoRequest:
+      type: object
+      description: Serializer for profile photo upload and management.
+      properties:
+        photo:
+          type: string
+          format: binary
+          nullable: true
+          description: Profile photo (max 2MB)
+        photo_visibility:
+          $ref: '#/components/schemas/PhotoVisibilityEnum'
+    ProfilePrivacySettings:
+      type: object
+      description: Serializer for privacy settings management.
+      properties:
+        profile_visibility:
+          $ref: '#/components/schemas/ProfileVisibility6faEnum'
+        photo_visibility:
+          $ref: '#/components/schemas/PhotoVisibilityEnum'
+        show_email_to_community:
+          type: boolean
+          default: false
+        allow_direct_messages:
+          type: boolean
+          default: true
+        show_online_status:
+          type: boolean
+          default: true
+      required:
+      - photo_visibility
+      - profile_visibility
+    ProfilePrivacySettingsRequest:
+      type: object
+      description: Serializer for privacy settings management.
+      properties:
+        profile_visibility:
+          $ref: '#/components/schemas/ProfileVisibility6faEnum'
+        photo_visibility:
+          $ref: '#/components/schemas/PhotoVisibilityEnum'
+        show_email_to_community:
+          type: boolean
+          default: false
+        allow_direct_messages:
+          type: boolean
+          default: true
+        show_online_status:
+          type: boolean
+          default: true
+      required:
+      - photo_visibility
+      - profile_visibility
+    ProfileVisibility6faEnum:
+      enum:
+      - private
+      - community
+      - public
+      type: string
+      description: |-
+        * `private` - Private
+        * `community` - Community Only
+        * `public` - Public
+    PurposeEnum:
+      enum:
+      - account_management
+      - service_provision
+      - communication
+      - analytics
+      - marketing
+      - research
+      - legal_compliance
+      - security
+      - recovery_support
+      type: string
+      description: |-
+        * `account_management` - Account Management
+        * `service_provision` - Service Provision
+        * `communication` - Communication
+        * `analytics` - Analytics
+        * `marketing` - Marketing
+        * `research` - Research
+        * `legal_compliance` - Legal Compliance
+        * `security` - Security
+        * `recovery_support` - Recovery Support
+    ReasonEnum:
+      enum:
+      - no_longer_necessary
+      - withdraw_consent
+      - unlawful_processing
+      - legal_compliance
+      - child_data
+      type: string
+      description: |-
+        * `no_longer_necessary` - Data no longer necessary for original purpose
+        * `withdraw_consent` - Withdrawing consent
+        * `unlawful_processing` - Data processed unlawfully
+        * `legal_compliance` - Erasure required for legal compliance
+        * `child_data` - Data collected from a child
+    RecoveryInfoVisibilityEnum:
+      enum:
+      - private
+      - friends
+      - supporters
+      - community
+      type: string
+      description: |-
+        * `private` - Private - Only visible to me
+        * `friends` - Friends - Visible to my connections
+        * `supporters` - Supporters - Visible to verified supporters
+        * `community` - Community - Visible to community members
+    SuccessMessage:
+      type: object
+      description: Serializer for success message responses.
+      properties:
+        message:
+          type: string
+          description: Success message
+        status:
+          type: string
+          default: success
+          description: Status indicator
+      required:
+      - message
+    UserProfileBasic:
+      type: object
+      description: Serializer for basic user profile information.
+      properties:
+        display_name:
+          type: string
+          description: Optional public name shown to other users
+          maxLength: 50
+        bio:
+          type: string
+          description: Optional short description about yourself
+          maxLength: 1500
+        timezone:
+          type: string
+          description: User timezone for date/time display
+          maxLength: 50
+        profile_visibility:
+          $ref: '#/components/schemas/ProfileVisibility6faEnum'
+        display_name_or_email:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - date_joined
+      - display_name_or_email
+      - email
+      - updated_at
+    UserProfileBasicRequest:
+      type: object
+      description: Serializer for basic user profile information.
+      properties:
+        display_name:
+          type: string
+          description: Optional public name shown to other users
+          maxLength: 50
+        bio:
+          type: string
+          description: Optional short description about yourself
+          maxLength: 1500
+        timezone:
+          type: string
+          minLength: 1
+          description: User timezone for date/time display
+          maxLength: 50
+        profile_visibility:
+          $ref: '#/components/schemas/ProfileVisibility6faEnum'
+    UserProfilePublic:
+      type: object
+      description: Serializer for public profile view (respects privacy settings).
+      properties:
+        display_name_or_email:
+          type: string
+          readOnly: true
+        bio:
+          type: string
+          readOnly: true
+          description: Optional short description about yourself
+        photo_url:
+          type: string
+          readOnly: true
+        thumbnail_url:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - bio
+      - created_at
+      - display_name_or_email
+      - photo_url
+      - thumbnail_url
+    UserRegistrationRequest:
+      type: object
+      description: |-
+        Enhanced user registration with user purpose system.
+
+        Creates User and UserProfile records, sends verification email,
+        and handles user purpose selection for personalized onboarding.
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          minLength: 1
+          description: Required. Enter a valid email address.
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+          description: Password must be at least 8 characters long
+          maxLength: 128
+        password_confirm:
+          type: string
+          writeOnly: true
+          minLength: 1
+          description: Must match password field
+        confirmPassword:
+          type: string
+          writeOnly: true
+          minLength: 1
+          description: Alternative field name for password confirmation
+        privacy_policy_accepted:
+          type: boolean
+          description: User must accept privacy policy
+        terms_of_service_accepted:
+          type: boolean
+          description: User must accept terms of service
+        display_name:
+          type: string
+          description: Optional display name
+          maxLength: 50
+        firstName:
+          type: string
+          description: First name (currently not stored)
+        lastName:
+          type: string
+          description: Last name (currently not stored)
+      required:
+      - email
+      - password
+      - privacy_policy_accepted
+      - terms_of_service_accepted
+      - username
+    UserSession:
+      type: object
+      description: Serializer for user session information.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        device_name:
+          type: string
+          description: User-provided device name (e.g., "iPhone", "Work Laptop").
+          maxLength: 100
+        device_fingerprint:
+          type: string
+          readOnly: true
+          description: Generated device fingerprint for security tracking.
+        ip_address:
+          type: string
+          readOnly: true
+          maxLength: 45
+        user_agent:
+          type: string
+          readOnly: true
+        city:
+          type: string
+          readOnly: true
+        country:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        is_verified:
+          type: boolean
+          description: Whether this session has been verified via 2FA.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_activity_at:
+          type: string
+          format: date-time
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+        device_info:
+          type: string
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
+        is_current:
+          type: string
+          readOnly: true
+        is_expired:
+          type: string
+          readOnly: true
+      required:
+      - city
+      - country
+      - created_at
+      - device_fingerprint
+      - device_info
+      - expires_at
+      - id
+      - ip_address
+      - is_current
+      - is_expired
+      - last_activity_at
+      - location
+      - user_agent
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+servers:
+- url: http://localhost:8001/api/v1/
+  description: Development server
+- url: https://api.vineyard_group_fellowship.com/v1/
+  description: Production server
+tags:
+- name: Authentication
+  description: User authentication, registration, and session management
+- name: Profiles
+  description: User profile management
+- name: Session Management
+  description: Device sessions, security monitoring, and device management
+- name: GDPR Compliance
+  description: Privacy controls, data export, and consent management
+- name: Security
+  description: Security operations, audit logs, and threat monitoring
+- name: System
+  description: Health checks and system status endpoints
+- name: Monitoring
+  description: Monitoring the application system metrics
+externalDocs:
+  description: REST API for Vineyard Group Fellowship Documentation
+  url: https://docs.vineyard_group_fellowship.com/

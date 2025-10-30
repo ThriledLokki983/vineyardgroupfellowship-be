@@ -1,0 +1,120 @@
+# Docker Compose configuration for Vineyard Group Fellowship Backend
+# =================================================================
+#
+# This Docker Compose file sets up the complete development infrastructure
+# including PostgreSQL database, Redis cache, and MailHog for email testing.
+#
+# Setup Instructions:
+# 1. Copy .env.docker.example to .env.docker
+# 2. Update credentials in .env.docker (never use example passwords!)
+# 3. Run: docker-compose up -d
+#
+# Services:
+# - web: Django application (built from current directory)
+# - postgres: PostgreSQL 15 database
+# - redis: Redis 7 for caching and rate limiting
+# - mailhog: Email testing service with web UI
+#
+# Usage:
+#   docker-compose up -d                    # Start all services in background
+#   docker-compose up web                   # Start with web service in foreground
+#   docker-compose down                     # Stop all services
+#   docker-compose logs -f web              # Follow web service logs
+#
+# Note: This configuration includes development-friendly defaults.
+# For production, use a separate docker-compose.prod.yml file.
+
+# Project name configuration
+name: vineyard-group-fellowship
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: vineyard-group-fellowship-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-vineyard_group_fellowship}
+      POSTGRES_USER: ${DB_USER:-vineyard_group_fellowship}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vineyard_group_fellowship}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-vineyard_group_fellowship} -d ${DB_NAME:-vineyard_group_fellowship}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - vineyard_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vineyard-group-fellowship-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-redis_password}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - vineyard_network
+
+  # MailHog for development email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: vineyard-group-fellowship-mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web interface
+    networks:
+      - vineyard_network
+
+  # Django Application (for full containerized development)
+  web:
+    build: .
+    container_name: vineyard-group-fellowship-web
+    command: ./start.sh
+    env_file:
+      - .env.docker  # Load environment variables from .env.docker file
+    volumes:
+      - .:/app
+      - /app/.venv  # Exclude venv from volume mount for performance
+      - /app/node_modules  # Exclude node_modules if any
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "${SERVER_PORT:-8001}:${SERVER_PORT:-8001}"
+    environment:
+      # Override specific settings for Docker environment
+      - PYTHONUNBUFFERED=1  # Ensures Python output is sent straight to terminal
+      - WATCHFILES_FORCE_POLLING=true  # Force polling for file changes
+      - PORT=${SERVER_PORT:-8001}  # Map SERVER_PORT to PORT for start.sh script
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - vineyard_network
+    # Enable development features
+    stdin_open: true
+    tty: true
+    # Restart policy for development
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
+
+networks:
+  vineyard_network:
+    driver: bridge
