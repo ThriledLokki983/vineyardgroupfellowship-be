@@ -233,10 +233,12 @@ class EnhancedJWTToken:
             refresh['device_fingerprint'] = device_info.get(
                 'device_fingerprint', '')
 
-        # Add profile information
+        # Add user email verification status
+        refresh['is_verified'] = user.email_verified
+
+        # Add profile information if available
         profile = getattr(user, 'basic_profile', None)
         if profile:
-            refresh['is_verified'] = profile.is_verified
             refresh['timezone'] = profile.timezone
             refresh['profile_id'] = str(profile.id)
 

@@ -88,7 +88,8 @@ class GDPRDataExporter:
             'date_joined': self.user.date_joined.isoformat(),
             'last_login': self.user.last_login.isoformat() if self.user.last_login else None,
             'is_active': self.user.is_active,
-            'email_verified': hasattr(self.user, 'Vineyard Group Fellowship_profile') and bool(self.user.basic_profile.email_verified_at),
+            'email_verified': self.user.email_verified,
+            'email_verified_at': self.user.email_verified_at.isoformat() if self.user.email_verified_at else None,
         }
 
     def _export_profile_data(self) -> Dict[str, Any]:

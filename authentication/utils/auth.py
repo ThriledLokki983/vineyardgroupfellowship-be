@@ -743,8 +743,7 @@ class EmailVerificationValidator:
         result['user'] = user
 
         # Check if user is already verified
-        profile = getattr(user, 'basic_profile', None)
-        if profile and hasattr(profile, 'email_verified_at') and profile.email_verified_at:
+        if user.email_verified:
             result['errors'].append(_("Email is already verified."))
             return result
 
@@ -771,23 +770,14 @@ class EmailVerificationValidator:
             True if verification successful, False otherwise
         """
         try:
-            # Email verification is stored on the profile
-            profile = getattr(user, 'basic_profile', None)
-            if profile and hasattr(profile, 'email_verified_at'):
-                profile.email_verified_at = timezone.now()
-                profile.is_verified = True
-                profile.save(update_fields=[
-                             'email_verified_at', 'is_verified'])
+            # Update user's email verification status
+            user.email_verified = True
+            user.email_verified_at = timezone.now()
+            user.is_active = True
+            user.save(update_fields=['email_verified', 'email_verified_at', 'is_active'])
 
-                # Also activate the user account
-                user.is_active = True
-                user.save(update_fields=['is_active'])
-
-                logger.info(f"Email verified for user: {user.email}")
-                return True
-            else:
-                logger.error(f"No profile found for user {user.email}")
-                return False
+            logger.info(f"Email verified for user: {user.email}")
+            return True
 
         except Exception as e:
             logger.error(f"Failed to verify email for user {user.email}: {e}")

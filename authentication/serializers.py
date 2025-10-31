@@ -567,14 +567,9 @@ class EmailVerificationSerializer(serializers.Serializer):
 
         user = self.user
         user.is_active = True
-        user.save()
-
-        # Update UserProfile email verification fields
-        profile = getattr(user, 'basic_profile', None)
-        if profile:
-            profile.is_verified = True
-            profile.email_verified_at = timezone.now()
-            profile.save(update_fields=['is_verified', 'email_verified_at'])
+        user.email_verified = True
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=['is_active', 'email_verified', 'email_verified_at'])
 
         # Log email verification
         request = self.context.get('request')

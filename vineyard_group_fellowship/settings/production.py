@@ -85,7 +85,7 @@ else:
         'www.vineyardgroupfellowship.org',  # www subdomain
         'vineyard-group-fellowship.org',  # Legacy domain
         'www.vineyard-group-fellowship.org',  # Legacy www subdomain
-        'api.vineyard-group-fellowship.org',  # Legacy API subdomain
+        'api.vineyardgroupfellowship.org',  # Legacy API subdomain
         'vineyard-group-fellowship.site',  # Alternative domain
         'www.vineyard-group-fellowship.site',  # Alternative www subdomain
         '.railway.app',    # Railway subdomains
@@ -221,7 +221,7 @@ X_FRAME_OPTIONS = 'DENY'
 
 # Cross-Origin Configuration Summary:
 # Frontend: https://vineyard-group-fellowship.org
-# Backend:  https://api.vineyard-group-fellowship.org
+# Backend:  https://api.vineyardgroupfellowship.org
 #
 # All cookies must use SameSite='None' + Secure=True for cross-origin requests
 # to work properly between different domains.
@@ -279,7 +279,7 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 # Secure cookies
 CSRF_COOKIE_SECURE = True
-# Required for cross-origin requests (vineyard-group-fellowship.org -> api.vineyard-group-fellowship.org)
+# Required for cross-origin requests (vineyard-group-fellowship.org -> api.vineyardgroupfellowship.org)
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_HTTPONLY = False  # Allow frontend JS to read CSRF token
 CSRF_COOKIE_NAME = 'csrftoken'  # Standard Django CSRF cookie name
@@ -303,7 +303,7 @@ SESSION_COOKIE_DOMAIN = None  # Don't restrict domain for cross-origin
 # Enforce secure cookies in production (HTTPS only)
 REFRESH_TOKEN_COOKIE_SECURE = True  # HTTPS only
 
-# Cross-origin cookie settings for vineyard-group-fellowship.org -> api.vineyard-group-fellowship.org
+# Cross-origin cookie settings for vineyard-group-fellowship.org -> api.vineyardgroupfellowship.org
 REFRESH_TOKEN_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
 REFRESH_TOKEN_COOKIE_DOMAIN = None  # Don't restrict domain for cross-origin
 
@@ -440,7 +440,7 @@ SITE_DOMAIN = config('CUSTOM_DOMAIN', default='vineyard-group-fellowship.org')
 FRONTEND_URL = config(
     'FRONTEND_URL', default='https://vineyard-group-fellowship.org')
 BACKEND_URL = config(
-    'BACKEND_URL', default='https://api.vineyard-group-fellowship.org')
+    'BACKEND_URL', default='https://api.vineyardgroupfellowship.org')
 
 # Production flags
 ENABLE_GEOIP_TIMEZONE = config(

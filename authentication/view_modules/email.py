@@ -91,17 +91,15 @@ class EmailVerificationView(APIView):
             user = email_verification_token.decode_uid(uidb64)
 
         # Check if already verified before validation
-        if user:
-            profile = getattr(user, 'basic_profile', None)
-            if profile and hasattr(profile, 'email_verified_at') and profile.email_verified_at:
-                # Already verified - return success with informative message
-                logger.info(f"Email already verified for user: {user.email}")
-                return Response({
-                    'message': _('Your email has already been verified. You can log in now.'),
-                    'user_id': user.id,
-                    'email': user.email,
-                    'already_verified': True
-                }, status=status.HTTP_200_OK)
+        if user and user.email_verified:
+            # Already verified - return success with informative message
+            logger.info(f"Email already verified for user: {user.email}")
+            return Response({
+                'message': _('Your email has already been verified. You can log in now.'),
+                'user_id': user.id,
+                'email': user.email,
+                'already_verified': True
+            }, status=status.HTTP_200_OK)
 
         # Initialize serializer with user context
         serializer = EmailVerificationSerializer(
