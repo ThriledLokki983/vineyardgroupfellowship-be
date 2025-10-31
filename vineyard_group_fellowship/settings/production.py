@@ -32,26 +32,33 @@ MIDDLEWARE.insert(
 
 DEBUG = False
 
-# Railway provides RAILWAY_PUBLIC_DOMAIN and custom domains
-ALLOWED_HOSTS = [
-    config('RAILWAY_PUBLIC_DOMAIN', default=''),
-    config('CUSTOM_DOMAIN', default=''),
-    'healthcheck.railway.app',  # Railway health check hostname
-    'vineyard-group-fellowship.org',  # Primary frontend domain
-    'www.vineyard-group-fellowship.org',  # www subdomain
-    'api.vineyard-group-fellowship.org',  # API subdomain
-    'vineyard-group-fellowship.site',  # Alternative domain
-    'www.vineyard-group-fellowship.site',  # Alternative www subdomain
-    '.railway.app',    # Railway subdomains
-    '.up.railway.app',  # Railway public domains
-    # Your specific Railway domain
-    'vineyard-group-fellowship-production.up.railway.app',
-    'localhost',       # For local Docker testing
-    '127.0.0.1',      # For local Docker testing
-]
+# Use ALLOWED_HOSTS from environment variable if provided, otherwise use defaults
+ALLOWED_HOSTS_ENV = config('ALLOWED_HOSTS', default='', cast=Csv())
+
+if ALLOWED_HOSTS_ENV:
+    # Use environment variable
+    ALLOWED_HOSTS = ALLOWED_HOSTS_ENV
+else:
+    # Fallback to hardcoded values
+    ALLOWED_HOSTS = [
+        config('RAILWAY_PUBLIC_DOMAIN', default=''),
+        config('CUSTOM_DOMAIN', default=''),
+        'healthcheck.railway.app',  # Railway health check hostname
+        'vineyard-group-fellowship.org',  # Primary frontend domain
+        'www.vineyard-group-fellowship.org',  # www subdomain
+        'api.vineyard-group-fellowship.org',  # API subdomain
+        'vineyard-group-fellowship.site',  # Alternative domain
+        'www.vineyard-group-fellowship.site',  # Alternative www subdomain
+        '.railway.app',    # Railway subdomains
+        '.up.railway.app',  # Railway public domains
+        # Your specific Railway domain
+        'vineyard-group-fellowship-production.up.railway.app',
+        'localhost',       # For local Docker testing
+        '127.0.0.1',      # For local Docker testing
+    ]
 
 # Remove empty strings
-ALLOWED_HOSTS = [host for host in ALLOWED_HOSTS if host]
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
 
 # ============================================================================
 # DATABASE - Production (PostgreSQL)
