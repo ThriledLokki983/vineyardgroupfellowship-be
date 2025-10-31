@@ -142,6 +142,12 @@ class ExchangeTokenService:
         """Create a user session for the token exchange login."""
         request_meta = request_meta or {}
 
+        # Generate a shorter session key that fits in 40 characters
+        # Format: {jti}_{short_timestamp}
+        import hashlib
+        timestamp = str(int(timezone.now().timestamp()))
+        session_key = f"{refresh_token['jti'][:24]}_{timestamp[:8]}"
+
         session = UserSession.objects.create(
             user=user,
             device_fingerprint=request_meta.get('device_fingerprint', ''),
@@ -150,7 +156,7 @@ class ExchangeTokenService:
             user_agent=request_meta.get('user_agent', ''),
             ip_address=request_meta.get('ip_address', ''),
             refresh_token_jti=str(refresh_token['jti']),
-            session_key=f"{user.id}_{refresh_token['jti'][:8]}_{timezone.now().timestamp()}",
+            session_key=session_key,
             expires_at=timezone.now() + timedelta(days=14)  # Match refresh token expiry
         )
 
