@@ -478,15 +478,17 @@ class PasswordResetEmailService:
             if request:
                 AuditLog.objects.create(
                     user=user,
-                    action='password_reset_email_sent',
+                    event_type='password_reset_email_sent',
+                    description='Password reset email sent successfully',
                     ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
                     user_agent=request.META.get(
                         'HTTP_USER_AGENT', 'Test Client'),
-                    details={
+                    success=True,
+                    risk_level='medium',
+                    metadata={
                         'email': user.email,
                         'reset_url_generated': True
-                    },
-                    success=True
+                    }
                 )
 
             return True
@@ -496,15 +498,17 @@ class PasswordResetEmailService:
             if request:
                 AuditLog.objects.create(
                     user=user,
-                    action='password_reset_email_failed',
+                    event_type='password_reset_email_failed',
+                    description=f'Password reset email failed: {str(e)}',
                     ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
                     user_agent=request.META.get(
                         'HTTP_USER_AGENT', 'Test Client'),
-                    details={
+                    success=False,
+                    risk_level='medium',
+                    metadata={
                         'email': user.email,
                         'error': str(e)
-                    },
-                    success=False
+                    }
                 )
 
             return False

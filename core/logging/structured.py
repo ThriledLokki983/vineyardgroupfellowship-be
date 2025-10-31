@@ -41,7 +41,8 @@ class SensitiveDataFilter(logging.Filter):
         # Phone numbers - more specific pattern that won't match timestamps
         # Matches: (123) 456-7890, 123-456-7890, 123.456.7890, 1234567890
         # But NOT: standalone 10-digit numbers without separators or parentheses in URLs
-        (re.compile(r'\b(\(\d{3}\)\s*|\d{3}[-.])\d{3}[-.]?\d{4}\b'), '[PHONE]'),
+        (re.compile(
+            r'\b(\(\d{3}\)\s*|\d{3}[-.])\d{3}[-.]?\d{4}\b'), '[PHONE]'),
         # Credit card numbers
         (re.compile(r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'), '[CARD]'),
         # Social Security Numbers

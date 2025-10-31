@@ -155,10 +155,13 @@ class RefreshTokenView(APIView):
             # Log token refresh
             AuditLog.objects.create(
                 user=user,
-                action='token_refreshed',
+                event_type='token_refreshed',
+                description='Access token refreshed successfully',
                 ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
                 user_agent=request.META.get('HTTP_USER_AGENT', 'Test Client'),
-                details={
+                success=True,
+                risk_level='low',
+                metadata={
                     'refresh_method': 'cookie' if refresh_token_str == get_refresh_token_from_cookie(request) else 'body',
                     'token_rotated': getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', False)
                 }
@@ -409,10 +412,13 @@ class TokenVerifyView(APIView):
             # Log successful token verification
             AuditLog.objects.create(
                 user=user,
-                action='token_verified',
+                event_type='token_verified',
+                description='Access token verified successfully',
                 ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
                 user_agent=request.META.get('HTTP_USER_AGENT', 'Test Client'),
-                details={
+                success=True,
+                risk_level='low',
+                metadata={
                     'token_type': 'access',
                     'expires_at': str(access_token.get('exp'))
                 }

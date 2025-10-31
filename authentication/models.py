@@ -274,12 +274,15 @@ class UserSession(models.Model):
         # Create audit log entry
         AuditLog.objects.create(
             user=self.user,
-            action='session_terminated',
+            event_type='session_terminated',
+            description=f'Session terminated: {reason or "manual_deactivation"}',
             ip_address=getattr(self, '_current_ip', self.ip_address),
             user_agent=getattr(self, '_current_user_agent',
                                self.user_agent or ''),
-            details={'reason': reason or 'manual_deactivation',
-                     'session_id': str(self.id)}
+            success=True,
+            risk_level='low',
+            metadata={'reason': reason or 'manual_deactivation',
+                      'session_id': str(self.id)}
         )
 
     def extend_expiry(self, days=14):

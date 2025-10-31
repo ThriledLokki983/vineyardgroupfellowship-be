@@ -536,8 +536,8 @@ class SessionAnalytics:
         return {
             'total_security_events': security_events.count(),
             'high_risk_events': security_events.filter(risk_level='high').count(),
-            'failed_logins': security_events.filter(action='login_failed').count(),
-            'password_changes': security_events.filter(action='password_changed').count()
+            'failed_logins': security_events.filter(event_type='login_failed').count(),
+            'password_changes': security_events.filter(event_type='password_changed').count()
         }
 
     def _get_activity_pattern(self, sessions) -> Dict[str, Any]:
