@@ -43,6 +43,11 @@ urlpatterns = [
     path('api/v1/security/', include('core.urls.security', namespace='security-api')),
 
     # ================================================================
+    # Management endpoints (production only)
+    # ================================================================
+    path('api/v1/management/', include('core.urls.management')),
+    
+    # ================================================================
     # Security Headers and Monitoring
     # ================================================================
     path('', include('core.urls.security', namespace='security-core')),
