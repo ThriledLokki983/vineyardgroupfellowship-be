@@ -60,8 +60,8 @@ COPY --from=builder /app/venv /app/venv
 # Copy application code
 COPY . .
 
-# Make startup script executable
-RUN chmod +x start.sh
+# Make startup and post-migration scripts executable
+RUN chmod +x start.sh scripts/post-migration.sh
 
 # Create required directories
 RUN mkdir -p /app/staticfiles /app/logs \

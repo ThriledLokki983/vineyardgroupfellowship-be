@@ -92,6 +92,14 @@ else
     exit 1
 fi
 
+# Run post-migration setup
+echo -e "${BLUE}⚙️  Running post-migration setup...${NC}"
+if [ -x "scripts/post-migration.sh" ]; then
+    ./scripts/post-migration.sh
+else
+    echo -e "${YELLOW}⚠️  Post-migration script not found or not executable${NC}"
+fi
+
 # Collect static files (in case they weren't collected during build)
 echo -e "${BLUE}📦 Collecting static files...${NC}"
 if python manage.py collectstatic --noinput --clear; then
@@ -103,24 +111,6 @@ fi
 # Create cache table if using database cache
 echo -e "${BLUE}🗃️  Setting up cache tables...${NC}"
 python manage.py createcachetable 2>/dev/null || echo -e "${YELLOW}⚠️  Cache table setup skipped (may already exist)${NC}"
-
-# Optional: Create superuser in development/staging
-if [ "$DJANGO_ENVIRONMENT" != "production" ] && [ "$CREATE_SUPERUSER" = "true" ]; then
-    echo -e "${BLUE}👤 Creating superuser...${NC}"
-    python manage.py shell -c "
-from django.contrib.auth import get_user_model
-User = get_user_model()
-if not User.objects.filter(email='admin@vineyard-group-fellowship.org').exists():
-    User.objects.create_superuser(
-        email='admin@vineyard-group-fellowship.org',
-        username='admin',
-        password='admin123'  # nosec - default dev password
-    )
-    print('Superuser created: admin@vineyard-group-fellowship.org / admin123')
-else:
-    print('Superuser already exists')
-" || echo -e "${YELLOW}⚠️  Superuser creation skipped${NC}"
-fi
 
 # System health check
 echo -e "${BLUE}🔍 Running system health checks...${NC}"
