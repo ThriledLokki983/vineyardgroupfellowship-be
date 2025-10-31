@@ -33,11 +33,15 @@ MIDDLEWARE.insert(
 DEBUG = False
 
 # Use ALLOWED_HOSTS from environment variable if provided, otherwise use defaults
-ALLOWED_HOSTS_ENV = config('ALLOWED_HOSTS', default='', cast=Csv())
+ALLOWED_HOSTS_ENV = config('ALLOWED_HOSTS', default='')
 
 if ALLOWED_HOSTS_ENV:
-    # Use environment variable
-    ALLOWED_HOSTS = ALLOWED_HOSTS_ENV
+    # Parse manually to handle single values like '*' correctly
+    if ALLOWED_HOSTS_ENV == '*':
+        ALLOWED_HOSTS = ['*']
+    else:
+        # Split by comma and strip whitespace
+        ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
 else:
     # Fallback to hardcoded values
     ALLOWED_HOSTS = [
