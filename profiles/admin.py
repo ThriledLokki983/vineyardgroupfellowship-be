@@ -140,6 +140,10 @@ class UserProfileAdmin(admin.ModelAdmin):
         ('Privacy Settings', {
             'fields': ('profile_visibility',)
         }),
+        ('Leadership Information', {
+            'fields': ('leadership_info',),
+            'description': 'Leadership permissions and information (JSON format). Example: {"can_lead_group": true}'
+        }),
         ('Profile Summary', {
             'fields': ('user_profile_info', 'completion_status'),
             'description': 'Comprehensive profile information and completion status'
