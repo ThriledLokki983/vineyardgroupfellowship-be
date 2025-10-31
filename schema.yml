@@ -4,18 +4,99 @@ info:
   version: 1.0.0
   description: REST API for Vineyard Group Fellowship platform
 paths:
-  /api/v1/auth/csrf/:
+  /analysis/:
     get:
-      operationId: auth_csrf_retrieve
-      description: DRF-compatible CSRF token endpoint.
+      operationId: get_security_analysis
+      description: "\n    Get comprehensive security analysis for the system.\n\n\
+        \    Provides detailed security analysis including:\n    - Overall security\
+        \ posture and score\n    - Risk assessment and threat analysis\n    - Security\
+        \ configuration review\n    - Active session security monitoring\n    - Recent\
+        \ security incidents and alerts\n    - Compliance status and recommendations\n\
+        \n    This endpoint aggregates data from multiple security monitoring systems\n\
+        \    to provide a holistic view of the application's security state.\n\n \
+        \   **Authentication**: Required (staff users only)\n    **Rate Limiting**:\
+        \ 10 requests per hour per user\n    "
+      summary: Get Security Analysis
       tags:
-      - auth
+      - Security
       security:
       - jwtAuth: []
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+              examples:
+                SecurityAnalysisReport:
+                  value:
+                    report_id: ANALYSIS-2025-045
+                    generated_at: '2025-10-30T06:40:00Z'
+                    summary: No critical vulnerabilities found
+                    vulnerabilities:
+                    - id: VULN-001
+                      description: Outdated software version
+                      severity: low
+                      status: resolved
+                    - id: VULN-002
+                      description: Weak password policy
+                      severity: medium
+                      status: in_progress
+                    recommendations:
+                    - Update all software to latest versions
+                    - Enforce stronger password policies
+                  summary: Security Analysis Report
+                  description: Example of security analysis report
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/csrf/:
+    get:
+      operationId: auth_csrf_token
+      description: Get CSRF token for SPA authentication
+      summary: Get CSRF Token
+      tags:
+      - Authentication
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  csrfToken:
+                    type: string
+                  detail:
+                    type: string
+          description: ''
   /api/v1/auth/email/resend/:
     post:
       operationId: auth_email_verification_resend
@@ -45,21 +126,19 @@ paths:
           description: Rate limit exceeded
   /api/v1/auth/email/verify/:
     get:
-      operationId: auth_email_verify_retrieve
-      description: Handle GET requests for email verification links with exchange
-        token flow.
+      operationId: auth_email_verify_get
+      description: Verify email address with token via GET request (email link)
+      summary: Verify Email via Link
       tags:
-      - auth
+      - Authentication
       security:
       - jwtAuth: []
       - {}
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EmailVerification'
-          description: ''
+          description: Email verified successfully
+        '400':
+          description: Invalid token or already verified
     post:
       operationId: auth_email_verify
       description: Verify email address with token
@@ -88,9 +167,9 @@ paths:
           description: Invalid token or already verified
   /api/v1/auth/email/verify/{uidb64}/{token}/:
     get:
-      operationId: auth_email_verify_retrieve_2
-      description: Handle GET requests for email verification links with exchange
-        token flow.
+      operationId: auth_email_verify_get_2
+      description: Verify email address with token via GET request (email link)
+      summary: Verify Email via Link
       parameters:
       - in: path
         name: token
@@ -103,17 +182,15 @@ paths:
           type: string
         required: true
       tags:
-      - auth
+      - Authentication
       security:
       - jwtAuth: []
       - {}
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EmailVerification'
-          description: ''
+          description: Email verified successfully
+        '400':
+          description: Invalid token or already verified
     post:
       operationId: auth_email_verify_2
       description: Verify email address with token
@@ -151,54 +228,49 @@ paths:
           description: Email verified successfully
         '400':
           description: Invalid token or already verified
-  /api/v1/auth/health/:
-    get:
-      operationId: health_check
-      description: "\n    Health checks and system status endpoints.\n\n    Check\
-        \ the comprehensive health status of the system including authentication service,\n\
-        \    database connectivity, cache status, and email backend. Returns detailed\
-        \ status\n    information for monitoring, debugging, and operational oversight.\n\
-        \n    This endpoint is public and does not require authentication.\n    "
-      summary: System health check
+  /api/v1/auth/exchange-token/:
+    post:
+      operationId: exchange_token_for_jwt
+      description: Exchange a one-time verification token for JWT access/refresh tokens
+      summary: Exchange Token for JWT
       tags:
-      - System
+      - Session Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExchangeTokenRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExchangeTokenRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExchangeTokenRequestRequest'
+        required: true
       security:
       - jwtAuth: []
       - {}
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthCheck'
-              examples:
-                HealthCheck:
-                  value:
-                    status: healthy
-                    timestamp: '2025-10-30T06:40:00Z'
-                    services:
-                      database:
-                        status: healthy
-                        response_time: 12ms
-                      redis:
-                        status: healthy
-                        response_time: 2ms
-                      email:
-                        status: healthy
-                        response_time: 45ms
-                    version: 1.0.0
-                    uptime: 2d 14h 32m
-                  summary: Health Check
-                  description: Example of system health check response
-          description: ''
-        '503':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-                description: Unspecified response body
-          description: ''
+          description: Token exchange successful
+        '400':
+          description: Invalid or expired exchange token
+        '429':
+          description: Rate limit exceeded
+  /api/v1/auth/health/:
+    get:
+      operationId: auth_health_retrieve
+      description: Check authentication system health
+      summary: Returns the current health status of the authentication system including
+        database connectivity and critical components.
+      tags:
+      - System Health
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
   /api/v1/auth/login/:
     post:
       operationId: login_user
@@ -380,13 +452,42 @@ paths:
                 description: Unspecified response body
           description: ''
   /api/v1/auth/password/reset/confirm/:
+    get:
+      operationId: validate_password_reset_token
+      description: Validate password reset token from email link (GET method)
+      summary: Validate password reset token
+      tags:
+      - Authentication
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token_valid:
+                    type: boolean
+                  email:
+                    type: string
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid or expired token
+          description: ''
     post:
       operationId: confirm_password_reset
-      description: "\n    Confirm password reset with token and set new password.\n\
-        \n    Uses secure token from reset email to verify identity. Token is\n  \
-        \  single-use and expires after 1 hour. All user sessions and tokens\n   \
-        \ are invalidated after password reset.\n\n    Rate limiting: 10 reset confirmations\
-        \ per hour per IP address.\n    "
+      description: "\n        Confirm password reset with token and set new password.\n\
+        \n        Uses secure token from reset email to verify identity. Token is\n\
+        \        single-use and expires after 1 hour. All user sessions and tokens\n\
+        \        are invalidated after password reset.\n\n        Rate limiting: 10\
+        \ reset confirmations per hour per IP address.\n        "
       summary: Confirm password reset
       tags:
       - Authentication
@@ -429,13 +530,53 @@ paths:
                 description: Unspecified response body
           description: ''
   /api/v1/auth/password/reset/confirm/{uidb64}/{token}/:
+    get:
+      operationId: validate_password_reset_token_2
+      description: Validate password reset token from email link (GET method)
+      summary: Validate password reset token
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: uidb64
+        schema:
+          type: string
+        required: true
+      tags:
+      - Authentication
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token_valid:
+                    type: boolean
+                  email:
+                    type: string
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid or expired token
+          description: ''
     post:
       operationId: confirm_password_reset_2
-      description: "\n    Confirm password reset with token and set new password.\n\
-        \n    Uses secure token from reset email to verify identity. Token is\n  \
-        \  single-use and expires after 1 hour. All user sessions and tokens\n   \
-        \ are invalidated after password reset.\n\n    Rate limiting: 10 reset confirmations\
-        \ per hour per IP address.\n    "
+      description: "\n        Confirm password reset with token and set new password.\n\
+        \n        Uses secure token from reset email to verify identity. Token is\n\
+        \        single-use and expires after 1 hour. All user sessions and tokens\n\
+        \        are invalidated after password reset.\n\n        Rate limiting: 10\
+        \ reset confirmations per hour per IP address.\n        "
       summary: Confirm password reset
       parameters:
       - in: path
@@ -662,110 +803,319 @@ paths:
                 additionalProperties: {}
                 description: Unspecified response body
           description: ''
-  /api/v1/health/:
-    get:
-      operationId: health_check_2
-      description: "\n    Health checks and system status endpoints.\n\n    Check\
-        \ the comprehensive health status of the system including authentication service,\n\
-        \    database connectivity, cache status, and email backend. Returns detailed\
-        \ status\n    information for monitoring, debugging, and operational oversight.\n\
-        \n    This endpoint is public and does not require authentication.\n    "
-      summary: System health check
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh
+      description: Refresh JWT access token using httpOnly cookie
+      summary: Refresh Access Token
       tags:
-      - System
+      - Session Management
       security:
       - jwtAuth: []
       - {}
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthCheck'
-              examples:
-                HealthCheck:
-                  value:
-                    status: healthy
-                    timestamp: '2025-10-30T06:40:00Z'
-                    services:
-                      database:
-                        status: healthy
-                        response_time: 12ms
-                      redis:
-                        status: healthy
-                        response_time: 2ms
-                      email:
-                        status: healthy
-                        response_time: 45ms
-                    version: 1.0.0
-                    uptime: 2d 14h 32m
-                  summary: Health Check
-                  description: Example of system health check response
-          description: ''
-        '503':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-                description: Unspecified response body
-          description: ''
+          description: Token refreshed successfully
+        '401':
+          description: Invalid or expired refresh token
+  /api/v1/auth/token/verify/:
+    post:
+      operationId: verify_jwt_token
+      description: Verify the validity of a JWT access token
+      summary: Verify JWT Token
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Token is valid
+        '400':
+          description: Invalid or expired token
+        '429':
+          description: Rate limit exceeded
+  /api/v1/health/:
+    get:
+      operationId: health_retrieve
+      description: Check authentication system health
+      summary: Returns the current health status of the authentication system including
+        database connectivity and critical components.
+      tags:
+      - System Health
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
   /api/v1/monitoring/metrics/:
     get:
       operationId: monitoring_metrics_retrieve
-      description: |-
-        Get performance metrics for monitoring dashboards.
-
-        Returns aggregated performance data for analysis.
+      description: Retrieve aggregated performance metrics for monitoring dashboards
+      summary: Get Performance Metrics
       tags:
-      - monitoring
+      - Monitoring
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          description: Performance metrics data
+        '403':
+          description: Admin access required
   /api/v1/monitoring/metrics/clear/:
     post:
       operationId: monitoring_metrics_clear_create
-      description: |-
-        Clear old performance metrics to manage database size.
-
-        Removes metrics older than specified retention period.
+      description: Clear old performance metrics to manage database size
+      summary: Clear Old Metrics
       tags:
-      - monitoring
+      - Monitoring
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          description: Metrics cleared successfully
+        '403':
+          description: Admin access required
   /api/v1/monitoring/metrics/endpoints/:
     get:
       operationId: monitoring_metrics_endpoints_retrieve
-      description: |-
-        Get performance metrics grouped by API endpoint.
-
-        Returns aggregated performance data per endpoint.
+      description: Retrieve performance metrics grouped by API endpoint
+      summary: Get Endpoint Metrics
       tags:
-      - monitoring
+      - Monitoring
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          description: Endpoint performance metrics
+        '403':
+          description: Admin access required
   /api/v1/monitoring/metrics/realtime/:
     get:
       operationId: monitoring_metrics_realtime_retrieve
-      description: |-
-        Get real-time performance metrics from cache.
-
-        Returns current performance data for monitoring dashboards.
+      description: Retrieve real-time performance metrics from cache
+      summary: Get Real-time Metrics
       tags:
-      - monitoring
+      - Monitoring
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          description: Real-time performance data
+        '403':
+          description: Admin access required
+  /api/v1/onboarding/community-preferences/:
+    get:
+      operationId: onboarding_community_preferences_retrieve
+      description: Get current community preferences.
+      summary: Get Community Preferences
+      tags:
+      - Onboarding
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Preferences retrieved
+        '401':
+          description: Authentication required
+    post:
+      operationId: onboarding_community_preferences_create
+      description: Configure community preferences during onboarding.
+      summary: Set Community Preferences
+      tags:
+      - Onboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommunityPreferencesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CommunityPreferencesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CommunityPreferencesRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Preferences saved
+        '400':
+          description: Invalid data
+        '401':
+          description: Authentication required
+  /api/v1/onboarding/complete/:
+    post:
+      operationId: onboarding_complete_create
+      description: Mark user onboarding as complete with optional feedback.
+      summary: Complete Onboarding
+      tags:
+      - Onboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingCompletionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OnboardingCompletionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OnboardingCompletionRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Onboarding completed successfully
+        '400':
+          description: Invalid data
+        '401':
+          description: Authentication required
+        '403':
+          description: Onboarding already completed
+  /api/v1/onboarding/feedback/:
+    post:
+      operationId: onboarding_feedback_create
+      description: Submit feedback for a specific onboarding step.
+      summary: Submit Onboarding Feedback
+      tags:
+      - Onboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingFeedbackRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OnboardingFeedbackRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OnboardingFeedbackRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Feedback submitted successfully
+        '400':
+          description: Invalid feedback data
+        '401':
+          description: Authentication required
+  /api/v1/onboarding/flow/:
+    get:
+      operationId: onboarding_flow_retrieve
+      description: Get personalized onboarding flow and progress for current user.
+      summary: Get Onboarding Flow
+      tags:
+      - Onboarding
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Onboarding flow retrieved
+        '401':
+          description: Authentication required
+  /api/v1/onboarding/leadership-profile/:
+    get:
+      operationId: onboarding_leadership_profile_retrieve
+      description: Get current leadership profile information.
+      summary: Get Leadership Profile
+      tags:
+      - Onboarding
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadershipProfile'
+          description: ''
+        '401':
+          description: Authentication required
+        '403':
+          description: Only group leaders can access this
+    post:
+      operationId: onboarding_leadership_profile_create
+      description: Save leadership profile information and preferences.
+      summary: Save Leadership Profile
+      tags:
+      - Onboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadershipProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LeadershipProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LeadershipProfileRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Leadership profile saved
+        '400':
+          description: Invalid data
+        '401':
+          description: Authentication required
+        '403':
+          description: Only group leaders can access this
+  /api/v1/onboarding/step/:
+    get:
+      operationId: onboarding_step_retrieve
+      description: Get current onboarding status and progress.
+      summary: Get Onboarding Status
+      tags:
+      - Onboarding
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Onboarding status retrieved
+        '401':
+          description: Authentication required
+    patch:
+      operationId: onboarding_step_partial_update
+      description: Update the current onboarding step and track progress.
+      summary: Update Onboarding Step
+      tags:
+      - Onboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOnboardingStepRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOnboardingStepRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOnboardingStepRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Step updated successfully
+        '400':
+          description: Invalid step data
+        '401':
+          description: Authentication required
   /api/v1/privacy/gdpr/cleanup/:
     get:
       operationId: gdpr_cleanup_status
@@ -983,7 +1333,7 @@ paths:
         description: User ID or "me" for current user
         required: true
       tags:
-      - Profiles
+      - User Profiles
       security:
       - jwtAuth: []
       - {}
@@ -1000,7 +1350,7 @@ paths:
       description: Get the current authenticated user's profile information.
       summary: Get current user profile
       tags:
-      - Profiles
+      - User Profiles
       security:
       - jwtAuth: []
       responses:
@@ -1015,7 +1365,7 @@ paths:
       description: Update the current authenticated user's profile information.
       summary: Update current user profile
       tags:
-      - Profiles
+      - User Profiles
       requestBody:
         content:
           application/json:
@@ -1041,7 +1391,7 @@ paths:
       description: Partially update the current authenticated user's profile information.
       summary: Update current user profile
       tags:
-      - Profiles
+      - User Profiles
       requestBody:
         content:
           application/json:
@@ -1068,7 +1418,7 @@ paths:
       description: Get the current user's profile completeness status and recommendations.
       summary: Get profile completeness
       tags:
-      - Profiles
+      - User Profiles
       security:
       - jwtAuth: []
       responses:
@@ -1084,7 +1434,7 @@ paths:
       description: Recalculate the current user's profile completeness status.
       summary: Refresh profile completeness
       tags:
-      - Profiles
+      - User Profiles
       security:
       - jwtAuth: []
       responses:
@@ -1100,7 +1450,7 @@ paths:
       description: Get information about the current user's profile photo.
       summary: Get profile photo info
       tags:
-      - Profiles
+      - User Profiles
       security:
       - jwtAuth: []
       responses:
@@ -1116,7 +1466,7 @@ paths:
       description: Delete the current user's profile photo.
       summary: Delete profile photo
       tags:
-      - Profiles
+      - User Profiles
       security:
       - jwtAuth: []
       responses:
@@ -1128,7 +1478,7 @@ paths:
       description: Upload or replace the current user's profile photo.
       summary: Upload profile photo
       tags:
-      - Profiles
+      - User Profiles
       requestBody:
         content:
           application/json:
@@ -1154,7 +1504,7 @@ paths:
       description: Replace the current user's profile photo.
       summary: Replace profile photo
       tags:
-      - Profiles
+      - User Profiles
       requestBody:
         content:
           application/json:
@@ -1181,7 +1531,7 @@ paths:
       description: Get the current user's privacy settings.
       summary: Get privacy settings
       tags:
-      - Profiles
+      - User Profiles
       security:
       - jwtAuth: []
       responses:
@@ -1197,7 +1547,7 @@ paths:
       description: Update the current user's privacy settings.
       summary: Update privacy settings
       tags:
-      - Profiles
+      - User Profiles
       requestBody:
         content:
           application/json:
@@ -1224,7 +1574,7 @@ paths:
       description: Partially update the current user's privacy settings.
       summary: Partially update privacy settings
       tags:
-      - Profiles
+      - User Profiles
       requestBody:
         content:
           application/json:
@@ -1244,6 +1594,77 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProfilePrivacySettings'
+          description: ''
+  /api/v1/security/analysis/:
+    get:
+      operationId: get_security_analysis_2
+      description: "\n    Get comprehensive security analysis for the system.\n\n\
+        \    Provides detailed security analysis including:\n    - Overall security\
+        \ posture and score\n    - Risk assessment and threat analysis\n    - Security\
+        \ configuration review\n    - Active session security monitoring\n    - Recent\
+        \ security incidents and alerts\n    - Compliance status and recommendations\n\
+        \n    This endpoint aggregates data from multiple security monitoring systems\n\
+        \    to provide a holistic view of the application's security state.\n\n \
+        \   **Authentication**: Required (staff users only)\n    **Rate Limiting**:\
+        \ 10 requests per hour per user\n    "
+      summary: Get Security Analysis
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+              examples:
+                SecurityAnalysisReport:
+                  value:
+                    report_id: ANALYSIS-2025-045
+                    generated_at: '2025-10-30T06:40:00Z'
+                    summary: No critical vulnerabilities found
+                    vulnerabilities:
+                    - id: VULN-001
+                      description: Outdated software version
+                      severity: low
+                      status: resolved
+                    - id: VULN-002
+                      description: Weak password policy
+                      severity: medium
+                      status: in_progress
+                    recommendations:
+                    - Update all software to latest versions
+                    - Enforce stronger password policies
+                  summary: Security Analysis Report
+                  description: Example of security analysis report
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
           description: ''
   /api/v1/security/csp-report/:
     post:
@@ -1332,6 +1753,38 @@ paths:
                 additionalProperties: {}
                 description: Unspecified response body
           description: ''
+  /api/v1/security/sessions/terminate-all/:
+    post:
+      operationId: security_sessions_terminate_all_create
+      description: Security endpoint to terminate all user sessions except the current
+        one. Used for security incident response and threat mitigation.
+      summary: Terminate All Sessions (Security)
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: All other sessions terminated successfully
+        '401':
+          description: Authentication required
+        '429':
+          description: Rate limit exceeded
+  /api/v1/security/sessions/terminate-suspicious/:
+    post:
+      operationId: security_sessions_terminate_suspicious_create
+      description: Automatically detect and terminate sessions flagged as suspicious
+        based on security heuristics.
+      summary: Terminate Suspicious Sessions
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Suspicious sessions terminated successfully
+        '401':
+          description: Authentication required
   /api/v1/security/status/:
     get:
       operationId: security_status
@@ -1373,6 +1826,392 @@ paths:
                 additionalProperties: {}
                 description: Unspecified response body
           description: ''
+  /api/v1/sessions/:
+    get:
+      operationId: sessions_list
+      description: Retrieve all sessions for the authenticated user with filtering
+        options.
+      summary: List user sessions
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Session Management
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeviceManagementList'
+          description: ''
+  /api/v1/sessions/{id}/:
+    get:
+      operationId: sessions_retrieve
+      description: Retrieve detailed information about a specific session.
+      summary: Get session details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Session Management
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceManagement'
+          description: ''
+    put:
+      operationId: sessions_update
+      description: Update session information such as device name or settings.
+      summary: Update session
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Session Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceManagement'
+          description: ''
+    patch:
+      operationId: sessions_partial_update
+      description: Partially update session information.
+      summary: Partially update session
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Session Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeviceManagementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeviceManagementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeviceManagementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceManagement'
+          description: ''
+    delete:
+      operationId: sessions_destroy
+      description: Terminate and delete a specific session.
+      summary: Delete session
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Session Management
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/sessions/{id}/revoke_device/:
+    post:
+      operationId: sessions_revoke_device_create
+      description: Revoke a specific device/session. Alias for terminate action to
+        match test expectations.
+      summary: Revoke Device
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Session Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeDeviceResponse'
+          description: ''
+        '400':
+          description: Cannot revoke current session
+        '401':
+          description: Authentication required
+        '404':
+          description: Session not found
+  /api/v1/sessions/{id}/terminate/:
+    post:
+      operationId: sessions_terminate_create
+      description: Terminate a specific user session with enhanced security checks.
+        Cannot terminate the current session.
+      summary: Terminate Specific Session
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Session Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionTerminateResponse'
+          description: ''
+        '400':
+          description: Cannot terminate current session
+        '401':
+          description: Authentication required
+        '404':
+          description: Session not found
+  /api/v1/sessions/analytics/:
+    get:
+      operationId: sessions_analytics_retrieve
+      description: Retrieve comprehensive analytics about user sessions including
+        login patterns, device usage, and security metrics.
+      summary: Get Session Analytics
+      tags:
+      - Session Management
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceManagement'
+          description: ''
+        '401':
+          description: Authentication required
+  /api/v1/sessions/cleanup_old/:
+    post:
+      operationId: sessions_cleanup_old_create
+      description: Remove old inactive sessions older than 30 days to maintain database
+        hygiene and security.
+      summary: Cleanup Old Sessions
+      tags:
+      - Session Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupResponse'
+          description: ''
+        '401':
+          description: Authentication required
+  /api/v1/sessions/current/:
+    get:
+      operationId: sessions_current_retrieve
+      description: Retrieve detailed information about the current user session including
+        device details and activity status.
+      summary: Get Current Session Info
+      tags:
+      - Session Management
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentSessionResponse'
+          description: ''
+        '401':
+          description: Authentication required
+        '404':
+          description: Current session not found
+  /api/v1/sessions/revoke_all/:
+    post:
+      operationId: sessions_revoke_all_create
+      description: Revoke all other active sessions/devices except the current one.
+        Alias for terminate_all to match test expectations.
+      summary: Revoke All Devices
+      tags:
+      - Session Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeAllResponse'
+          description: ''
+        '401':
+          description: Authentication required
+  /api/v1/sessions/security_analysis/:
+    get:
+      operationId: sessions_security_analysis_retrieve
+      description: Perform comprehensive security analysis of all user sessions including
+        threat detection and risk assessment.
+      summary: Get Security Analysis
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceManagement'
+          description: ''
+        '401':
+          description: Authentication required
+  /api/v1/sessions/terminate_all/:
+    post:
+      operationId: sessions_terminate_all_create
+      description: Terminate all other user sessions except the current one. Useful
+        for security purposes when devices are lost or compromised.
+      summary: Terminate All Other Sessions
+      tags:
+      - Session Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateAllResponse'
+          description: ''
+        '401':
+          description: Authentication required
+  /api/v1/sessions/terminate_suspicious/:
+    post:
+      operationId: sessions_terminate_suspicious_create
+      description: Automatically identify and terminate sessions flagged as suspicious
+        based on device fingerprinting and security analysis.
+      summary: Terminate Suspicious Sessions
+      tags:
+      - Security
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceManagementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateSuspiciousResponse'
+          description: ''
+        '401':
+          description: Authentication required
   /csp-report/:
     post:
       operationId: csp_violation_report_2
@@ -1460,6 +2299,38 @@ paths:
                 additionalProperties: {}
                 description: Unspecified response body
           description: ''
+  /sessions/terminate-all/:
+    post:
+      operationId: sessions_terminate_all_create_2
+      description: Security endpoint to terminate all user sessions except the current
+        one. Used for security incident response and threat mitigation.
+      summary: Terminate All Sessions (Security)
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: All other sessions terminated successfully
+        '401':
+          description: Authentication required
+        '429':
+          description: Rate limit exceeded
+  /sessions/terminate-suspicious/:
+    post:
+      operationId: sessions_terminate_suspicious_create_2
+      description: Automatically detect and terminate sessions flagged as suspicious
+        based on security heuristics.
+      summary: Terminate Suspicious Sessions
+      tags:
+      - Security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Suspicious sessions terminated successfully
+        '401':
+          description: Authentication required
   /status/:
     get:
       operationId: security_status_2
@@ -1526,12 +2397,27 @@ components:
           type: string
           description: JWT refresh token for token renewal
         user:
-          type: string
+          type: object
+          additionalProperties: {}
           readOnly: true
           description: Basic user information
       required:
       - access
       - user
+    CleanupResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        deleted_count:
+          type: integer
+        cutoff_date:
+          type: string
+          format: date-time
+      required:
+      - cutoff_date
+      - deleted_count
+      - message
     CleanupTypeEnum:
       enum:
       - old_sessions
@@ -1542,6 +2428,36 @@ components:
         * `old_sessions` - Old Sessions
         * `expired_tokens` - Expired Tokens
         * `audit_logs` - Old Audit Logs
+    CommunityPreferencesRequest:
+      type: object
+      description: |-
+        Serializer for setting user's community preferences during onboarding.
+        For fellowship members to express their interests and meeting preferences.
+      properties:
+        interest_areas:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Areas of interest (e.g., 'prayer', 'bible_study', 'youth',
+            'worship')
+        meeting_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingPreferencesEnum'
+          description: Preferred meeting formats
+        notification_preferences:
+          description: Notification settings
+        privacy_level:
+          allOf:
+          - $ref: '#/components/schemas/PrivacyLevelEnum'
+          default: community
+          description: |-
+            Privacy level for profile
+
+            * `private` - Private
+            * `community` - Community Only
+            * `public` - Public
     CompletionLevelEnum:
       enum:
       - minimal
@@ -1687,6 +2603,17 @@ components:
         * `limited` - Limited - Important updates only
         * `normal` - Normal - Regular communications
         * `all` - All - All communications and updates
+    CurrentSessionResponse:
+      type: object
+      properties:
+        current_session:
+          $ref: '#/components/schemas/DeviceManagement'
+        session_info:
+          type: object
+          additionalProperties: {}
+      required:
+      - current_session
+      - session_info
     DataProcessingRecord:
       type: object
       description: |-
@@ -1773,17 +2700,21 @@ components:
         * `standard` - Standard - 3 years retention
         * `extended` - Extended - 7 years retention
         * `permanent` - Permanent - Keep until deletion request
-    EmailVerification:
+    DeviceManagement:
       type: object
-      description: Verify email address with token.
+      description: Placeholder serializer for device management.
       properties:
-        uidb64:
+        message:
           type: string
-        token:
+          default: Device management not implemented yet
+    DeviceManagementRequest:
+      type: object
+      description: Placeholder serializer for device management.
+      properties:
+        message:
           type: string
-      required:
-      - token
-      - uidb64
+          minLength: 1
+          default: Device management not implemented yet
     EmailVerificationRequest:
       type: object
       description: Verify email address with token.
@@ -1807,6 +2738,15 @@ components:
           minLength: 1
       required:
       - email
+    ExchangeTokenRequestRequest:
+      type: object
+      properties:
+        exchange_token:
+          type: string
+          minLength: 1
+          description: One-time exchange token from email verification
+      required:
+      - exchange_token
     ExportFormatEnum:
       enum:
       - json
@@ -1896,30 +2836,99 @@ components:
           default: false
       required:
       - retention_period
-    HealthCheck:
+    LeadershipProfile:
       type: object
-      description: Serializer for health check responses.
+      description: |-
+        Serializer for leadership profile setup during onboarding.
+        Simple, church-facing information for group leaders.
       properties:
-        status:
+        ministry_experience_years:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          title: Years of ministry experience
+          description: 'Optional: Years of ministry or leadership experience'
+        previous_leadership_roles:
           type: string
-          description: Overall health status
-        timestamp:
+          description: 'Optional: Previous leadership experience description'
+        ministry_interests:
+          description: Areas of ministry interest (e.g., youth, couples, men's/women's
+            groups)
+        preferred_group_size:
+          $ref: '#/components/schemas/PreferredGroupSizeEnum'
+        meeting_frequency_preference:
+          $ref: '#/components/schemas/MeetingFrequencyPreferenceEnum'
+        meeting_format_preference:
+          title: Meeting format preferences
+          description: 'Preferred formats: in_person, online, hybrid'
+        leadership_topics:
+          description: Topic areas comfortable leading (e.g., prayer, bible_study,
+            outreach)
+        general_availability:
+          description: 'General availability by day/time (e.g., {"monday": ["evening"],
+            "tuesday": ["morning", "evening"]})'
+        max_group_capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Maximum group capacity
+          description: Maximum number of groups willing to lead simultaneously
+        is_active:
+          type: boolean
+          description: Whether the leader is currently active
+        created_at:
           type: string
           format: date-time
-          description: Timestamp of health check
-        version:
+          readOnly: true
+        updated_at:
           type: string
-          description: Application version
-        checks:
-          type: object
-          additionalProperties: {}
-          description: Individual component health checks
-        uptime:
-          type: string
-          description: Application uptime
+          format: date-time
+          readOnly: true
       required:
-      - status
-      - timestamp
+      - created_at
+      - updated_at
+    LeadershipProfileRequest:
+      type: object
+      description: |-
+        Serializer for leadership profile setup during onboarding.
+        Simple, church-facing information for group leaders.
+      properties:
+        ministry_experience_years:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          title: Years of ministry experience
+          description: 'Optional: Years of ministry or leadership experience'
+        previous_leadership_roles:
+          type: string
+          description: 'Optional: Previous leadership experience description'
+        ministry_interests:
+          description: Areas of ministry interest (e.g., youth, couples, men's/women's
+            groups)
+        preferred_group_size:
+          $ref: '#/components/schemas/PreferredGroupSizeEnum'
+        meeting_frequency_preference:
+          $ref: '#/components/schemas/MeetingFrequencyPreferenceEnum'
+        meeting_format_preference:
+          title: Meeting format preferences
+          description: 'Preferred formats: in_person, online, hybrid'
+        leadership_topics:
+          description: Topic areas comfortable leading (e.g., prayer, bible_study,
+            outreach)
+        general_availability:
+          description: 'General availability by day/time (e.g., {"monday": ["evening"],
+            "tuesday": ["morning", "evening"]})'
+        max_group_capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Maximum group capacity
+          description: Maximum number of groups willing to lead simultaneously
+        is_active:
+          type: boolean
+          description: Whether the leader is currently active
     LegalBasisEnum:
       enum:
       - consent
@@ -1968,6 +2977,97 @@ components:
       required:
       - email_or_username
       - password
+    MeetingFrequencyPreferenceEnum:
+      enum:
+      - weekly
+      - biweekly
+      - monthly
+      type: string
+      description: |-
+        * `weekly` - Weekly
+        * `biweekly` - Bi-weekly
+        * `monthly` - Monthly
+    MeetingPreferencesEnum:
+      enum:
+      - in_person
+      - online
+      - hybrid
+      type: string
+      description: |-
+        * `in_person` - In Person
+        * `online` - Online
+        * `hybrid` - Hybrid
+    OnboardingCompletionRequest:
+      type: object
+      description: Serializer for marking onboarding as complete.
+      properties:
+        feedback_rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+          description: Optional rating for overall onboarding experience (1-5)
+        feedback_text:
+          type: string
+          description: Optional feedback about onboarding experience
+          maxLength: 1000
+    OnboardingFeedbackRequest:
+      type: object
+      description: Serializer for onboarding step feedback.
+      properties:
+        step_name:
+          type: string
+          minLength: 1
+          description: The onboarding step this feedback relates to
+          maxLength: 50
+        rating:
+          allOf:
+          - $ref: '#/components/schemas/RatingEnum'
+          description: |-
+            1-5 star rating for this step
+
+            * `1` - 1 stars
+            * `2` - 2 stars
+            * `3` - 3 stars
+            * `4` - 4 stars
+            * `5` - 5 stars
+          minimum: 0
+          maximum: 2147483647
+        feedback_text:
+          type: string
+          description: Optional detailed feedback
+        was_confusing:
+          type: boolean
+        was_helpful:
+          type: boolean
+        suggestions:
+          type: string
+          description: Suggestions for improvement
+      required:
+      - rating
+      - step_name
+    PaginatedDeviceManagementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceManagement'
     PasswordChangeRequest:
       type: object
       description: Change password for authenticated users.
@@ -2021,6 +3121,27 @@ components:
           minLength: 1
       required:
       - email
+    PatchedDeviceManagementRequest:
+      type: object
+      description: Placeholder serializer for device management.
+      properties:
+        message:
+          type: string
+          minLength: 1
+          default: Device management not implemented yet
+    PatchedOnboardingStepRequest:
+      type: object
+      description: Serializer for updating onboarding step progress.
+      properties:
+        step:
+          type: string
+          minLength: 1
+          description: The onboarding step to mark as current
+          maxLength: 50
+        time_spent_minutes:
+          type: integer
+          minimum: 0
+          description: 'Optional: time spent on previous step in minutes'
     PatchedProfilePrivacySettingsRequest:
       type: object
       description: Serializer for privacy settings management.
@@ -2057,6 +3178,9 @@ components:
           maxLength: 50
         profile_visibility:
           $ref: '#/components/schemas/ProfileVisibility6faEnum'
+        leadership_info:
+          title: Leadership information
+          description: Leadership-related information and permissions
     PhotoModerationStatusEnum:
       enum:
       - pending
@@ -2081,6 +3205,16 @@ components:
         * `supporters` - Supporters only
         * `community` - Community members
         * `public` - Public
+    PreferredGroupSizeEnum:
+      enum:
+      - small
+      - medium
+      - large
+      type: string
+      description: |-
+        * `small` - 5-10 people
+        * `medium` - 10-20 people
+        * `large` - 20+ people
     PrivacyDashboard:
       type: object
       description: |-
@@ -2111,6 +3245,16 @@ components:
       - data_summary
       - profile
       - recent_consent_changes
+    PrivacyLevelEnum:
+      enum:
+      - private
+      - community
+      - public
+      type: string
+      description: |-
+        * `private` - Private
+        * `community` - Community Only
+        * `public` - Public
     PrivacyProfile:
       type: object
       description: |-
@@ -2324,7 +3468,10 @@ components:
           type: boolean
           readOnly: true
         recommendations:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
           readOnly: true
         last_calculated_at:
           type: string
@@ -2362,9 +3509,13 @@ components:
           description: Auto-generated thumbnail (150x150)
         photo_url:
           type: string
+          format: uri
+          nullable: true
           readOnly: true
         thumbnail_url:
           type: string
+          format: uri
+          nullable: true
           readOnly: true
         photo_filename:
           type: string
@@ -2497,6 +3648,20 @@ components:
         * `legal_compliance` - Legal Compliance
         * `security` - Security
         * `recovery_support` - Recovery Support
+    RatingEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      type: integer
+      description: |-
+        * `1` - 1 stars
+        * `2` - 2 stars
+        * `3` - 3 stars
+        * `4` - 4 stars
+        * `5` - 5 stars
     ReasonEnum:
       enum:
       - no_longer_necessary
@@ -2523,6 +3688,41 @@ components:
         * `friends` - Friends - Visible to my connections
         * `supporters` - Supporters - Visible to verified supporters
         * `community` - Community - Visible to community members
+    RevokeAllResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        terminated_count:
+          type: integer
+        remaining_sessions:
+          type: integer
+      required:
+      - message
+      - remaining_sessions
+      - terminated_count
+    RevokeDeviceResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        terminated_session:
+          type: object
+          additionalProperties: {}
+      required:
+      - message
+      - terminated_session
+    SessionTerminateResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        terminated_session:
+          type: object
+          additionalProperties: {}
+      required:
+      - message
+      - terminated_session
     SuccessMessage:
       type: object
       description: Serializer for success message responses.
@@ -2536,6 +3736,42 @@ components:
           description: Status indicator
       required:
       - message
+    TerminateAllResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        terminated_count:
+          type: integer
+        remaining_sessions:
+          type: integer
+      required:
+      - message
+      - remaining_sessions
+      - terminated_count
+    TerminateSuspiciousResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        terminated_count:
+          type: integer
+        suspicious_sessions:
+          type: array
+          items: {}
+      required:
+      - message
+      - suspicious_sessions
+      - terminated_count
+    TokenVerifyRequestRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+          description: JWT access token to verify
+      required:
+      - token
     UserProfileBasic:
       type: object
       description: Serializer for basic user profile information.
@@ -2554,6 +3790,9 @@ components:
           maxLength: 50
         profile_visibility:
           $ref: '#/components/schemas/ProfileVisibility6faEnum'
+        leadership_info:
+          title: Leadership information
+          description: Leadership-related information and permissions
         display_name_or_email:
           type: string
           readOnly: true
@@ -2598,6 +3837,9 @@ components:
           maxLength: 50
         profile_visibility:
           $ref: '#/components/schemas/ProfileVisibility6faEnum'
+        leadership_info:
+          title: Leadership information
+          description: Leadership-related information and permissions
     UserProfilePublic:
       type: object
       description: Serializer for public profile view (respects privacy settings).
@@ -2611,9 +3853,13 @@ components:
           description: Optional short description about yourself
         photo_url:
           type: string
+          format: uri
+          nullable: true
           readOnly: true
         thumbnail_url:
           type: string
+          format: uri
+          nullable: true
           readOnly: true
         created_at:
           type: string
@@ -2728,16 +3974,18 @@ components:
           type: string
           format: date-time
         device_info:
-          type: string
+          type: object
+          additionalProperties: {}
           readOnly: true
         location:
-          type: string
+          type: object
+          additionalProperties: {}
           readOnly: true
         is_current:
-          type: string
+          type: boolean
           readOnly: true
         is_expired:
-          type: string
+          type: boolean
           readOnly: true
       required:
       - city
@@ -2761,23 +4009,21 @@ components:
 servers:
 - url: http://localhost:8001/api/v1/
   description: Development server
-- url: https://api.vineyard_group_fellowship.com/v1/
+- url: https://api.vineyardgroupfellowship.org/api/v1/
   description: Production server
 tags:
 - name: Authentication
-  description: User authentication, registration, and session management
-- name: Profiles
-  description: User profile management
+  description: User authentication, registration, and token management
 - name: Session Management
-  description: Device sessions, security monitoring, and device management
-- name: GDPR Compliance
-  description: Privacy controls, data export, and consent management
-- name: Security
-  description: Security operations, audit logs, and threat monitoring
-- name: System
-  description: Health checks and system status endpoints
+  description: User session tracking and device management
+- name: User Profiles
+  description: User profile management, photos, and personal settings
+- name: System Health
+  description: Health checks and system status for load balancers
 - name: Monitoring
-  description: Monitoring the application system metrics
+  description: Performance metrics and application monitoring
+- name: Security
+  description: Security incident reporting and policy violation tracking
 externalDocs:
   description: REST API for Vineyard Group Fellowship Documentation
-  url: https://docs.vineyard_group_fellowship.com/
+  url: https://api.vineyardgroupfellowship.org/api/v1/

@@ -39,6 +39,7 @@ urlpatterns = [
     path('api/v1/sessions/', include('authentication.url_modules.sessions_router')),
     path('api/v1/profiles/', include('profiles.urls')),
     path('api/v1/privacy/', include('privacy.urls')),
+    path('api/v1/onboarding/', include('onboarding.urls')),
     path('api/v1/monitoring/', include('monitoring.urls')),
     path('api/v1/security/', include('core.urls.security', namespace='security-api')),
 

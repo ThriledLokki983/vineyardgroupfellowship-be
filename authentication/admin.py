@@ -123,7 +123,7 @@ class UserProfileBasicInline(admin.StackedInline):
     model = UserProfileBasic
     can_delete = False
     verbose_name_plural = 'Basic Profile'
-    
+
     from profiles.admin import UserProfileBasicAdminForm
     form = UserProfileBasicAdminForm
 

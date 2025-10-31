@@ -96,16 +96,37 @@ model.
 - **Anonymization Options**: Convert data to anonymous research data instead of
   deletion
 
-## API Endpoints (Planned)
+## API Endpoints
 
-- `GET /api/v1/privacy/profile/` - Get privacy settings
-- `PATCH /api/v1/privacy/profile/` - Update privacy preferences
-- `POST /api/v1/privacy/consent/` - Give/withdraw specific consent
-- `GET /api/v1/privacy/consent/log/` - View consent history
-- `POST /api/v1/privacy/export/` - Request data export
-- `POST /api/v1/privacy/delete/` - Request account deletion
-- `DELETE /api/v1/privacy/delete/` - Cancel deletion request
-- `GET /api/v1/privacy/processing/` - View data processing activities
+### GDPR Data Export
+- `POST /api/v1/privacy/gdpr/export/` - Request complete data export (generates downloadable JSON)
+
+### GDPR Data Erasure
+- `POST /api/v1/privacy/gdpr/erasure/` - Request account deletion (30-day delay)
+- `DELETE /api/v1/privacy/gdpr/erasure/` - Cancel pending deletion request
+- `GET /api/v1/privacy/gdpr/erasure/` - Check deletion status
+
+### GDPR Consent Management
+- `GET /api/v1/privacy/gdpr/consent/` - Get current consent status for all purposes
+- `POST /api/v1/privacy/gdpr/consent/` - Update consent for specific purposes
+- `DELETE /api/v1/privacy/gdpr/consent/` - Withdraw all consent
+
+### Privacy Dashboard
+- `GET /api/v1/privacy/gdpr/dashboard/` - Comprehensive privacy overview
+  - Current consent status
+  - Privacy settings
+  - Data processing activities
+  - Export history
+  - Deletion requests
+
+### Data Retention
+- `GET /api/v1/privacy/gdpr/retention/` - Get current retention preferences
+- `PUT /api/v1/privacy/gdpr/retention/` - Update retention preferences
+- `DELETE /api/v1/privacy/gdpr/retention/` - Reset to default retention
+
+### Data Cleanup
+- `POST /api/v1/privacy/gdpr/cleanup/` - Trigger data cleanup for expired records
+- `GET /api/v1/privacy/gdpr/cleanup/` - Get cleanup status and history
 
 ## Business Logic
 

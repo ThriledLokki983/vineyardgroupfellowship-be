@@ -105,7 +105,7 @@ class UserProfileBasic(models.Model):
     def set_leadership_permission(self, permission_key, value):
         """
         Set a leadership permission.
-        
+
         Args:
             permission_key: The permission key (e.g., 'can_lead_group')
             value: The permission value
@@ -116,11 +116,11 @@ class UserProfileBasic(models.Model):
     def get_leadership_permission(self, permission_key, default=None):
         """
         Get a leadership permission.
-        
+
         Args:
             permission_key: The permission key
             default: Default value if key not found
-            
+
         Returns:
             The permission value or default
         """
@@ -197,7 +197,7 @@ class ProfilePhoto(models.Model):
             ('rejected', _('Rejected')),
             ('flagged', _('Flagged for Review')),
         ],
-        default='pending'
+        default='approved'  # Auto-approve photos (no moderation required)
     )
 
     # Timestamps
@@ -232,7 +232,8 @@ class ProfilePhoto(models.Model):
         self.photo_filename = ''
         self.photo_content_type = ''
         self.photo_size_bytes = None
-        self.photo_moderation_status = 'pending'
+        # Reset to approved (will be overwritten when new photo is uploaded)
+        self.photo_moderation_status = 'approved'
         self.save()
 
     def save(self, *args, **kwargs):

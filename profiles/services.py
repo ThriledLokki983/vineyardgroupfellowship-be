@@ -145,7 +145,21 @@ class PhotoService:
         """
         Upload and process a new profile photo.
         """
+        logger.info(
+            "PhotoService.upload_photo called",
+            user_id=str(user.id),
+            photo_file_name=photo_file.name,
+            photo_file_size=photo_file.size,
+            photo_file_content_type=photo_file.content_type
+        )
+
         photo_profile = ProfileService.get_or_create_photo_profile(user)
+
+        logger.info(
+            "Got photo profile",
+            photo_profile_id=photo_profile.id,
+            has_existing_photo=photo_profile.has_photo
+        )
 
         # Delete existing photo if present
         if photo_profile.has_photo:
@@ -158,12 +172,31 @@ class PhotoService:
             )
 
         # Save new photo
+        logger.info("About to save photo to photo_profile.photo field")
         photo_profile.photo = photo_file
         photo_profile.photo_filename = photo_file.name
         photo_profile.photo_content_type = photo_file.content_type
         photo_profile.photo_size_bytes = photo_file.size
-        photo_profile.photo_moderation_status = 'pending'
+        # Auto-approve uploaded photos (no moderation required)
+        photo_profile.photo_moderation_status = 'approved'
+
+        logger.info(
+            "About to save photo_profile",
+            photo_field_value=str(photo_profile.photo),
+            photo_field_bool=bool(photo_profile.photo)
+        )
+
         photo_profile.save()
+
+        # Refresh from DB to verify save
+        photo_profile.refresh_from_db()
+
+        logger.info(
+            "Photo profile saved and refreshed",
+            photo_field_after_save=str(photo_profile.photo),
+            has_photo_after_save=photo_profile.has_photo,
+            photo_url=photo_profile.photo.url if photo_profile.photo else None
+        )
 
         logger.info(
             "Uploaded new profile photo",

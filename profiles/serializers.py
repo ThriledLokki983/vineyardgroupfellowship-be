@@ -27,6 +27,15 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
     date_joined = serializers.DateTimeField(
         source='user.date_joined', read_only=True)
 
+    # Onboarding state (read-only) - nested under 'onboarding'
+    onboarding = serializers.SerializerMethodField()
+
+    # Profile photo fields (read-only)
+    photo_url = serializers.SerializerMethodField()
+    photo_thumbnail_url = serializers.SerializerMethodField()
+    photo_visibility = serializers.SerializerMethodField()
+    can_upload_photo = serializers.SerializerMethodField()
+
     class Meta:
         model = UserProfileBasic
         fields = [
@@ -40,6 +49,11 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
             'date_joined',
             'created_at',
             'updated_at',
+            'onboarding',
+            'photo_url',
+            'photo_thumbnail_url',
+            'photo_visibility',
+            'can_upload_photo',
         ]
         read_only_fields = [
             'display_name_or_email',
@@ -47,7 +61,104 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
             'date_joined',
             'created_at',
             'updated_at',
+            'onboarding',
+            'photo_url',
+            'photo_thumbnail_url',
+            'photo_visibility',
+            'can_upload_photo',
         ]
+
+    def get_onboarding(self, obj):
+        """Get all onboarding state as a nested object."""
+        progress = self._get_onboarding_progress(obj)
+
+        # Default values for users without onboarding progress
+        if not progress:
+            return {
+                'completed': False,
+                'current_step': None,
+                'progress_percentage': 0
+            }
+
+        # Get current step - the most recent uncompleted or in-progress step
+        current_step = None
+        if progress.steps_completed:
+            completed_steps = list(progress.steps_completed.keys())
+            if completed_steps:
+                # Filter out "completed" as it's not a real step
+                real_steps = [
+                    step for step in completed_steps if step != 'completed']
+                current_step = real_steps[-1] if real_steps else None
+
+        # Calculate completion
+        progress_percentage = float(progress.completion_percentage)
+        is_completed = progress_percentage >= 100.0
+
+        return {
+            'completed': is_completed,
+            'current_step': current_step,
+            'progress_percentage': int(progress_percentage)
+        }
+
+    def _get_onboarding_progress(self, obj):
+        """Helper method to get onboarding progress with caching."""
+        # Cache the progress object in the serializer context to avoid multiple queries
+        if not hasattr(self, '_onboarding_progress_cache'):
+            try:
+                from onboarding.models import OnboardingProgress
+                self._onboarding_progress_cache = OnboardingProgress.objects.filter(
+                    user=obj.user
+                ).first()
+            except Exception:
+                self._onboarding_progress_cache = None
+        return self._onboarding_progress_cache
+
+    def _get_profile_photo(self, obj):
+        """Helper method to get profile photo with caching."""
+        if not hasattr(self, '_profile_photo_cache'):
+            try:
+                self._profile_photo_cache = ProfilePhoto.objects.filter(
+                    user=obj.user
+                ).first()
+            except Exception:
+                self._profile_photo_cache = None
+        return self._profile_photo_cache
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_photo_url(self, obj):
+        """Get the full URL for the profile photo."""
+        photo = self._get_profile_photo(obj)
+        if photo and photo.has_photo:
+            # Show photo to the owner regardless of moderation status
+            # For public/community viewing, would need approval check
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(photo.photo.url)
+        return None
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_photo_thumbnail_url(self, obj):
+        """Get the full URL for the profile photo thumbnail."""
+        photo = self._get_profile_photo(obj)
+        if photo and photo.has_photo and photo.thumbnail:
+            # Show thumbnail to the owner regardless of moderation status
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(photo.thumbnail.url)
+        return None
+
+    @extend_schema_field(serializers.ChoiceField(choices=['public', 'private', 'community']))
+    def get_photo_visibility(self, obj):
+        """Get the photo visibility setting."""
+        photo = self._get_profile_photo(obj)
+        if photo:
+            return photo.photo_visibility
+        return 'private'  # Default to private if no photo profile exists
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_can_upload_photo(self, obj):
+        """Check if user can upload a photo (always true for authenticated users)."""
+        return True
 
     def validate_display_name(self, value):
         """Validate display name for appropriateness."""
@@ -175,7 +286,8 @@ class ProfilePhotoSerializer(serializers.ModelSerializer):
             instance.photo_filename = photo.name
             instance.photo_content_type = photo.content_type
             instance.photo_size_bytes = photo.size
-            instance.photo_moderation_status = 'pending'
+            # Auto-approve uploaded photos (no moderation required)
+            instance.photo_moderation_status = 'approved'
 
         return super().update(instance, validated_data)
 

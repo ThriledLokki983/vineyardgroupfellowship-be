@@ -57,7 +57,12 @@ class UserProfileViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
         else:
             user = self.request.user
 
-        return ProfileService.get_or_create_profile(user)
+        # Get profile with optimized query
+        profile = ProfileService.get_or_create_profile(user)
+
+        # Prefetch onboarding data to avoid N+1 queries
+        # This is handled in the serializer but we can log it here
+        return profile
 
     @extend_schema(
         operation_id='get_current_user_profile',
@@ -166,16 +171,37 @@ class ProfilePhotoViewSet(GenericViewSet):
     def upload(self, request):
         """Upload or replace profile photo."""
         if 'photo' not in request.FILES:
+            logger.warning(
+                "Photo upload attempted without file",
+                user_id=str(request.user.id),
+                files_keys=list(request.FILES.keys())
+            )
             return Response(
                 {'error': 'No photo file provided'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
+            logger.info(
+                "Starting photo upload",
+                user_id=str(request.user.id),
+                filename=request.FILES['photo'].name,
+                content_type=request.FILES['photo'].content_type,
+                size=request.FILES['photo'].size
+            )
+
             photo_profile = PhotoService.upload_photo(
                 request.user,
                 request.FILES['photo']
             )
+
+            logger.info(
+                "Photo upload successful",
+                user_id=str(request.user.id),
+                photo_profile_id=photo_profile.id,
+                has_photo=photo_profile.has_photo
+            )
+
             serializer = self.get_serializer(
                 photo_profile,
                 context={'request': request}
@@ -186,10 +212,11 @@ class ProfilePhotoViewSet(GenericViewSet):
             logger.error(
                 "Photo upload failed",
                 user_id=str(request.user.id),
-                error=str(e)
+                error=str(e),
+                exc_info=True
             )
             return Response(
-                {'error': 'Photo upload failed'},
+                {'error': f'Photo upload failed: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

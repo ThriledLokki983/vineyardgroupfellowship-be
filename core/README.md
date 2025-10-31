@@ -81,12 +81,25 @@ core/
 
 ## API Endpoints
 
-- `GET /api/v1/csrf/` - Get CSRF token for SPA
-- `POST /api/v1/security/csp-report/` - CSP violation reporting
-- `/healthz` - Basic health check
-- `/readiness` - Readiness probe for orchestration
+### CSRF Endpoints
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/v1/csrf/` | Get CSRF token for SPA | No |
 
-## Security Features
+### Security Endpoints
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/v1/security/csp-report/` | CSP violation reporting | No |
+| POST | `/api/v1/security/incident/` | Report security incident | Yes |
+| GET | `/api/v1/security/status/` | Get security status | No |
+| GET | `/api/v1/security/analysis/` | Get security analysis | Admin |
+| POST | `/api/v1/security/sessions/terminate-all/` | Terminate all sessions (security) | Yes |
+| POST | `/api/v1/security/sessions/terminate-suspicious/` | Terminate suspicious sessions | Yes |
+
+### Health & Monitoring
+See [Monitoring App README](../monitoring/README.md) for health check endpoints.
+
+---## Security Features
 
 ### Content Security Policy (CSP)
 

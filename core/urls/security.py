@@ -14,15 +14,47 @@ from core.security.monitoring import (
 )
 
 # Import session termination view for security-specific paths
-from authentication.view_modules.sessions import terminate_all_sessions_view
+from authentication.view_modules.sessions import terminate_all_sessions_view as auth_terminate_all
 from profiles.views import DeviceManagementViewSet
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-# Create a wrapper for terminate_suspicious to make it accessible as a function view
+# Create security-tagged wrappers for session management endpoints
 
 
+@extend_schema(
+    summary="Terminate All Sessions (Security)",
+    description="Security endpoint to terminate all user sessions except the current one. "
+                "Used for security incident response and threat mitigation.",
+    request=None,
+    responses={
+        200: OpenApiResponse(description='All other sessions terminated successfully'),
+        401: OpenApiResponse(description='Authentication required'),
+        429: OpenApiResponse(description='Rate limit exceeded')
+    },
+    tags=['Security']
+)
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def terminate_all_sessions_view(request):
+    """Security-specific wrapper for terminate all sessions."""
+    # Delegate to the actual implementation
+    return auth_terminate_all(request)
+
+
+@extend_schema(
+    summary="Terminate Suspicious Sessions",
+    description="Automatically detect and terminate sessions flagged as suspicious based on security heuristics.",
+    request=None,
+    responses={
+        200: OpenApiResponse(description='Suspicious sessions terminated successfully'),
+        401: OpenApiResponse(description='Authentication required')
+    },
+    tags=['Security']
+)
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

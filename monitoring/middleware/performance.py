@@ -105,12 +105,15 @@ class PerformanceMonitoringMiddleware:
             endpoint_path = self._get_endpoint_path(request)
 
             # Basic request context
+            user_id = getattr(request.user, 'id', None) if hasattr(
+                request, 'user') else None
             context = {
                 'endpoint_path': endpoint_path,
                 'method': request.method,
                 'status_code': response.status_code,
                 'query_count': query_count,
-                'user_id': getattr(request.user, 'id', None) if hasattr(request, 'user') else None,
+                # Convert UUID to string
+                'user_id': str(user_id) if user_id else None,
                 'user_agent': request.META.get('HTTP_USER_AGENT', ''),
                 'remote_addr': self._get_client_ip(request),
             }
