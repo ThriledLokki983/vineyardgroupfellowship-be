@@ -20,7 +20,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
     """
 
     # Read-only computed fields
-    display_name_or_email = serializers.ReadOnlyField()
+    display_name_or_email = serializers.CharField(read_only=True)
 
     # User information (read-only)
     email = serializers.EmailField(source='user.email', read_only=True)
@@ -299,7 +299,7 @@ class UserProfilePublicSerializer(serializers.ModelSerializer):
     Serializer for public profile view (respects privacy settings).
     """
 
-    display_name_or_email = serializers.ReadOnlyField()
+    display_name_or_email = serializers.CharField(read_only=True)
     photo_url = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
 

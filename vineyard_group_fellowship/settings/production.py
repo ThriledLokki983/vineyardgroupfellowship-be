@@ -35,6 +35,11 @@ if unique_chars < 10:
         "Please use a more complex secret key."
     )
 
+# Silence Django's built-in SECRET_KEY warning since we have our own validation
+SILENCED_SYSTEM_CHECKS = [
+    'security.W009',  # SECRET_KEY length/complexity warning (we have custom validation)
+]
+
 # ============================================================================
 # MIDDLEWARE - Production
 # ============================================================================

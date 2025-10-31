@@ -671,7 +671,7 @@ class UserSessionSerializer(serializers.ModelSerializer):
     device_info = serializers.SerializerMethodField()
     location = serializers.SerializerMethodField()
     is_current = serializers.SerializerMethodField()
-    is_expired = serializers.ReadOnlyField()
+    is_expired = serializers.BooleanField(read_only=True)
 
     # Explicitly define ip_address field to avoid DRF version compatibility issues
     ip_address = serializers.CharField(max_length=45, read_only=True)
