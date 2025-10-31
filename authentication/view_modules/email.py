@@ -127,11 +127,12 @@ class EmailVerificationView(APIView):
             if user:
                 AuditLog.objects.create(
                     user=user,
-                    action='email_verification_failed',
+                    event_type='email_verification',
+                    description=f'Email verification failed: {str(e)}',
                     ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
                     user_agent=request.META.get(
                         'HTTP_USER_AGENT', 'Test Client'),
-                    details={'reason': str(e)},
+                    metadata={'reason': str(e)},
                     success=False,
                     risk_level='medium'
                 )
@@ -202,11 +203,12 @@ class EmailVerificationView(APIView):
                 # Log successful verification with exchange token generation
                 AuditLog.objects.create(
                     user=user,
-                    action='email_verified_exchange_token_generated',
+                    event_type='email_verification',
+                    description='Email verified successfully with exchange token generated',
                     ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
                     user_agent=request.META.get(
                         'HTTP_USER_AGENT', 'Test Client'),
-                    details={
+                    metadata={
                         'auto_login_flow': True,
                         'exchange_token_generated': True
                     },
@@ -227,11 +229,12 @@ class EmailVerificationView(APIView):
             if user:
                 AuditLog.objects.create(
                     user=user,
-                    action='email_verification_failed',
+                    event_type='email_verification',
+                    description=f'Email verification failed (GET): {str(e)}',
                     ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
                     user_agent=request.META.get(
                         'HTTP_USER_AGENT', 'Test Client'),
-                    details={'reason': str(e)},
+                    metadata={'reason': str(e)},
                     success=False,
                     risk_level='medium'
                 )

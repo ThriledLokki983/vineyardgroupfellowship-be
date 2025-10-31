@@ -335,12 +335,15 @@ class LoginSerializer(serializers.Serializer):
             request = self.context.get('request')
             AuditLog.objects.create(
                 user=user if user else None,
-                action='login_failed',
+                event_type='login_failure',
+                description=f'Failed login attempt for: {email_or_username}',
                 ip_address=request.META.get(
                     'REMOTE_ADDR', '127.0.0.1') if request else '127.0.0.1',
                 user_agent=request.META.get(
                     'HTTP_USER_AGENT', 'Test Client') if request else 'Test Client',
-                details={'login_attempt': email_or_username}
+                success=False,
+                risk_level='medium',
+                metadata={'login_attempt': email_or_username}
             )
 
             # Record failed login attempt for existing users
@@ -443,11 +446,14 @@ class PasswordChangeSerializer(serializers.Serializer):
         request = self.context['request']
         AuditLog.objects.create(
             user=user,
-            action='password_changed',
+            event_type='password_change',
+            description='User changed their password',
             ip_address=request.META.get(
                 'REMOTE_ADDR', '127.0.0.1') if request else '127.0.0.1',
             user_agent=request.META.get(
-                'HTTP_USER_AGENT', 'Test Client') if request else 'Test Client'
+                'HTTP_USER_AGENT', 'Test Client') if request else 'Test Client',
+            success=True,
+            risk_level='low'
         )
 
         return user
@@ -526,11 +532,14 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         request = self.context.get('request')
         AuditLog.objects.create(
             user=user,
-            action='password_reset',
+            event_type='password_reset_complete',
+            description='User completed password reset',
             ip_address=request.META.get(
                 'REMOTE_ADDR', '127.0.0.1') if request else '127.0.0.1',
             user_agent=request.META.get(
-                'HTTP_USER_AGENT', 'Test Client') if request else 'Test Client'
+                'HTTP_USER_AGENT', 'Test Client') if request else 'Test Client',
+            success=True,
+            risk_level='medium'
         )
 
         return user
@@ -569,7 +578,8 @@ class EmailVerificationSerializer(serializers.Serializer):
         user.is_active = True
         user.email_verified = True
         user.email_verified_at = timezone.now()
-        user.save(update_fields=['is_active', 'email_verified', 'email_verified_at'])
+        user.save(update_fields=['is_active',
+                  'email_verified', 'email_verified_at'])
 
         # Log email verification
         request = self.context.get('request')
@@ -581,10 +591,13 @@ class EmailVerificationSerializer(serializers.Serializer):
 
         AuditLog.objects.create(
             user=user,
-            action='email_verified',
+            event_type='email_verification',
+            description='Email address verified successfully',
             ip_address=request.META.get(
                 'REMOTE_ADDR', '127.0.0.1') if request else '127.0.0.1',
-            user_agent=user_agent
+            user_agent=user_agent,
+            success=True,
+            risk_level='low'
         )
 
         return user

@@ -774,7 +774,8 @@ class EmailVerificationValidator:
             user.email_verified = True
             user.email_verified_at = timezone.now()
             user.is_active = True
-            user.save(update_fields=['email_verified', 'email_verified_at', 'is_active'])
+            user.save(update_fields=['email_verified',
+                      'email_verified_at', 'is_active'])
 
             logger.info(f"Email verified for user: {user.email}")
             return True
