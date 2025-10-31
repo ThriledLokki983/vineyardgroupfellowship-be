@@ -29,8 +29,9 @@ required_vars=(
     "DJANGO_ENVIRONMENT"
 )
 
-# Database variables (either individual vars or DATABASE_URL)
-if [ -z "$DATABASE_URL" ]; then
+# Database variables (Railway supports DATABASE_URL or individual PGHOST/PGDATABASE vars)
+if [ -z "$DATABASE_URL" ] && [ -z "$PGHOST" ]; then
+    # Only require individual DB vars if neither DATABASE_URL nor Railway vars are available
     required_vars+=(
         "DB_NAME"
         "DB_USER"
@@ -61,7 +62,7 @@ echo -e "${GREEN}✅ Environment validation passed${NC}"
 echo -e "${BLUE}📊 Configuration:${NC}"
 echo "   Environment: ${DJANGO_ENVIRONMENT}"
 echo "   Port: ${PORT}"
-echo "   Database: $([ -n "$DATABASE_URL" ] && echo "DATABASE_URL configured" || echo "$DB_HOST:${DB_PORT:-5432}/$DB_NAME")"
+echo "   Database: $([ -n "$DATABASE_URL" ] && echo "DATABASE_URL configured" || ([ -n "$PGHOST" ] && echo "Railway PG: $PGHOST:${PGPORT:-5432}/$PGDATABASE" || echo "$DB_HOST:${DB_PORT:-5432}/$DB_NAME"))"
 
 # Wait for database to be ready
 echo -e "${BLUE}🗄️  Waiting for database connection...${NC}"

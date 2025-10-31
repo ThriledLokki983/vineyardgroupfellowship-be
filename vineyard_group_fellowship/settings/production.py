@@ -75,14 +75,31 @@ if DATABASE_URL:
     }
 else:
     # Fallback to individual variables (Railway style)
+    # Railway provides these as PGHOST, PGDATABASE, etc.
+    db_name = config('POSTGRES_DB', default=config('PGDATABASE', default=config('DB_NAME', default='dummy')))
+    db_user = config('POSTGRES_USER', default=config('PGUSER', default=config('DB_USER', default='dummy')))
+    db_password = config('POSTGRES_PASSWORD', default=config('PGPASSWORD', default=config('DB_PASSWORD', default='dummy')))
+    db_host = config('POSTGRES_HOST', default=config('PGHOST', default=config('DB_HOST', default='dummy')))
+    db_port = config('POSTGRES_PORT', default=config('PGPORT', default=config('DB_PORT', default=5432)), cast=int)
+    
+    # Check if we have valid database configuration
+    if db_host == 'dummy' or db_name == 'dummy':
+        raise ValueError(
+            "Database configuration is incomplete. Please set either:\n"
+            "1. DATABASE_URL environment variable, or\n"
+            "2. PGHOST, PGDATABASE, PGUSER, PGPASSWORD environment variables (Railway style), or\n"
+            "3. DB_HOST, DB_NAME, DB_USER, DB_PASSWORD environment variables\n"
+            f"Current values: HOST={db_host}, NAME={db_name}"
+        )
+    
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': config('POSTGRES_DB', default=config('PGDATABASE', default='')),
-            'USER': config('POSTGRES_USER', default=config('PGUSER', default='')),
-            'PASSWORD': config('POSTGRES_PASSWORD', default=config('PGPASSWORD', default='')),
-            'HOST': config('POSTGRES_HOST', default=config('PGHOST', default='')),
-            'PORT': config('POSTGRES_PORT', default=config('PGPORT', default=5432), cast=int),
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_password,
+            'HOST': db_host,
+            'PORT': db_port,
             'CONN_MAX_AGE': 60,
             'OPTIONS': {
                 'sslmode': 'require',
