@@ -3,7 +3,7 @@ Django management command to create an admin user.
 
 Usage:
     python manage.py create_admin_user --email admin@example.com --password mypassword
-    
+
 Or use environment variables:
     ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=mypassword python manage.py create_admin_user
 """
@@ -40,7 +40,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Get email from argument, environment variable, or prompt
         email = (
-            options.get('email') or 
+            options.get('email') or
             config('ADMIN_EMAIL', default='') or
             input('Enter admin email: ')
         )
@@ -55,25 +55,27 @@ class Command(BaseCommand):
         if User.objects.filter(email=email).exists():
             if options.get('skip_if_exists'):
                 self.stdout.write(
-                    self.style.WARNING(f'Admin user with email {email} already exists. Skipping.')
+                    self.style.WARNING(
+                        f'Admin user with email {email} already exists. Skipping.')
                 )
                 return
             else:
                 self.stdout.write(
-                    self.style.ERROR(f'User with email {email} already exists!')
+                    self.style.ERROR(
+                        f'User with email {email} already exists!')
                 )
                 return
 
         # Get password from argument, environment variable, or prompt
         password = (
-            options.get('password') or 
+            options.get('password') or
             config('ADMIN_PASSWORD', default='')
         )
-        
+
         if not password:
             password = getpass.getpass('Enter admin password: ')
             password_confirm = getpass.getpass('Confirm admin password: ')
-            
+
             if password != password_confirm:
                 self.stdout.write(
                     self.style.ERROR('Passwords do not match!')
@@ -96,7 +98,7 @@ class Command(BaseCommand):
                     is_superuser=True,
                     is_verified=True,  # Skip email verification for admin
                 )
-                
+
                 # Create user profile if it doesn't exist
                 from profiles.models import UserProfileBasic
                 profile, created = UserProfileBasic.objects.get_or_create(

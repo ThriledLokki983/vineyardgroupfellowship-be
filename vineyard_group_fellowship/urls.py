@@ -46,7 +46,7 @@ urlpatterns = [
     # Management endpoints (production only)
     # ================================================================
     path('api/v1/management/', include('core.urls.management')),
-    
+
     # ================================================================
     # Security Headers and Monitoring
     # ================================================================

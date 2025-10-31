@@ -11,13 +11,14 @@ from datetime import timedelta
 from typing import Optional, Dict, Any
 
 from django.core.cache import cache
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import UserSession, AuditLog
 
+User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
@@ -167,10 +168,11 @@ class ExchangeTokenService:
 
         AuditLog.objects.create(
             user=user,
-            action='exchange_token_used' if success else 'exchange_token_failed',
+            event_type='security_event',
+            description=f'Exchange token {"used" if success else "failed"} for auto-login',
             ip_address=request_meta.get('ip_address', ''),
             user_agent=request_meta.get('user_agent', ''),
-            details={
+            metadata={
                 'auto_login': True,
                 'method': 'email_verification_exchange'
             },
