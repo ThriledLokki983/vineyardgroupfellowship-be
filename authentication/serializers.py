@@ -24,6 +24,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import extend_schema_field
 
 from .models import UserSession, AuditLog, TokenBlacklist
 from profiles.models import UserProfileBasic as UserProfile
@@ -636,6 +637,7 @@ class AuthResponseSerializer(serializers.Serializer):
         help_text="Basic user information"
     )
 
+    @extend_schema_field(serializers.DictField())
     def get_user(self, obj):
         """Return basic user information."""
         if 'user' in obj:
@@ -687,6 +689,7 @@ class UserSessionSerializer(serializers.ModelSerializer):
             'user_agent', 'city', 'country', 'last_activity_at'
         ]
 
+    @extend_schema_field(serializers.DictField())
     def get_device_info(self, obj):
         """Return parsed device information."""
         if obj.user_agent:
@@ -731,6 +734,7 @@ class UserSessionSerializer(serializers.ModelSerializer):
             return device_info
         return None
 
+    @extend_schema_field(serializers.DictField())
     def get_location(self, obj):
         """Return location information from IP address."""
         return {
@@ -739,6 +743,7 @@ class UserSessionSerializer(serializers.ModelSerializer):
             'ip': obj.ip_address or 'Unknown'
         }
 
+    @extend_schema_field(serializers.BooleanField())
     def get_is_current(self, obj):
         """Check if this is the current session."""
         request = self.context.get('request')

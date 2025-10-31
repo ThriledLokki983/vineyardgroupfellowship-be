@@ -17,12 +17,12 @@ if 'build' in django_settings_module:
 else:
     # Use environment-based selection for normal operations
     ENVIRONMENT = config('DJANGO_ENVIRONMENT', default='development')
-    
+
     if ENVIRONMENT == 'production':
         from .production import *
     elif ENVIRONMENT == 'testing':
         from .testing import *  # We'll create this if needed
     else:
         from .development import *
-    
+
     print(f"🎛️  Environment: {ENVIRONMENT}")

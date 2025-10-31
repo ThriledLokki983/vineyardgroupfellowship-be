@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from PIL import Image
 from io import BytesIO
+from drf_spectacular.utils import extend_schema_field
 
 from .models import UserProfileBasic, ProfilePhoto, ProfileCompletenessTracker
 
@@ -113,12 +114,14 @@ class ProfilePhotoSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
 
+    @extend_schema_field(serializers.URLField(allow_null=True))
     def get_photo_url(self, obj):
         """Get the full URL for the photo."""
         if obj.photo:
             return self.context['request'].build_absolute_uri(obj.photo.url)
         return None
 
+    @extend_schema_field(serializers.URLField(allow_null=True))
     def get_thumbnail_url(self, obj):
         """Get the full URL for the thumbnail."""
         if obj.thumbnail:
@@ -223,6 +226,7 @@ class ProfileCompletenessSerializer(serializers.ModelSerializer):
             'last_calculated_at',
         ]
 
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_recommendations(self, obj):
         """Generate recommendations for improving profile completeness."""
         recommendations = []
@@ -316,6 +320,7 @@ class UserProfilePublicSerializer(serializers.ModelSerializer):
             'created_at',
         ]
 
+    @extend_schema_field(serializers.URLField(allow_null=True))
     def get_photo_url(self, obj):
         """Get photo URL if visible to current user."""
         try:
@@ -333,6 +338,7 @@ class UserProfilePublicSerializer(serializers.ModelSerializer):
             pass
         return None
 
+    @extend_schema_field(serializers.URLField(allow_null=True))
     def get_thumbnail_url(self, obj):
         """Get thumbnail URL if visible to current user."""
         try:

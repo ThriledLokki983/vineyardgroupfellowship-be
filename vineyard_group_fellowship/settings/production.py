@@ -11,6 +11,22 @@ from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
 # ============================================================================
+# SECRET KEY VALIDATION
+# ============================================================================
+
+# Validate SECRET_KEY in production
+if SECRET_KEY.startswith('django-insecure-'):
+    raise ValueError(
+        "Production SECRET_KEY must not use the default insecure key. "
+        "Please set a proper SECRET_KEY environment variable."
+    )
+
+if len(SECRET_KEY) < 50:
+    raise ValueError(
+        "Production SECRET_KEY must be at least 50 characters long for security."
+    )
+
+# ============================================================================
 # MIDDLEWARE - Production
 # ============================================================================
 
@@ -41,7 +57,8 @@ if ALLOWED_HOSTS_ENV:
         ALLOWED_HOSTS = ['*']
     else:
         # Split by comma and strip whitespace
-        ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
+        ALLOWED_HOSTS = [host.strip()
+                         for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
 else:
     # Fallback to hardcoded values
     ALLOWED_HOSTS = [
@@ -90,12 +107,17 @@ if DATABASE_URL:
 else:
     # Fallback to individual variables (Railway style)
     # Railway provides these as PGHOST, PGDATABASE, etc.
-    db_name = config('POSTGRES_DB', default=config('PGDATABASE', default=config('DB_NAME', default='dummy')))
-    db_user = config('POSTGRES_USER', default=config('PGUSER', default=config('DB_USER', default='dummy')))
-    db_password = config('POSTGRES_PASSWORD', default=config('PGPASSWORD', default=config('DB_PASSWORD', default='dummy')))
-    db_host = config('POSTGRES_HOST', default=config('PGHOST', default=config('DB_HOST', default='dummy')))
-    db_port = config('POSTGRES_PORT', default=config('PGPORT', default=config('DB_PORT', default=5432)), cast=int)
-    
+    db_name = config('POSTGRES_DB', default=config(
+        'PGDATABASE', default=config('DB_NAME', default='dummy')))
+    db_user = config('POSTGRES_USER', default=config(
+        'PGUSER', default=config('DB_USER', default='dummy')))
+    db_password = config('POSTGRES_PASSWORD', default=config(
+        'PGPASSWORD', default=config('DB_PASSWORD', default='dummy')))
+    db_host = config('POSTGRES_HOST', default=config(
+        'PGHOST', default=config('DB_HOST', default='dummy')))
+    db_port = config('POSTGRES_PORT', default=config(
+        'PGPORT', default=config('DB_PORT', default=5432)), cast=int)
+
     # Check if we have valid database configuration
     if db_host == 'dummy' or db_name == 'dummy':
         raise ValueError(
@@ -105,7 +127,7 @@ else:
             "3. DB_HOST, DB_NAME, DB_USER, DB_PASSWORD environment variables\n"
             f"Current values: HOST={db_host}, NAME={db_name}"
         )
-    
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -194,10 +216,10 @@ CORS_ALLOWED_ORIGINS = [
     "https://vineyardgroupfellowship.org",       # Primary frontend domain
     "https://www.vineyardgroupfellowship.org",   # www subdomain
     "https://vineyard-group-fellowship.org",     # Legacy domain
-    "https://www.vineyard-group-fellowship.org", # Legacy www subdomain
+    "https://www.vineyard-group-fellowship.org",  # Legacy www subdomain
     # Removed backend URL - backends don't need CORS to themselves
     "https://vineyard-group-fellowship.site",    # Alternative domain
-    "https://www.vineyard-group-fellowship.site", # Alternative www subdomain
+    "https://www.vineyard-group-fellowship.site",  # Alternative www subdomain
     # Backend Railway domain (if needed for admin)
     "https://vineyard-group-fellowship-production.up.railway.app",
     # Frontend Railway domain

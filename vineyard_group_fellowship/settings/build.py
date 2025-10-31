@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',   # Required for collectstatic
     'rest_framework',               # For DRF static files
     'corsheaders',                  # For CORS static files
-    
+
     # Local apps (needed for static files and model definitions)
     'core',
     'authentication',
