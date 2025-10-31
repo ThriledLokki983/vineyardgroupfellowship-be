@@ -41,15 +41,17 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
 ]
 
-# Minimal installed apps for collectstatic
+# Minimal installed apps for collectstatic - include core Django apps that are dependencies
 INSTALLED_APPS = [
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'corsheaders',
+    'django.contrib.contenttypes',  # Required by auth and other apps
+    'django.contrib.auth',          # Required by custom user models
+    'django.contrib.staticfiles',   # Required for collectstatic
+    'rest_framework',               # For DRF static files
+    'corsheaders',                  # For CORS static files
     
-    # Local apps (needed for static files)
+    # Local apps (needed for static files and model definitions)
     'core',
-    'authentication', 
+    'authentication',
     'profiles',
     'privacy',
     'monitoring',

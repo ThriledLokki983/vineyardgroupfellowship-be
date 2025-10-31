@@ -191,11 +191,13 @@ X_FRAME_OPTIONS = 'DENY'
 
 # Configure for your production frontend domain
 CORS_ALLOWED_ORIGINS = [
-    "https://vineyard-group-fellowship.org",
-    "https://www.vineyard-group-fellowship.org",
+    "https://vineyardgroupfellowship.org",       # Primary frontend domain
+    "https://www.vineyardgroupfellowship.org",   # www subdomain
+    "https://vineyard-group-fellowship.org",     # Legacy domain
+    "https://www.vineyard-group-fellowship.org", # Legacy www subdomain
     # Removed backend URL - backends don't need CORS to themselves
-    "https://vineyard-group-fellowship.site",  # Alternative domain
-    "https://www.vineyard-group-fellowship.site",  # Alternative www subdomain
+    "https://vineyard-group-fellowship.site",    # Alternative domain
+    "https://www.vineyard-group-fellowship.site", # Alternative www subdomain
     # Backend Railway domain (if needed for admin)
     "https://vineyard-group-fellowship-production.up.railway.app",
     # Frontend Railway domain
