@@ -44,9 +44,12 @@ else:
         config('RAILWAY_PUBLIC_DOMAIN', default=''),
         config('CUSTOM_DOMAIN', default=''),
         'healthcheck.railway.app',  # Railway health check hostname
-        'vineyard-group-fellowship.org',  # Primary frontend domain
-        'www.vineyard-group-fellowship.org',  # www subdomain
-        'api.vineyard-group-fellowship.org',  # API subdomain
+        'api.vineyardgroupfellowship.org',  # Primary API domain
+        'vineyardgroupfellowship.org',  # Primary frontend domain
+        'www.vineyardgroupfellowship.org',  # www subdomain
+        'vineyard-group-fellowship.org',  # Legacy domain
+        'www.vineyard-group-fellowship.org',  # Legacy www subdomain
+        'api.vineyard-group-fellowship.org',  # Legacy API subdomain
         'vineyard-group-fellowship.site',  # Alternative domain
         'www.vineyard-group-fellowship.site',  # Alternative www subdomain
         '.railway.app',    # Railway subdomains
@@ -127,15 +130,15 @@ SENDGRID_API_KEY = config('SENDGRID_API_KEY', default='')
 
 # Email settings - Using domain-authenticated SendGrid email
 DEFAULT_FROM_EMAIL = config(
-    'DEFAULT_FROM_EMAIL', default='Vineyard Group Fellowship <info@vineyard-group-fellowship.org>')
+    'DEFAULT_FROM_EMAIL', default='Vineyard Group Fellowship <info@vineyardgroupfellowship.org>')
 SERVER_EMAIL = config(
-    'SERVER_EMAIL', default='Vineyard Group Fellowship System <info@vineyard-group-fellowship.org>')
+    'SERVER_EMAIL', default='Vineyard Group Fellowship System <info@vineyardgroupfellowship.org>')
 
 # Additional email addresses for specific purposes
 SUPPORT_EMAIL = config(
-    'SUPPORT_EMAIL', default='info@vineyard-group-fellowship.org')
+    'SUPPORT_EMAIL', default='info@vineyardgroupfellowship.org')
 NOREPLY_EMAIL = config(
-    'NOREPLY_EMAIL', default='noreply@vineyard-group-fellowship.org')
+    'NOREPLY_EMAIL', default='noreply@vineyardgroupfellowship.org')
 
 # Alternative: Use django-anymail (uncomment to switch)
 # EMAIL_BACKEND = 'anymail.backends.sendgrid.EmailBackend'
