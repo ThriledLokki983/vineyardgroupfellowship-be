@@ -73,7 +73,7 @@ USER django
 # Collect static files with environment variables for build
 # nosec - These are dummy values only used for build-time static collection
 ENV SECRET_KEY=build-time-secret-key-not-for-production \
-    DJANGO_ENVIRONMENT=production \
+    DJANGO_SETTINGS_MODULE=vineyard_group_fellowship.settings.build \
     DB_NAME=dummy \
     DB_USER=dummy \
     DB_PASSWORD=dummy \
