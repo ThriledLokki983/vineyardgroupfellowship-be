@@ -196,6 +196,73 @@ class AuthenticationService:
     """
 
     @staticmethod
+    def authenticate_user(validated_data: Dict[str, Any], request) -> Dict[str, Any]:
+        """
+        Authenticate user and create session with JWT tokens.
+
+        Args:
+            validated_data: Dictionary containing user and session data from serializer
+            request: HTTP request object
+
+        Returns:
+            Dict containing access_token, refresh_token, user, session, and metadata
+        """
+        user = validated_data['user']
+        device_name = validated_data.get('device_name', 'Unknown Device')
+        device_fingerprint = validated_data.get('device_fingerprint', '')
+        remember_me = validated_data.get('remember_me', False)
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+
+        # Extract request metadata
+        request_meta = {
+            'device_fingerprint': device_fingerprint or AuthenticationService.get_device_fingerprint(request),
+            'device_name': device_name,
+            'user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown'),
+            'ip_address': request.META.get('REMOTE_ADDR', ''),
+        }
+
+        # Create user session
+        from .models import UserSession
+        session = UserSession.objects.create(
+            user=user,
+            device_fingerprint=request_meta['device_fingerprint'],
+            device_name=request_meta['device_name'],
+            user_agent=request_meta['user_agent'],
+            ip_address=request_meta['ip_address'],
+            refresh_token_jti=str(refresh['jti']),
+            session_key=f"{refresh['jti'][:24]}_{str(int(timezone.now().timestamp()))[:8]}",
+            expires_at=timezone.now() + timedelta(days=14 if remember_me else 7)
+        )
+
+        # Log successful login
+        AuditLog.objects.create(
+            user=user,
+            event_type='login_success',
+            description='User logged in successfully',
+            ip_address=request_meta['ip_address'],
+            user_agent=request_meta['user_agent'],
+            session_id=str(session.id),
+            success=True,
+            risk_level='low',
+            metadata={
+                'device_name': device_name,
+                'remember_me': remember_me
+            }
+        )
+
+        return {
+            'access_token': str(access_token),
+            'refresh_token': str(refresh),
+            'user': user,
+            'session': session,
+            'expires_in': 900,  # 15 minutes
+            'token_type': 'Bearer'
+        }
+
+    @staticmethod
     def get_device_fingerprint(request) -> str:
         """
         Generate a device fingerprint from request headers.
