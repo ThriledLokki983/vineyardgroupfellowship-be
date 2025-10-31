@@ -21,9 +21,18 @@ if SECRET_KEY.startswith('django-insecure-'):
         "Please set a proper SECRET_KEY environment variable."
     )
 
-if len(SECRET_KEY) < 50:
+if len(SECRET_KEY) < 32:
     raise ValueError(
-        "Production SECRET_KEY must be at least 50 characters long for security."
+        "Production SECRET_KEY must be at least 32 characters long for security. "
+        f"Current length: {len(SECRET_KEY)}"
+    )
+
+# Additional security check for character diversity
+unique_chars = len(set(SECRET_KEY))
+if unique_chars < 10:
+    raise ValueError(
+        f"Production SECRET_KEY has insufficient character diversity ({unique_chars} unique characters). "
+        "Please use a more complex secret key."
     )
 
 # ============================================================================
