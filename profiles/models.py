@@ -66,6 +66,14 @@ class UserProfileBasic(models.Model):
         default='private'
     )
 
+    # Leadership information
+    leadership_info = models.JSONField(
+        _('leadership information'),
+        default=dict,
+        blank=True,
+        help_text=_('Leadership-related information and permissions')
+    )
+
     # Timestamps
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
@@ -83,6 +91,40 @@ class UserProfileBasic(models.Model):
     def display_name_or_email(self):
         """Return display name or fall back to email."""
         return self.display_name or self.user.email.split('@')[0]
+
+    @property
+    def can_lead_group(self):
+        """Check if user can lead groups."""
+        return self.leadership_info.get('can_lead_group', False)
+
+    @can_lead_group.setter
+    def can_lead_group(self, value):
+        """Set whether user can lead groups."""
+        self.leadership_info['can_lead_group'] = bool(value)
+
+    def set_leadership_permission(self, permission_key, value):
+        """
+        Set a leadership permission.
+        
+        Args:
+            permission_key: The permission key (e.g., 'can_lead_group')
+            value: The permission value
+        """
+        self.leadership_info[permission_key] = value
+        self.save(update_fields=['leadership_info', 'updated_at'])
+
+    def get_leadership_permission(self, permission_key, default=None):
+        """
+        Get a leadership permission.
+        
+        Args:
+            permission_key: The permission key
+            default: Default value if key not found
+            
+        Returns:
+            The permission value or default
+        """
+        return self.leadership_info.get(permission_key, default)
 
 
 class ProfilePhoto(models.Model):

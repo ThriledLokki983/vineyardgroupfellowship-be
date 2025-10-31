@@ -34,6 +34,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
             'bio',
             'timezone',
             'profile_visibility',
+            'leadership_info',
             'display_name_or_email',
             'email',
             'date_joined',

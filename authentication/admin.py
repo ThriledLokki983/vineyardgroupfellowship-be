@@ -136,6 +136,10 @@ class UserProfileBasicInline(admin.StackedInline):
         (_('Privacy Settings'), {
             'fields': ('profile_visibility',)
         }),
+        (_('Leadership Information'), {
+            'fields': ('leadership_info',),
+            'description': _('Leadership permissions and information (JSON format)')
+        }),
         (_('Timestamps'), {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
