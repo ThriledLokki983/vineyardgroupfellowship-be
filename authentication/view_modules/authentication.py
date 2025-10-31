@@ -258,10 +258,12 @@ def login_view(request):
 
         # Set refresh token as httpOnly cookie
         remember_me = serializer.validated_data.get('remember_me', False)
+        max_age = 14 * 24 * 60 * 60 if remember_me else 7 * \
+            24 * 60 * 60  # 14 days or 7 days
         response = set_refresh_token_cookie(
             response,
             auth_data['refresh_token'],
-            remember_me=remember_me
+            max_age=max_age
         )
 
         logger.info(
