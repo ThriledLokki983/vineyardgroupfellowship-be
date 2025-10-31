@@ -83,8 +83,8 @@ else:
         'api.vineyardgroupfellowship.org',  # Primary API domain
         'vineyardgroupfellowship.org',  # Primary frontend domain
         'www.vineyardgroupfellowship.org',  # www subdomain
-        'vineyard-group-fellowship.org',  # Legacy domain
-        'www.vineyard-group-fellowship.org',  # Legacy www subdomain
+        'vineyardgroupfellowship.org',  # Legacy domain
+        'www.vineyardgroupfellowship.org',  # Legacy www subdomain
         'api.vineyardgroupfellowship.org',  # Legacy API subdomain
         'vineyard-group-fellowship.site',  # Alternative domain
         'www.vineyard-group-fellowship.site',  # Alternative www subdomain
@@ -220,7 +220,7 @@ X_FRAME_OPTIONS = 'DENY'
 # ============================================================================
 
 # Cross-Origin Configuration Summary:
-# Frontend: https://vineyard-group-fellowship.org
+# Frontend: https://vineyardgroupfellowship.org
 # Backend:  https://api.vineyardgroupfellowship.org
 #
 # All cookies must use SameSite='None' + Secure=True for cross-origin requests
@@ -230,8 +230,8 @@ X_FRAME_OPTIONS = 'DENY'
 CORS_ALLOWED_ORIGINS = [
     "https://vineyardgroupfellowship.org",       # Primary frontend domain
     "https://www.vineyardgroupfellowship.org",   # www subdomain
-    "https://vineyard-group-fellowship.org",     # Legacy domain
-    "https://www.vineyard-group-fellowship.org",  # Legacy www subdomain
+    "https://vineyardgroupfellowship.org",     # Legacy domain
+    "https://www.vineyardgroupfellowship.org",  # Legacy www subdomain
     # Removed backend URL - backends don't need CORS to themselves
     "https://vineyard-group-fellowship.site",    # Alternative domain
     "https://www.vineyard-group-fellowship.site",  # Alternative www subdomain
@@ -279,7 +279,7 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 # Secure cookies
 CSRF_COOKIE_SECURE = True
-# Required for cross-origin requests (vineyard-group-fellowship.org -> api.vineyardgroupfellowship.org)
+# Required for cross-origin requests (vineyardgroupfellowship.org -> api.vineyardgroupfellowship.org)
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_HTTPONLY = False  # Allow frontend JS to read CSRF token
 CSRF_COOKIE_NAME = 'csrftoken'  # Standard Django CSRF cookie name
@@ -303,7 +303,7 @@ SESSION_COOKIE_DOMAIN = None  # Don't restrict domain for cross-origin
 # Enforce secure cookies in production (HTTPS only)
 REFRESH_TOKEN_COOKIE_SECURE = True  # HTTPS only
 
-# Cross-origin cookie settings for vineyard-group-fellowship.org -> api.vineyardgroupfellowship.org
+# Cross-origin cookie settings for vineyardgroupfellowship.org -> api.vineyardgroupfellowship.org
 REFRESH_TOKEN_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
 REFRESH_TOKEN_COOKIE_DOMAIN = None  # Don't restrict domain for cross-origin
 
@@ -436,9 +436,9 @@ SIMPLE_JWT.update({
 # ============================================================================
 
 SITE_NAME = 'Vineyard Group Fellowship'
-SITE_DOMAIN = config('CUSTOM_DOMAIN', default='vineyard-group-fellowship.org')
+SITE_DOMAIN = config('CUSTOM_DOMAIN', default='vineyardgroupfellowship.org')
 FRONTEND_URL = config(
-    'FRONTEND_URL', default='https://vineyard-group-fellowship.org')
+    'FRONTEND_URL', default='https://vineyardgroupfellowship.org')
 BACKEND_URL = config(
     'BACKEND_URL', default='https://api.vineyardgroupfellowship.org')
 

@@ -315,12 +315,12 @@ SPECTACULAR_SETTINGS = {
     'SERVERS': [
         {'url': 'http://localhost:8001/api/v1/',
             'description': 'Development server'},
-        {'url': 'https://api.vineyard-group-fellowship.com/v1/',
+        {'url': 'https://api.vineyardgroupfellowship.org/api/v1/',
             'description': 'Production server'},
     ],
     'EXTERNAL_DOCS': {
         'description': 'REST API for Vineyard Group Fellowship Documentation',
-        'url': 'https://docs.vineyard-group-fellowship.com/',
+        'url': 'https://api.vineyardgroupfellowship.org/api/v1/',
     },
     # Schema generation compatibility settings
     'SCHEMA_COERCE_PATH_PK': True,

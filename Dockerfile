@@ -85,7 +85,7 @@ ENV SECRET_KEY=build-time-secret-key-not-for-production \
     PGHOST=dummy \
     PGPORT=5432 \
     EMAIL_HOST_PASSWORD=dummy \
-    DEFAULT_FROM_EMAIL=build@vineyard-group-fellowship.org
+    DEFAULT_FROM_EMAIL=build@vineyardgroupfellowship.org
 RUN python manage.py collectstatic --noinput
 
 # Health check - Railway will override this with its own health check

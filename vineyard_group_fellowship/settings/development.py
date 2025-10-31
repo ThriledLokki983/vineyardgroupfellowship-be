@@ -53,7 +53,7 @@ if SENDGRID_API_KEY:
     # Custom SendGrid backend enabled
     EMAIL_BACKEND = 'core.email_backends.SendGridWebAPIBackend'
     DEFAULT_FROM_EMAIL = config(
-        'DEFAULT_FROM_EMAIL', default='Vineyard Group Fellowship <info@vineyard-group-fellowship.org>')
+        'DEFAULT_FROM_EMAIL', default='Vineyard Group Fellowship <info@vineyardgroupfellowship.org>')
     SERVER_EMAIL = config(
         'SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
     SUPPORT_EMAIL = config(

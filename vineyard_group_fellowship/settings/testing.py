@@ -41,7 +41,7 @@ SENDGRID_API_KEY = config('SENDGRID_API_KEY', default='')
 if SENDGRID_API_KEY and config('TEST_WITH_SENDGRID', default=False, cast=bool):
     EMAIL_BACKEND = 'core.email_backends.SendGridWebAPIBackend'
     DEFAULT_FROM_EMAIL = config(
-        'DEFAULT_FROM_EMAIL', default='info@vineyard-group-fellowship.org')
+        'DEFAULT_FROM_EMAIL', default='info@vineyardgroupfellowship.org')
 
 # ============================================================================
 # PASSWORD HASHING - Testing

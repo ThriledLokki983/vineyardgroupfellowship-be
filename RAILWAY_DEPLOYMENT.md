@@ -32,8 +32,8 @@ SECRET_KEY=your-super-secret-production-key-here
 #### Email Configuration (SendGrid)
 ```bash
 SENDGRID_API_KEY=SG.your_sendgrid_api_key_here
-DEFAULT_FROM_EMAIL=noreply@vineyard-group-fellowship.org
-SUPPORT_EMAIL=support@vineyard-group-fellowship.org
+DEFAULT_FROM_EMAIL=noreply@vineyardgroupfellowship.org
+SUPPORT_EMAIL=support@vineyardgroupfellowship.org
 ```
 
 #### Optional - Custom Domain
