@@ -123,6 +123,9 @@ class UserProfileBasicInline(admin.StackedInline):
     model = UserProfileBasic
     can_delete = False
     verbose_name_plural = 'Basic Profile'
+    
+    from profiles.admin import UserProfileBasicAdminForm
+    form = UserProfileBasicAdminForm
 
     readonly_fields = (
         'created_at',
@@ -136,9 +139,9 @@ class UserProfileBasicInline(admin.StackedInline):
         (_('Privacy Settings'), {
             'fields': ('profile_visibility',)
         }),
-        (_('Leadership Information'), {
-            'fields': ('leadership_info',),
-            'description': _('Leadership permissions and information (JSON format)')
+        (_('Leadership Permissions'), {
+            'fields': ('can_lead_group',),
+            'description': _('Set leadership permissions for this user')
         }),
         (_('Timestamps'), {
             'fields': ('created_at', 'updated_at'),

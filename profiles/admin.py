@@ -2,6 +2,7 @@
 Django admin configuration for profiles app.
 """
 
+from django import forms
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
@@ -10,9 +11,39 @@ from django.utils.safestring import mark_safe
 from .models import UserProfileBasic, ProfilePhoto, ProfileCompletenessTracker
 
 
+class UserProfileBasicAdminForm(forms.ModelForm):
+    """Custom form for UserProfileBasic with individual leadership fields."""
+    
+    can_lead_group = forms.BooleanField(
+        required=False,
+        label='Can Lead Group',
+        help_text='Allow this user to lead groups'
+    )
+    
+    class Meta:
+        model = UserProfileBasic
+        fields = '__all__'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Populate leadership fields from JSON
+        if self.instance and self.instance.pk:
+            self.fields['can_lead_group'].initial = self.instance.leadership_info.get('can_lead_group', False)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Save leadership fields to JSON
+        instance.leadership_info['can_lead_group'] = self.cleaned_data.get('can_lead_group', False)
+        if commit:
+            instance.save()
+        return instance
+
+
 @admin.register(UserProfileBasic)
 class UserProfileAdmin(admin.ModelAdmin):
     """Comprehensive admin interface for user profiles."""
+    
+    form = UserProfileBasicAdminForm
 
     list_display = [
         'user', 'display_name', 'profile_visibility_display', 'is_verified', 'is_complete', 'created_at'
@@ -140,9 +171,9 @@ class UserProfileAdmin(admin.ModelAdmin):
         ('Privacy Settings', {
             'fields': ('profile_visibility',)
         }),
-        ('Leadership Information', {
-            'fields': ('leadership_info',),
-            'description': 'Leadership permissions and information (JSON format). Example: {"can_lead_group": true}'
+        ('Leadership Permissions', {
+            'fields': ('can_lead_group',),
+            'description': 'Set leadership permissions for this user'
         }),
         ('Profile Summary', {
             'fields': ('user_profile_info', 'completion_status'),
