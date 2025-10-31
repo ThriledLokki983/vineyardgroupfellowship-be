@@ -1,0 +1,420 @@
+{% extends "base.html" %} {% block title %}Health Check - AddictFree{%endblock%}
+{% block extra_styles %}
+<style>
+  /* Status Color System */
+
+  .health-container {
+    margin: 0 auto;
+  }
+
+  .health-header {
+    text-align: center;
+    margin-bottom: var(--size-12);
+  }
+
+  .health-title {
+    color: var(--brand-primary);
+    font-size: var(--font-size-6);
+    font-weight: var(--font-weight-7);
+    margin-bottom: var(--size-3);
+    letter-spacing: -0.02em;
+  }
+
+  .health-subtitle {
+    color: rgba(96, 48, 0, 0.7);
+    font-size: var(--font-size-3);
+    font-weight: var(--font-weight-4);
+  }
+
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-3);
+    padding: var(--size-4) var(--size-8);
+    border-radius: var(--radius-3);
+    font-size: var(--font-size-3);
+    font-weight: var(--font-weight-6);
+    margin-bottom: var(--size-12);
+  }
+
+  .status-indicator.healthy {
+    background: rgba(23, 93, 45, 0.1);
+    border: 1px solid rgba(23, 93, 45, 0.3);
+    color: #175d2d;
+  }
+
+  .status-indicator.degraded {
+    background: rgba(235, 140, 0, 0.1);
+    border: 1px solid rgba(235, 140, 0, 0.3);
+    color: #eb8c00;
+  }
+
+  .status-indicator.unhealthy {
+    background: rgba(197, 42, 26, 0.1);
+    border: 1px solid rgba(197, 42, 26, 0.3);
+    color: #c52a1a;
+  }
+
+  .status-icon {
+    font-size: 2rem;
+    animation: pulse 2s var(--ease-out) infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+
+  .health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--size-6);
+    margin-bottom: var(--size-12);
+  }
+
+  .health-card {
+    background: white;
+    border-radius: var(--radius-3);
+    padding: var(--size-8);
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(96, 48, 0, 0.08);
+    transition: all var(--animation-duration-fast) var(--ease-out);
+  }
+
+  .health-card:hover {
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-2px);
+  }
+
+  .health-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--size-6);
+  }
+
+  .health-card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--size-3);
+    color: var(--brand-primary);
+    font-size: var(--font-size-4);
+    font-weight: var(--font-weight-6);
+  }
+
+  .health-card-icon {
+    font-size: 1.75rem;
+    filter: grayscale(20%);
+  }
+
+  .health-badge {
+    padding: var(--size-1) var(--size-3);
+    border-radius: var(--radius-2);
+    font-size: var(--font-size-0);
+    font-weight: var(--font-weight-6);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .health-badge.healthy {
+    background: rgba(23, 93, 45, 0.1);
+    color: #175d2d;
+    border: 1px solid rgba(23, 93, 45, 0.3);
+  }
+
+  .health-badge.warning {
+    background: rgba(235, 140, 0, 0.1);
+    color: #eb8c00;
+    border: 1px solid rgba(235, 140, 0, 0.3);
+  }
+
+  .health-badge.unhealthy {
+    background: rgba(197, 42, 26, 0.1);
+    color: #c52a1a;
+    border: 1px solid rgba(197, 42, 26, 0.3);
+  }
+
+  .health-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-3);
+  }
+
+  .health-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--size-3) 0;
+    border-bottom: 1px solid rgba(96, 48, 0, 0.08);
+  }
+
+  .health-metric:last-child {
+    border-bottom: none;
+  }
+
+  .health-metric-label {
+    color: rgba(96, 48, 0, 0.6);
+    font-size: var(--font-size-1);
+    font-weight: var(--font-weight-4);
+  }
+
+  .health-metric-value {
+    color: var(--brand-primary);
+    font-size: var(--font-size-2);
+    font-weight: var(--font-weight-6);
+  }
+
+  .health-metric-value code {
+    background: rgba(96, 48, 0, 0.05);
+    padding: var(--size-1) var(--size-2);
+    border-radius: var(--radius-2);
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: var(--font-size-1);
+  }
+
+  .system-info {
+    background: white;
+    border-radius: var(--radius-3);
+    padding: var(--size-8);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .system-info h2 {
+    color: var(--brand-primary);
+    font-size: var(--font-size-4);
+    font-weight: var(--font-weight-6);
+    margin-bottom: var(--size-6);
+    display: flex;
+    align-items: center;
+    gap: var(--size-3);
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--size-6);
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+  }
+
+  .info-label {
+    color: rgba(96, 48, 0, 0.5);
+    font-size: var(--font-size-0);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: var(--font-weight-6);
+  }
+
+  .info-value {
+    color: var(--brand-primary);
+    font-size: var(--font-size-2);
+    font-weight: var(--font-weight-6);
+  }
+
+  .refresh-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-2);
+    background: var(--brand-primary);
+    color: white;
+    padding: var(--size-3) var(--size-6);
+    border-radius: var(--radius-2);
+    font-size: var(--font-size-2);
+    font-weight: var(--font-weight-6);
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all var(--animation-duration-fast) var(--ease-out);
+    margin-top: var(--size-8);
+  }
+
+  .refresh-button:hover {
+    background: var(--accent-warm);
+    color: var(--brand-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-2);
+    color: var(--brand-primary);
+    text-decoration: none;
+    font-weight: var(--font-weight-6);
+    font-size: var(--font-size-2);
+    margin-bottom: var(--size-6);
+    transition: color var(--animation-duration-fast) var(--ease-out);
+  }
+
+  .back-link:hover {
+    color: var(--accent-warm);
+  }
+
+  .timestamp {
+    text-align: center;
+    color: rgba(96, 48, 0, 0.5);
+    font-size: var(--font-size-1);
+    margin-top: var(--size-8);
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="health-container">
+  <a
+    href="/"
+    class="back-link"
+    >← Back to Dashboard</a
+  >
+
+  <div class="health-header">
+    <h1 class="health-title">System Health Check</h1>
+    <p class="health-subtitle">Monitor platform status and performance</p>
+  </div>
+
+  <div style="text-align: center">
+    <div class="status-indicator {{ overall_status }}">
+      <span class="status-icon">{% if overall_status == 'healthy' %}✓{% else %}✗{% endif %}</span>
+      <span>System {% if overall_status == 'healthy' %}Healthy{% elif overall_status == 'degraded' %}Degraded{% else %}Issues Detected{% endif %}</span>
+    </div>
+  </div>
+
+  <div class="health-grid">
+    <!-- Database Health -->
+    <div class="health-card">
+      <div class="health-card-header">
+        <div class="health-card-title">
+          <span class="health-card-icon">💾</span>
+          <span>Database</span>
+        </div>
+        <span class="health-badge {% if db_status == 'operational' %}healthy{% else %}unhealthy{% endif %}">
+          {{ db_status }}
+        </span>
+      </div>
+      <div class="health-card-content">
+        <div class="health-metric">
+          <span class="health-metric-label">Connection</span>
+          <span class="health-metric-value">{% if db_status == 'operational' %}✓ Active{% else %}✗ Failed{% endif %}</span>
+        </div>
+        <div class="health-metric">
+          <span class="health-metric-label">Type</span>
+          <span class="health-metric-value"><code>{{ db_engine }}</code></span>
+        </div>
+        <div class="health-metric">
+          <span class="health-metric-label">Response Time</span>
+          <span class="health-metric-value">{% if db_status == 'operational' %}{{ db_response_time }}ms{% else %}N/A{% endif %}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cache Health -->
+    <div class="health-card">
+      <div class="health-card-header">
+        <div class="health-card-title">
+          <span class="health-card-icon">⚡</span>
+          <span>Cache</span>
+        </div>
+        <span class="health-badge {% if cache_status == 'operational' %}healthy{% else %}unhealthy{% endif %}">
+          {{ cache_status }}
+        </span>
+      </div>
+      <div class="health-card-content">
+        <div class="health-metric">
+          <span class="health-metric-label">Connection</span>
+          <span class="health-metric-value">{% if cache_status == 'operational' %}✓ Active{% else %}✗ Failed{% endif %}</span>
+        </div>
+        <div class="health-metric">
+          <span class="health-metric-label">Type</span>
+          <span class="health-metric-value"><code>{{ cache_backend }}</code></span>
+        </div>
+        <div class="health-metric">
+          <span class="health-metric-label">Response Time</span>
+          <span class="health-metric-value">{% if cache_status == 'operational' %}{{ cache_response_time }}ms{% else %}N/A{% endif %}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Health -->
+        <div class="health-card">
+          <div class="health-card-header">
+            <div class="health-card-title">
+              <span class="health-card-icon">🔌</span>
+              <span>API</span>
+            </div>
+            <span class="health-badge healthy">{{ api_status }}</span>
+          </div>
+          <div class="health-card-content">
+            <div class="health-metric">
+              <span class="health-metric-label">Status</span>
+              <span class="health-metric-value">✓ Operational</span>
+            </div>
+            <div class="health-metric">
+              <span class="health-metric-label">Version</span>
+              <span class="health-metric-value"
+                ><code>{{ api_version }}</code></span
+              >
+            </div>
+            <div class="health-metric">
+              <span class="health-metric-label">Endpoints</span>
+              <span class="health-metric-value">{{ endpoint_count }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="system-info">
+        <h2>
+          <span>📊</span>
+          <span>System Information</span>
+        </h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Environment</span>
+            <span class="info-value">{{ environment }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Django</span>
+            <span class="info-value">{{ django_version }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Python</span>
+            <span class="info-value">{{ python_version }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Debug Mode</span>
+            <span class="info-value">{{ debug_status }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Time Zone</span>
+            <span class="info-value">{{ timezone }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Language</span>
+            <span class="info-value">{{ language }}</span>
+          </div>
+        </div>
+
+        <div style="text-align: center">
+          <button
+            class="refresh-button"
+            onclick="window.location.reload()"
+          >
+            <span>🔄</span>
+            <span>Refresh Status</span>
+          </button>
+        </div>
+      </div>
+
+      <p class="timestamp">Last checked: {{ check_time }}</p>
+    </div>
+    {% endblock %}
+  </div></div
+>

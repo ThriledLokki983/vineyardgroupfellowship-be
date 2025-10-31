@@ -1,0 +1,206 @@
+{% extends "base.html" %} {% block title %}Privacy Policy - AddictFree{%
+endblock %} {% block extra_styles %}
+<style>
+  .legal-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .legal-header {
+    text-align: center;
+    margin-bottom: var(--size-12);
+  }
+
+  .legal-title {
+    color: var(--brand-primary);
+    font-size: var(--font-size-6);
+    font-weight: var(--font-weight-7);
+    margin-bottom: var(--size-3);
+    letter-spacing: -0.02em;
+  }
+
+  .legal-updated {
+    color: rgba(96, 48, 0, 0.6);
+    font-size: var(--font-size-1);
+    font-weight: var(--font-weight-4);
+  }
+
+  .legal-content {
+    background: white;
+    border-radius: var(--radius-3);
+    padding: var(--size-10);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .legal-section {
+    margin-bottom: var(--size-10);
+  }
+
+  .legal-section h2 {
+    color: var(--brand-primary);
+    font-size: var(--font-size-4);
+    font-weight: var(--font-weight-6);
+    margin-bottom: var(--size-4);
+  }
+
+  .legal-section p {
+    color: rgba(96, 48, 0, 0.8);
+    font-size: var(--font-size-2);
+    line-height: var(--font-lineheight-3);
+    margin-bottom: var(--size-4);
+  }
+
+  .legal-section ul {
+    list-style: none;
+    padding-left: var(--size-6);
+    margin-bottom: var(--size-4);
+  }
+
+  .legal-section li {
+    color: rgba(96, 48, 0, 0.8);
+    font-size: var(--font-size-2);
+    line-height: var(--font-lineheight-3);
+    margin-bottom: var(--size-2);
+    position: relative;
+  }
+
+  .legal-section li::before {
+    content: '→';
+    position: absolute;
+    left: calc(-1 * var(--size-6));
+    color: var(--accent-warm);
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-2);
+    color: var(--brand-primary);
+    text-decoration: none;
+    font-weight: var(--font-weight-6);
+    font-size: var(--font-size-2);
+    margin-bottom: var(--size-6);
+    transition: color var(--animation-duration-fast) var(--ease-out);
+  }
+
+  .back-link:hover {
+    color: var(--accent-warm);
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="legal-container">
+  <a
+    href="/"
+    class="back-link"
+    >← Back to Home</a
+  >
+
+  <div class="legal-header">
+    <h1 class="legal-title">Privacy Policy</h1>
+    <p class="legal-updated">Last Updated: October 11, 2025</p>
+  </div>
+
+  <div class="legal-content">
+    <div class="legal-section">
+      <h2>Introduction</h2>
+      <p>
+        Welcome to AddictFree. We are committed to protecting your privacy and
+        ensuring the security of your personal information. This Privacy Policy
+        explains how we collect, use, disclose, and safeguard your information
+        when you use our recovery support platform.
+      </p>
+      <p>
+        We understand the sensitive nature of addiction recovery and take extra
+        precautions to protect your data and maintain your confidentiality.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Information We Collect</h2>
+      <p
+        >We collect several types of information to provide and improve our
+        services:</p
+      >
+      <ul>
+        <li>Account information (email, username, password)</li>
+        <li>Profile data (age, recovery journey details - optional)</li>
+        <li>Usage data (interactions with the platform)</li>
+        <li>Device information (IP address, browser type)</li>
+        <li>Communications you send to us</li>
+      </ul>
+    </div>
+
+    <div class="legal-section">
+      <h2>How We Use Your Information</h2>
+      <p>Your information is used to:</p>
+      <ul>
+        <li>Provide and maintain our services</li>
+        <li>Personalize your recovery journey experience</li>
+        <li>Send important updates and notifications</li>
+        <li>Improve our platform and develop new features</li>
+        <li>Ensure platform security and prevent abuse</li>
+        <li>Comply with legal obligations</li>
+      </ul>
+    </div>
+
+    <div class="legal-section">
+      <h2>Data Security</h2>
+      <p>
+        We implement industry-standard security measures to protect your data,
+        including:
+      </p>
+      <ul>
+        <li>End-to-end encryption for sensitive data</li>
+        <li>Secure password hashing with Argon2</li>
+        <li>Regular security audits and updates</li>
+        <li>Strict access controls and authentication</li>
+        <li>Secure data transmission (HTTPS/TLS)</li>
+      </ul>
+    </div>
+
+    <div class="legal-section">
+      <h2>Your Privacy Rights</h2>
+      <p>You have the right to:</p>
+      <ul>
+        <li>Access your personal data</li>
+        <li>Request data correction or deletion</li>
+        <li>Export your data</li>
+        <li>Opt-out of communications</li>
+        <li>Request data portability</li>
+        <li>Withdraw consent at any time</li>
+      </ul>
+    </div>
+
+    <div class="legal-section">
+      <h2>Data Retention</h2>
+      <p>
+        We retain your data for as long as your account is active or as needed
+        to provide services. You can request deletion of your account and
+        associated data at any time. Some data may be retained for legal
+        compliance purposes.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Third-Party Services</h2>
+      <p>
+        We do not sell your personal information. We may share data with trusted
+        service providers who help us operate our platform, always under strict
+        confidentiality agreements.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Contact Us</h2>
+      <p>
+        If you have questions about this Privacy Policy or our data practices,
+        please contact us at:
+      </p>
+      <p>
+        <strong>Email:</strong> privacy@addictfree.com<br />
+        <strong>Support:</strong> support@addictfree.com
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

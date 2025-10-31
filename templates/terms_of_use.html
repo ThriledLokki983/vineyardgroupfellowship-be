@@ -1,0 +1,272 @@
+{% extends "base.html" %} {% block title %}Terms of Use - AddictFree{% endblock
+%} {% block extra_styles %}
+<style>
+  .legal-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .legal-header {
+    text-align: center;
+    margin-bottom: var(--size-12);
+  }
+
+  .legal-title {
+    color: var(--brand-primary);
+    font-size: var(--font-size-6);
+    font-weight: var(--font-weight-7);
+    margin-bottom: var(--size-3);
+    letter-spacing: -0.02em;
+  }
+
+  .legal-updated {
+    color: rgba(96, 48, 0, 0.6);
+    font-size: var(--font-size-1);
+    font-weight: var(--font-weight-4);
+  }
+
+  .legal-content {
+    background: white;
+    border-radius: var(--radius-3);
+    padding: var(--size-10);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .legal-section {
+    margin-bottom: var(--size-10);
+  }
+
+  .legal-section h2 {
+    color: var(--brand-primary);
+    font-size: var(--font-size-4);
+    font-weight: var(--font-weight-6);
+    margin-bottom: var(--size-4);
+  }
+
+  .legal-section p {
+    color: rgba(96, 48, 0, 0.8);
+    font-size: var(--font-size-2);
+    line-height: var(--font-lineheight-3);
+    margin-bottom: var(--size-4);
+  }
+
+  .legal-section ul {
+    list-style: none;
+    padding-left: var(--size-6);
+    margin-bottom: var(--size-4);
+  }
+
+  .legal-section li {
+    color: rgba(96, 48, 0, 0.8);
+    font-size: var(--font-size-2);
+    line-height: var(--font-lineheight-3);
+    margin-bottom: var(--size-2);
+    position: relative;
+  }
+
+  .legal-section li::before {
+    content: '→';
+    position: absolute;
+    left: calc(-1 * var(--size-6));
+    color: var(--accent-warm);
+  }
+
+  .important-notice {
+    background: rgba(244, 199, 123, 0.1);
+    border-left: 4px solid var(--accent-warm);
+    padding: var(--size-4);
+    border-radius: var(--radius-2);
+    margin-bottom: var(--size-4);
+  }
+
+  .important-notice p {
+    margin-bottom: 0;
+    font-weight: var(--font-weight-6);
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-2);
+    color: var(--brand-primary);
+    text-decoration: none;
+    font-weight: var(--font-weight-6);
+    font-size: var(--font-size-2);
+    margin-bottom: var(--size-6);
+    transition: color var(--animation-duration-fast) var(--ease-out);
+  }
+
+  .back-link:hover {
+    color: var(--accent-warm);
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="legal-container">
+  <a
+    href="/"
+    class="back-link"
+    >← Back to Home</a
+  >
+
+  <div class="legal-header">
+    <h1 class="legal-title">Terms of Use</h1>
+    <p class="legal-updated">Last Updated: October 11, 2025</p>
+  </div>
+
+  <div class="legal-content">
+    <div class="important-notice">
+      <p
+        ><strong>Important:</strong> This platform is a support tool and does
+        not replace professional medical treatment. If you're in crisis, please
+        contact emergency services or a crisis hotline immediately.</p
+      >
+    </div>
+
+    <div class="legal-section">
+      <h2>Acceptance of Terms</h2>
+      <p>
+        By accessing and using AddictFree ("the Platform"), you accept and agree
+        to be bound by these Terms of Use. If you do not agree to these terms,
+        please do not use the Platform.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Eligibility</h2>
+      <p
+        >You must be at least 18 years old to use this Platform. By using
+        AddictFree, you represent that:</p
+      >
+      <ul>
+        <li>You are at least 18 years of age</li>
+        <li>You have the legal capacity to enter into this agreement</li>
+        <li>You will use the Platform for lawful purposes only</li>
+        <li>All information you provide is accurate and truthful</li>
+      </ul>
+    </div>
+
+    <div class="legal-section">
+      <h2>User Responsibilities</h2>
+      <p>As a user of AddictFree, you agree to:</p>
+      <ul>
+        <li>Maintain the confidentiality of your account credentials</li>
+        <li>Use the Platform in a respectful and supportive manner</li>
+        <li>Not post harmful, offensive, or triggering content</li>
+        <li>Respect the privacy and anonymity of other users</li>
+        <li>Not attempt to access unauthorized areas of the Platform</li>
+        <li>Not use the Platform for commercial purposes</li>
+      </ul>
+    </div>
+
+    <div class="legal-section">
+      <h2>Medical Disclaimer</h2>
+      <p>
+        AddictFree is a peer support platform and does NOT provide medical
+        advice, diagnosis, or treatment. The Platform:
+      </p>
+      <ul>
+        <li>Is not a substitute for professional medical care</li>
+        <li>Does not provide emergency services</li>
+        <li>Should not be relied upon for medical decisions</li>
+        <li>Recommends consulting healthcare professionals</li>
+      </ul>
+      <p>
+        <strong
+          >In case of emergency, call emergency services or a crisis hotline
+          immediately.</strong
+        >
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Content and Community Guidelines</h2>
+      <p
+        >We maintain a safe and supportive community. Prohibited content
+        includes:</p
+      >
+      <ul>
+        <li>Content promoting substance abuse or self-harm</li>
+        <li>Harassment, bullying, or discrimination</li>
+        <li>Explicit or inappropriate material</li>
+        <li>Spam or commercial solicitations</li>
+        <li>False or misleading information</li>
+        <li>Content violating others' privacy</li>
+      </ul>
+    </div>
+
+    <div class="legal-section">
+      <h2>Account Termination</h2>
+      <p>
+        We reserve the right to suspend or terminate accounts that violate these
+        Terms of Use or engage in harmful behavior. You may also delete your
+        account at any time through your account settings.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Privacy and Data</h2>
+      <p>
+        Your use of AddictFree is also governed by our
+        <a
+          href="/privacy-policy/"
+          style="color: var(--brand-primary); text-decoration: underline"
+          >Privacy Policy</a
+        >. We are committed to protecting your privacy and maintaining the
+        confidentiality of your recovery journey.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Intellectual Property</h2>
+      <p>
+        All content, features, and functionality of AddictFree are owned by us
+        and protected by intellectual property laws. You may not copy, modify,
+        or distribute Platform content without permission.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Limitation of Liability</h2>
+      <p>
+        AddictFree is provided "as is" without warranties of any kind. We are
+        not liable for any indirect, incidental, or consequential damages
+        arising from your use of the Platform.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Changes to Terms</h2>
+      <p>
+        We may update these Terms of Use from time to time. Continued use of the
+        Platform after changes constitutes acceptance of the new terms. We will
+        notify users of significant changes.
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Contact Information</h2>
+      <p> For questions about these Terms of Use, please contact: </p>
+      <p>
+        <strong>Email:</strong> legal@addictfree.com<br />
+        <strong>Support:</strong> support@addictfree.com
+      </p>
+    </div>
+
+    <div class="legal-section">
+      <h2>Crisis Resources</h2>
+      <p>
+        If you're experiencing a crisis, please reach out for immediate help:
+      </p>
+      <ul>
+        <li
+          ><strong>Emergency Services:</strong> 911 (US) or your local emergency
+          number</li
+        >
+        <li><strong>Suicide Prevention Lifeline:</strong> 988 (US)</li>
+        <li><strong>Substance Abuse Hotline:</strong> 1-800-662-HELP (4357)</li>
+        <li><strong>Crisis Text Line:</strong> Text HOME to 741741</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
