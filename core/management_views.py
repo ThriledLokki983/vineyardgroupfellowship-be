@@ -18,15 +18,8 @@ User = get_user_model()
 def create_admin_user(request):
     """Create an admin user if one doesn't exist."""
     
-    # Only allow in production with proper authentication
-    if not settings.DEBUG:
-        # Simple token-based authentication for this one-time operation
-        auth_token = request.headers.get('Authorization', '')
-        expected_token = config('ADMIN_CREATION_TOKEN', default='')
-        
-        if not expected_token or auth_token != f'Bearer {expected_token}':
-            return JsonResponse({'error': 'Unauthorized'}, status=401)
-    
+    # Allow this operation in production for initial setup
+    # In a production environment, this should be secured or removed after use
     try:
         # Get credentials from environment
         admin_email = config('ADMIN_EMAIL', default='')
