@@ -57,7 +57,7 @@ User = get_user_model()
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@method_decorator(never_cache)
+@never_cache
 @ratelimit(key='user', rate='10/h', method='POST', block=True)
 def change_password_view(request):
     """
@@ -473,8 +473,8 @@ class PasswordResetConfirmView(APIView):
 
 
 # Backward compatibility function
-@method_decorator(csrf_exempt, name='dispatch')
-@method_decorator(never_cache, name='dispatch')
+@csrf_exempt
+@never_cache
 def password_reset_confirm_view(request, uidb64=None, token=None):
     """Backward compatibility wrapper for the class-based view."""
     view = PasswordResetConfirmView()

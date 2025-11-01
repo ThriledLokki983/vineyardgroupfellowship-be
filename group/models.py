@@ -97,6 +97,36 @@ class Group(models.Model):
         help_text=_('Additional leaders/facilitators of the group')
     )
 
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='created_groups',
+        verbose_name=_('created by'),
+        null=True,
+        blank=True,
+        help_text=_('User who originally created this group')
+    )
+
+    last_updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='updated_groups',
+        verbose_name=_('last updated by'),
+        null=True,
+        blank=True,
+        help_text=_('User who last updated this group')
+    )
+
+    archived_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='archived_groups',
+        verbose_name=_('archived by'),
+        null=True,
+        blank=True,
+        help_text=_('User who archived this group')
+    )
+
     # Group Photo
     photo = models.ImageField(
         _('group photo'),
@@ -165,6 +195,12 @@ class Group(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    archived_at = models.DateTimeField(
+        _('archived at'),
+        null=True,
+        blank=True,
+        help_text=_('When the group was archived (soft delete)')
+    )
 
     class Meta:
         verbose_name = _('Group')
@@ -174,6 +210,8 @@ class Group(models.Model):
             models.Index(fields=['is_active', 'is_open']),
             models.Index(fields=['leader']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['created_by']),
+            models.Index(fields=['archived_at']),
         ]
 
     def __str__(self):
@@ -198,6 +236,33 @@ class Group(models.Model):
     def can_accept_members(self):
         """Check if group can accept new members."""
         return self.is_active and self.is_open and not self.is_full
+
+    @property
+    def is_archived(self):
+        """Check if group is archived."""
+        return self.archived_at is not None
+
+    def archive(self, user=None):
+        """
+        Archive the group (soft delete).
+
+        Args:
+            user: The user who is archiving the group (optional)
+        """
+        self.archived_at = timezone.now()
+        self.archived_by = user
+        self.is_active = False
+        self.is_open = False
+        self.save(update_fields=[
+                  'archived_at', 'archived_by', 'is_active', 'is_open', 'updated_at'])
+
+    def unarchive(self):
+        """Unarchive the group and clear archive metadata."""
+        self.archived_at = None
+        self.archived_by = None
+        self.is_active = True
+        self.save(update_fields=['archived_at',
+                  'archived_by', 'is_active', 'updated_at'])
 
 
 class GroupMembership(models.Model):

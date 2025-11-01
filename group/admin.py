@@ -118,7 +118,7 @@ class GroupAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset with select_related and prefetch_related."""
         qs = super().get_queryset(request)
-        return qs.select_related('leader').prefetch_related('co_leaders', 'members')
+        return qs.select_related('leader').prefetch_related('co_leaders', 'memberships')
 
 
 @admin.register(GroupMembership)

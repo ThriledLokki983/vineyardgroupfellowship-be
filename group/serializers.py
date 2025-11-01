@@ -34,7 +34,10 @@ class GroupMemberSerializer(serializers.ModelSerializer):
 
     user_id = serializers.UUIDField(source='user.id', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
     display_name = serializers.SerializerMethodField()
+    photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = GroupMembership
@@ -42,7 +45,10 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             'id',
             'user_id',
             'email',
+            'first_name',
+            'last_name',
             'display_name',
+            'photo_url',
             'role',
             'status',
             'joined_at',
@@ -51,9 +57,26 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             'id',
             'user_id',
             'email',
+            'first_name',
+            'last_name',
             'display_name',
+            'photo_url',
             'joined_at',
         ]
+
+    def get_first_name(self, obj):
+        """Get member's first name from profile."""
+        try:
+            return obj.user.basic_profile.first_name or ''
+        except:
+            return ''
+
+    def get_last_name(self, obj):
+        """Get member's last name from profile."""
+        try:
+            return obj.user.basic_profile.last_name or ''
+        except:
+            return ''
 
     def get_display_name(self, obj):
         """Get member's display name from profile."""
@@ -61,6 +84,18 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             return obj.user.basic_profile.display_name_or_email
         except:
             return obj.user.email
+
+    def get_photo_url(self, obj):
+        """Get member's photo URL."""
+        try:
+            profile_photo = obj.user.profile_photo
+            if profile_photo and profile_photo.photo:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(profile_photo.photo.url)
+        except:
+            pass
+        return None
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -73,6 +108,14 @@ class GroupSerializer(serializers.ModelSerializer):
     co_leaders_info = GroupLeaderSerializer(
         many=True, source='co_leaders', read_only=True)
 
+    # Audit fields
+    created_by_info = GroupLeaderSerializer(
+        source='created_by', read_only=True)
+    last_updated_by_info = GroupLeaderSerializer(
+        source='last_updated_by', read_only=True)
+    archived_by_info = GroupLeaderSerializer(
+        source='archived_by', read_only=True)
+
     # Computed fields
     current_member_count = serializers.IntegerField(read_only=True)
     is_full = serializers.BooleanField(read_only=True)
@@ -84,6 +127,9 @@ class GroupSerializer(serializers.ModelSerializer):
 
     # User's membership status
     user_membership = serializers.SerializerMethodField()
+
+    # Group members list
+    group_members = serializers.SerializerMethodField()
 
     class Meta:
         model = Group
@@ -104,6 +150,13 @@ class GroupSerializer(serializers.ModelSerializer):
             'leader_info',
             'co_leaders',
             'co_leaders_info',
+            'created_by',
+            'created_by_info',
+            'last_updated_by',
+            'last_updated_by_info',
+            'archived_by',
+            'archived_by_info',
+            'archived_at',
             'photo',
             'photo_url',
             'meeting_day',
@@ -112,6 +165,7 @@ class GroupSerializer(serializers.ModelSerializer):
             'focus_areas',
             'visibility',
             'user_membership',
+            'group_members',
             'created_at',
             'updated_at',
         ]
@@ -123,8 +177,16 @@ class GroupSerializer(serializers.ModelSerializer):
             'can_accept_members',
             'leader_info',
             'co_leaders_info',
+            'created_by',
+            'created_by_info',
+            'last_updated_by',
+            'last_updated_by_info',
+            'archived_by',
+            'archived_by_info',
+            'archived_at',
             'photo_url',
             'user_membership',
+            'group_members',
             'created_at',
             'updated_at',
         ]
@@ -158,6 +220,27 @@ class GroupSerializer(serializers.ModelSerializer):
             }
         except GroupMembership.DoesNotExist:
             return None
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_group_members(self, obj):
+        """Get all group members including the leader."""
+        # Get all active memberships for this group
+        memberships = GroupMembership.objects.filter(
+            group=obj,
+            status='active'
+        ).select_related(
+            'user',
+            'user__basic_profile',
+            'user__profile_photo'
+        ).order_by('-role', 'joined_at')  # Leaders first, then by join date
+
+        # Use the GroupMemberSerializer to serialize each membership
+        serializer = GroupMemberSerializer(
+            memberships,
+            many=True,
+            context=self.context
+        )
+        return serializer.data
 
     def validate_member_limit(self, value):
         """Validate member limit."""

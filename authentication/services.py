@@ -289,6 +289,74 @@ class AuthenticationService:
             'ip_address': request.META.get('REMOTE_ADDR', ''),
         }
 
+    @staticmethod
+    def logout_user(user, request) -> bool:
+        """
+        Logout user and invalidate their active sessions.
+
+        Args:
+            user: User instance to logout
+            request: HTTP request object
+
+        Returns:
+            bool: Success status
+        """
+        try:
+            # Invalidate all active sessions for this user
+            # You can also choose to invalidate only the current session
+            from .models import UserSession
+
+            active_sessions = UserSession.objects.filter(
+                user=user,
+                is_active=True
+            )
+
+            terminated_count = active_sessions.update(is_active=False)
+
+            # Log the logout
+            AuditLog.objects.create(
+                user=user,
+                event_type='logout_success',
+                description=f'User logged out successfully. Terminated {terminated_count} session(s)',
+                ip_address=request.META.get('REMOTE_ADDR', ''),
+                user_agent=request.META.get('HTTP_USER_AGENT', 'Unknown'),
+                success=True,
+                risk_level='low',
+                metadata={
+                    'sessions_terminated': terminated_count
+                }
+            )
+
+            logger.info(
+                "User logout successful",
+                user_id=str(user.id),
+                sessions_terminated=terminated_count
+            )
+
+            return True
+        except Exception as e:
+            logger.error(
+                "Logout failed with exception",
+                user_id=str(user.id),
+                error=str(e)
+            )
+
+            # Log the failure
+            AuditLog.objects.create(
+                user=user,
+                event_type='logout_failure',
+                description=f'User logout failed: {str(e)}',
+                ip_address=request.META.get('REMOTE_ADDR', ''),
+                user_agent=request.META.get('HTTP_USER_AGENT', 'Unknown'),
+                success=False,
+                risk_level='medium',
+                metadata={
+                    'error': str(e)
+                }
+            )
+
+            return False
+
 
 class PasswordService:
     """

@@ -53,7 +53,7 @@ User = get_user_model()
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@method_decorator(never_cache)
+@never_cache
 @ratelimit(key='user', rate='30/h', method='GET', block=True)
 def list_sessions_view(request):
     """
@@ -158,7 +158,7 @@ def list_sessions_view(request):
 )
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-@method_decorator(never_cache)
+@never_cache
 @ratelimit(key='user', rate='20/h', method='DELETE', block=True)
 def terminate_session_view(request):
     """
@@ -287,7 +287,7 @@ def terminate_session_view(request):
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@method_decorator(never_cache)
+@never_cache
 @ratelimit(key='user', rate='5/h', method='POST', block=True)
 def terminate_all_sessions_view(request):
     """

@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.decorators import method_decorator
@@ -14,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 from django.middleware.csrf import get_token
+from django.utils.translation import gettext_lazy as _
 import structlog
 
 from ..serializers import (
@@ -25,10 +27,11 @@ from ..services import AuthenticationService
 from ..utils.cookies import (
     set_refresh_token_cookie,
     clear_refresh_token_cookie,
-    get_refresh_token_from_cookie
+    get_refresh_token_from_cookie,
+    get_refresh_token_from_request
 )
 from ..utils.api_docs import authentication_schema
-from ..models import AuditLog
+from ..models import AuditLog, UserSession
 
 logger = structlog.get_logger(__name__)
 User = get_user_model()
@@ -308,70 +311,143 @@ def login_view(request):
     operation_id='logout_user',
     summary='User logout',
     description='''
-    Logout user and invalidate all tokens.
+    Logout user, blacklist refresh token, and clear cookies.
 
-    Invalidates the user's refresh token and clears the httpOnly cookie.
-    Requires authentication.
+    This endpoint works with or without a valid access token.
+    The refresh token from the httpOnly cookie is used to identify and blacklist the session.
+    Even if the access token has expired, logout will succeed as long as the refresh token cookie is present.
+
+    Features:
+    - JWT token blacklisting
+    - HttpOnly cookie clearing
+    - Session deactivation
+    - Security logging
     ''',
     responses={
         200: 'Logout successful',
-        401: 'User not authenticated'
     }
 )
 @api_view(['POST'])
-@method_decorator(never_cache)
+@permission_classes([AllowAny])  # Allow logout even with expired tokens
+@csrf_exempt
+@never_cache
 def logout_view(request):
     """
     Logout user and invalidate tokens.
 
-    This endpoint logs out the current user, invalidates their refresh token,
-    and clears the refresh token cookie.
+    This endpoint logs out the current user, blacklists their refresh token,
+    terminates the session, and clears the refresh token cookie.
 
-    **Authentication**: Required
+    **Authentication**: Not required (works with expired tokens)
 
     **Response**:
-    - `200 OK`: Logout successful
-    - `401 Unauthorized`: User not authenticated
+    - `200 OK`: Logout successful (always returns success for UX)
     """
     try:
-        # Use service to handle logout
-        AuthenticationService.logout_user(
-            user=request.user,
-            request=request
-        )
+        user = None
 
-        response = Response(
-            {
-                'message': 'Logout successful'
-            },
-            status=status.HTTP_200_OK
-        )
+        # Get refresh token from cookie (with body fallback)
+        refresh_token_str = get_refresh_token_from_request(request)
+
+        if not refresh_token_str:
+            # No refresh token provided - idempotent operation, already logged out
+            logger.info(
+                "Logout called without refresh token - already logged out")
+            response = Response(
+                {"message": _("Successfully logged out.")},
+                status=status.HTTP_200_OK
+            )
+            clear_refresh_token_cookie(response)
+            return response
+
+        try:
+            # Blacklist the refresh token
+            refresh_token = RefreshToken(refresh_token_str)
+            refresh_token.blacklist()
+
+            # Extract user from token
+            user_id = refresh_token.get('user_id')
+            if user_id:
+                try:
+                    user = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    logger.warning(f"User {user_id} not found during logout")
+                    pass
+
+            # Find and terminate specific session by JTI
+            if user:
+                terminated_count = UserSession.objects.filter(
+                    user=user,
+                    refresh_token_jti=str(refresh_token.get('jti')),
+                    is_active=True
+                ).update(
+                    is_active=False
+                )
+
+                logger.info(
+                    "Session terminated",
+                    user_id=str(user.id),
+                    sessions_terminated=terminated_count,
+                    jti=str(refresh_token.get('jti'))
+                )
+
+            logger.info(
+                "Refresh token blacklisted",
+                user_email=user.email if user else 'unknown',
+                user_id=str(user.id) if user else 'unknown'
+            )
+
+        except (TokenError, AttributeError, InvalidToken) as e:
+            logger.warning(
+                "Could not blacklist token during logout",
+                error=str(e),
+                error_type=type(e).__name__
+            )
+            # Continue with logout even if blacklisting fails
+
+        # Log logout if we have a user
+        if user:
+            AuditLog.objects.create(
+                user=user,
+                event_type='logout_success',
+                description='User logged out successfully',
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
+                user_agent=request.META.get('HTTP_USER_AGENT', 'Unknown'),
+                success=True,
+                risk_level='low',
+                metadata={'logout_method': 'manual'}
+            )
+            logger.info(
+                "User logged out successfully",
+                user_id=str(user.id),
+                email=user.email
+            )
+        else:
+            logger.info("Logout completed without valid user context")
+
+        # Create response
+        response = Response({
+            'message': _('Successfully logged out.')
+        }, status=status.HTTP_200_OK)
 
         # Clear refresh token cookie
         response = clear_refresh_token_cookie(response)
-
-        logger.info(
-            "User logout successful",
-            user_id=str(request.user.id),
-            email=request.user.email
-        )
 
         return response
 
     except Exception as e:
         logger.error(
             "Logout failed with exception",
-            user_id=str(
-                request.user.id) if request.user.is_authenticated else 'anonymous',
-            error=str(e)
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True
         )
-
-        return Response(
-            {
-                'error': 'Logout failed. Please try again later.'
-            },
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        # Return success even on errors (UX: don't block logout)
+        response = Response({
+            'message': _('Logout completed with warnings.')
+        }, status=status.HTTP_200_OK)
+        response = clear_refresh_token_cookie(response)
+        return response
 
 
 @authentication_schema(

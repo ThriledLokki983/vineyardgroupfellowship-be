@@ -30,6 +30,9 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
     # Onboarding state (read-only) - nested under 'onboarding'
     onboarding = serializers.SerializerMethodField()
 
+    # Leadership info with group data (read-only, computed)
+    leadership_info = serializers.SerializerMethodField()
+
     # Profile photo fields (read-only)
     photo_url = serializers.SerializerMethodField()
     photo_thumbnail_url = serializers.SerializerMethodField()
@@ -65,6 +68,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
             'date_joined',
             'created_at',
             'updated_at',
+            'leadership_info',
             'onboarding',
             'photo_url',
             'photo_thumbnail_url',
@@ -163,6 +167,188 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
     def get_can_upload_photo(self, obj):
         """Check if user can upload a photo (always true for authenticated users)."""
         return True
+
+    @extend_schema_field({
+        'type': 'object',
+        'properties': {
+            'can_lead_group': {'type': 'boolean'},
+            'group': {
+                'type': 'object',
+                'nullable': True,
+                'properties': {
+                    'id': {'type': 'integer'},
+                    'name': {'type': 'string'},
+                    'description': {'type': 'string'},
+                    'location': {'type': 'string'},
+                    'location_type': {'type': 'string'},
+                    'meeting_time': {'type': 'string', 'nullable': True},
+                    'is_open': {'type': 'boolean'},
+                    'current_member_count': {'type': 'integer'},
+                    'member_limit': {'type': 'integer'},
+                    'available_spots': {'type': 'integer'},
+                    'photo_url': {'type': 'string', 'nullable': True},
+                    'my_role': {
+                        'type': 'string',
+                        'enum': ['leader', 'co_leader', 'member']
+                    },
+                    'created_by_me': {'type': 'boolean'},
+                    'last_updated_by': {
+                        'type': 'object',
+                        'nullable': True,
+                        'properties': {
+                            'id': {'type': 'integer'},
+                            'email': {'type': 'string'},
+                            'display_name': {'type': 'string', 'nullable': True},
+                        }
+                    },
+                    'joined_at': {'type': 'string', 'format': 'date-time'},
+                    'membership_status': {'type': 'string'},
+                }
+            }
+        }
+    })
+    def get_leadership_info(self, obj):
+        """
+        Enhanced leadership_info with current group data.
+
+        Returns leadership permissions + current group info (if any).
+        Users can only be in ONE active group at a time.
+        """
+        # Start with existing leadership permissions from the model
+        base_info = dict(obj.leadership_info) if obj.leadership_info else {}
+
+        # Ensure can_lead_group is present
+        if 'can_lead_group' not in base_info:
+            base_info['can_lead_group'] = False
+
+        # Add current group info
+        user = obj.user
+        from group.models import Group, GroupMembership
+
+        # Check if user is a group leader (exclude archived groups)
+        leader_group = Group.objects.filter(
+            leader=user,
+            is_active=True,
+            archived_at__isnull=True
+        ).first()
+        if leader_group:
+            # Get last updated by info
+            last_updated_by_info = None
+            if leader_group.last_updated_by:
+                last_updated_by_info = {
+                    'id': leader_group.last_updated_by.id,
+                    'email': leader_group.last_updated_by.email,
+                    'display_name': getattr(leader_group.last_updated_by.profile, 'display_name', None) if hasattr(leader_group.last_updated_by, 'profile') else None,
+                }
+
+            base_info['group'] = {
+                'id': leader_group.id,
+                'name': leader_group.name,
+                'description': leader_group.description,
+                'location': leader_group.location,
+                'location_type': leader_group.location_type,
+                'meeting_time': leader_group.meeting_time,
+                'is_open': leader_group.is_open,
+                'current_member_count': leader_group.current_member_count,
+                'member_limit': leader_group.member_limit,
+                'available_spots': leader_group.available_spots,
+                'photo_url': self.context['request'].build_absolute_uri(leader_group.photo.url) if leader_group.photo else None,
+                'my_role': 'leader',
+                'created_by_me': leader_group.created_by_id == user.id if leader_group.created_by else False,
+                'last_updated_by': last_updated_by_info,
+                'joined_at': leader_group.created_at.isoformat(),
+                'membership_status': 'active'
+            }
+            return base_info
+
+        # Check if user is a co-leader (exclude archived groups)
+        co_leader_group = Group.objects.filter(
+            co_leaders=user,
+            is_active=True,
+            archived_at__isnull=True
+        ).first()
+        if co_leader_group:
+            # Get the membership record for joined_at
+            membership = GroupMembership.objects.filter(
+                user=user,
+                group=co_leader_group,
+                status='active'
+            ).first()
+
+            # Get last updated by info
+            last_updated_by_info = None
+            if co_leader_group.last_updated_by:
+                last_updated_by_info = {
+                    'id': co_leader_group.last_updated_by.id,
+                    'email': co_leader_group.last_updated_by.email,
+                    'display_name': getattr(co_leader_group.last_updated_by.profile, 'display_name', None) if hasattr(co_leader_group.last_updated_by, 'profile') else None,
+                }
+
+            base_info['group'] = {
+                'id': co_leader_group.id,
+                'name': co_leader_group.name,
+                'description': co_leader_group.description,
+                'location': co_leader_group.location,
+                'location_type': co_leader_group.location_type,
+                'meeting_time': co_leader_group.meeting_time,
+                'is_open': co_leader_group.is_open,
+                'current_member_count': co_leader_group.current_member_count,
+                'member_limit': co_leader_group.member_limit,
+                'available_spots': co_leader_group.available_spots,
+                'photo_url': self.context['request'].build_absolute_uri(co_leader_group.photo.url) if co_leader_group.photo else None,
+                'my_role': 'co_leader',
+                'created_by_me': co_leader_group.created_by_id == user.id if co_leader_group.created_by else False,
+                'last_updated_by': last_updated_by_info,
+                'joined_at': (
+                    membership.created_at.isoformat()
+                    if membership
+                    else co_leader_group.created_at.isoformat()
+                ),
+                'membership_status': 'active'
+            }
+            return base_info
+
+        # Check if user is a regular member
+        membership = GroupMembership.objects.filter(
+            user=user,
+            status='active'
+        ).select_related('group').first()
+
+        if membership:
+            group = membership.group
+
+            # Get last updated by info
+            last_updated_by_info = None
+            if group.last_updated_by:
+                last_updated_by_info = {
+                    'id': group.last_updated_by.id,
+                    'email': group.last_updated_by.email,
+                    'display_name': getattr(group.last_updated_by.profile, 'display_name', None) if hasattr(group.last_updated_by, 'profile') else None,
+                }
+
+            base_info['group'] = {
+                'id': group.id,
+                'name': group.name,
+                'description': group.description,
+                'location': group.location,
+                'location_type': group.location_type,
+                'meeting_time': group.meeting_time,
+                'is_open': group.is_open,
+                'current_member_count': group.current_member_count,
+                'member_limit': group.member_limit,
+                'available_spots': group.available_spots,
+                'photo_url': self.context['request'].build_absolute_uri(group.photo.url) if group.photo else None,
+                'my_role': 'member',
+                'created_by_me': group.created_by_id == user.id if group.created_by else False,
+                'last_updated_by': last_updated_by_info,
+                'joined_at': membership.created_at.isoformat(),
+                'membership_status': membership.status
+            }
+            return base_info
+
+        # User has no active group
+        base_info['group'] = None
+        return base_info
 
     def validate_display_name(self, value):
         """Validate display name for appropriateness."""

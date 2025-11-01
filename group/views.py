@@ -23,8 +23,34 @@ from .serializers import (
 @extend_schema_view(
     list=extend_schema(
         summary="List all groups",
-        description="Get a list of all active groups. Can filter by location, visibility, and availability.",
+        description="Get a list of all active groups. Can filter by location, visibility, availability, and membership.",
         tags=["Groups"],
+        parameters=[
+            OpenApiParameter(
+                name='location',
+                description='Filter by location (case-insensitive contains)',
+                required=False,
+                type=str
+            ),
+            OpenApiParameter(
+                name='is_open',
+                description='Filter by open/closed status',
+                required=False,
+                type=bool
+            ),
+            OpenApiParameter(
+                name='has_space',
+                description='Show only groups with available spots',
+                required=False,
+                type=bool
+            ),
+            OpenApiParameter(
+                name='my_groups',
+                description='Show only groups where user is a member, co-leader, or leader',
+                required=False,
+                type=bool
+            ),
+        ]
     ),
     create=extend_schema(
         summary="Create a new group",
@@ -74,6 +100,12 @@ class GroupViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
 
+        # Exclude archived groups by default (unless specifically requested)
+        include_archived = self.request.query_params.get(
+            'include_archived', 'false').lower() == 'true'
+        if not include_archived:
+            queryset = queryset.filter(archived_at__isnull=True)
+
         # Only show active groups by default
         if self.action == 'list':
             queryset = queryset.filter(is_active=True)
@@ -84,10 +116,10 @@ class GroupViewSet(viewsets.ModelViewSet):
                 Q(visibility='public') |
                 Q(visibility='community', leader=user) |
                 Q(visibility='community', co_leaders=user) |
-                Q(visibility='community', members__user=user) |
+                Q(visibility='community', memberships__user=user) |
                 Q(visibility='private', leader=user) |
                 Q(visibility='private', co_leaders=user) |
-                Q(visibility='private', members__user=user)
+                Q(visibility='private', memberships__user=user)
             ).distinct()
 
         # Query parameters for filtering
@@ -102,22 +134,51 @@ class GroupViewSet(viewsets.ModelViewSet):
         has_space = self.request.query_params.get('has_space')
         if has_space and has_space.lower() == 'true':
             queryset = queryset.annotate(
-                member_count=Count('members', filter=Q(
-                    members__status='active'))
+                member_count=Count('memberships', filter=Q(
+                    memberships__status='active'))
             ).filter(
                 Q(member_count__lt=F('member_limit')) & Q(is_open=True)
             )
+
+        # Filter by my groups (groups user is a member of or created)
+        my_groups = self.request.query_params.get('my_groups')
+        if my_groups and my_groups.lower() == 'true':
+            queryset = queryset.filter(
+                Q(leader=user) |
+                Q(co_leaders=user) |
+                Q(memberships__user=user, memberships__status='active')
+            ).distinct()
 
         return queryset
 
     def perform_create(self, serializer):
         """Create group and add creator as leader member."""
-        group = serializer.save()
+        user = self.request.user
+
+        # Check if user already has an active group they created
+        existing_group = Group.objects.filter(
+            created_by=user,
+            is_active=True,
+            archived_at__isnull=True
+        ).first()
+
+        if existing_group:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({
+                'error': 'You already have an active group. Please archive your current group before creating a new one.',
+                'existing_group': {
+                    'id': str(existing_group.id),
+                    'name': existing_group.name
+                }
+            })
+
+        # Save group with created_by and last_updated_by set to the current user
+        group = serializer.save(created_by=user, last_updated_by=user)
 
         # Create membership for the leader
         GroupMembership.objects.create(
             group=group,
-            user=self.request.user,
+            user=user,
             role='leader',
             status='active'
         )
@@ -132,17 +193,17 @@ class GroupViewSet(viewsets.ModelViewSet):
             raise PermissionError(
                 "Only group leaders can update group details.")
 
-        serializer.save()
+        # Track who updated the group
+        serializer.save(last_updated_by=user)
 
     def perform_destroy(self, instance):
-        """Only group leader can delete."""
+        """Archive the group instead of hard delete (soft delete)."""
         if self.request.user != instance.leader:
             raise PermissionError(
                 "Only the group leader can delete this group.")
 
-        # Soft delete by setting is_active to False
-        instance.is_active = False
-        instance.save()
+        # Archive the group (soft delete) and track who archived it
+        instance.archive(user=self.request.user)
 
     @extend_schema(
         summary="Get group members",
