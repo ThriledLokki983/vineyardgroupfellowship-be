@@ -287,6 +287,8 @@ class GroupListSerializer(serializers.ModelSerializer):
     current_member_count = serializers.IntegerField(read_only=True)
     available_spots = serializers.IntegerField(read_only=True)
     photo_url = serializers.SerializerMethodField()
+    membership_status = serializers.SerializerMethodField()
+    request_date = serializers.SerializerMethodField()
 
     class Meta:
         model = Group
@@ -307,6 +309,8 @@ class GroupListSerializer(serializers.ModelSerializer):
             'meeting_time',
             'meeting_frequency',
             'focus_areas',
+            'membership_status',
+            'request_date',
             'created_at',
         ]
 
@@ -318,6 +322,75 @@ class GroupListSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.photo.url)
         return None
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_membership_status(self, obj):
+        """
+        Get current user's membership status in this group.
+        
+        Returns:
+            - 'leader' if user is the group leader
+            - 'co_leader' if user is a co-leader
+            - 'active' if user is an active member
+            - 'pending' if user has a pending join request
+            - None if user has no relationship with this group
+        """
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+
+        user = request.user
+
+        # Check if user is the leader
+        if obj.leader_id == user.id:
+            return 'leader'
+
+        # Check if user is a co-leader
+        if obj.co_leaders.filter(id=user.id).exists():
+            return 'co_leader'
+
+        # Check membership status
+        try:
+            membership = GroupMembership.objects.get(
+                group=obj,
+                user=user
+            )
+            return membership.status  # Returns 'active' or 'pending'
+        except GroupMembership.DoesNotExist:
+            return None
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_request_date(self, obj):
+        """
+        Get the date when user requested to join this group.
+        
+        Returns the timestamp when the join request was submitted.
+        Only applicable for pending requests.
+        
+        Returns:
+            - ISO 8601 datetime string if user has a pending or active membership
+            - None if user has no relationship with this group
+        """
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+
+        user = request.user
+
+        # Leaders and co-leaders don't have a request date
+        if obj.leader_id == user.id or obj.co_leaders.filter(id=user.id).exists():
+            return None
+
+        # Get the membership request date
+        try:
+            membership = GroupMembership.objects.get(
+                group=obj,
+                user=user
+            )
+            # Return the joined_at timestamp (when request was created)
+            return membership.joined_at.isoformat() if membership.joined_at else None
+        except GroupMembership.DoesNotExist:
+            return None
 
 
 class GroupCreateSerializer(serializers.ModelSerializer):

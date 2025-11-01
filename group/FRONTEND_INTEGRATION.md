@@ -41,10 +41,13 @@ All group endpoints: /api/v1/groups/
 | PATCH | `/{id}/` | Update group | ✅ | Leader or co-leader |
 | PUT | `/{id}/` | Update group (full) | ✅ | Leader or co-leader |
 | DELETE | `/{id}/` | Delete group | ✅ | Leader only |
-| GET | `/{id}/members/` | Get group members | ✅ | Anyone who can view the group |
-| POST | `/{id}/join/` | Join group | ✅ | Any authenticated user |
+| GET | `/{id}/members/` | Get active group members | ✅ | Anyone who can view the group |
+| POST | `/{id}/join/` | Request to join group | ✅ | Any authenticated user |
 | POST | `/{id}/leave/` | Leave group | ✅ | Current member (not leader) |
 | POST | `/{id}/upload_photo/` | Upload group photo | ✅ | Leader or co-leader |
+| GET | `/{id}/pending_requests/` | View pending join requests | ✅ | Leader or co-leader |
+| POST | `/{id}/approve-request/{membership_id}/` | Approve join request | ✅ | Leader or co-leader |
+| POST | `/{id}/reject-request/{membership_id}/` | Reject join request | ✅ | Leader or co-leader |
 
 ---
 
@@ -63,7 +66,7 @@ Get a list of all groups visible to the authenticated user.
 | `location` | string | No | Filter by location (case-insensitive contains) | `?location=downtown` |
 | `is_open` | boolean | No | Filter by open/closed status | `?is_open=true` |
 | `has_space` | boolean | No | Show only groups with available spots | `?has_space=true` |
-| `my_groups` | boolean | No | Show only groups where user is a member, co-leader, or leader | `?my_groups=true` |
+| `my_groups` | boolean | No | Show only groups where user is a member, co-leader, leader, or has a pending join request | `?my_groups=true` |
 
 **Request Example:**
 ```http
@@ -102,6 +105,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "meeting_time": "19:00:00",
     "meeting_frequency": "weekly",
     "focus_areas": ["worship", "bible_study", "fellowship"],
+    "membership_status": null,
+    "request_date": null,
     "created_at": "2024-11-01T10:00:00Z"
   },
   {
@@ -125,6 +130,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "meeting_time": "18:00:00",
     "meeting_frequency": "weekly",
     "focus_areas": ["prayer", "women"],
+    "membership_status": null,
+    "request_date": null,
     "created_at": "2024-10-15T14:30:00Z"
   }
 ]
@@ -133,6 +140,45 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 **Empty Response:** `200 OK`
 ```json
 []
+```
+
+**Field: membership_status**
+
+The `membership_status` field indicates the current user's relationship with each group:
+
+| Value | Description | Use Case |
+|-------|-------------|----------|
+| `null` | User has no relationship with this group | Show "Join Group" button |
+| `"pending"` | User has a pending join request awaiting approval | Show "Request Pending" badge |
+| `"active"` | User is an active member | Show "Leave Group" button |
+| `"leader"` | User is the group leader | Show "Manage Group" options |
+| `"co_leader"` | User is a co-leader | Show "Manage Group" options (limited) |
+
+**Note:** When using `my_groups=true`, the `membership_status` field is especially important to differentiate between active memberships and pending requests.
+
+**Field: request_date**
+
+The `request_date` field shows when the user submitted their join request:
+
+| membership_status | request_date Value | Description |
+|------------------|-------------------|-------------|
+| `null` | `null` | User has no relationship with this group |
+| `"pending"` | ISO 8601 datetime | Timestamp when join request was submitted |
+| `"active"` | ISO 8601 datetime | Timestamp when membership was created (or approved from pending) |
+| `"leader"` | `null` | Leaders don't have a request date |
+| `"co_leader"` | `null` | Co-leaders don't have a request date |
+
+**Usage Example:**
+```javascript
+// Calculate how long a request has been pending
+if (group.membership_status === 'pending' && group.request_date) {
+  const requestDate = new Date(group.request_date);
+  const now = new Date();
+  const daysPending = Math.floor((now - requestDate) / (1000 * 60 * 60 * 24));
+  
+  console.log(`Request pending for ${daysPending} days`);
+  // Show "Pending for 3 days" badge
+}
 ```
 
 ---
@@ -145,7 +191,8 @@ Create a new fellowship group. Requires leadership permission.
 
 **Prerequisites:**
 - User must have `leadership_info.can_lead_group: true` in their profile
-- Check via: `GET /api/v1/profiles/me/`
+- User must not have an existing active or pending group membership
+- Check via: `GET /api/v1/profiles/me/` → Verify `leadership_info.can_lead_group === true` and `leadership_info.group === null`
 
 **Request Body:**
 
@@ -463,7 +510,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### 7. Join Group
 
-Request to join a group. Automatically approved for open groups, pending for closed groups.
+Request to join a group. **All join requests require leader approval** and are initially set to `pending` status.
 
 **Endpoint:** `POST /api/v1/groups/{id}/join/`
 
@@ -507,33 +554,20 @@ Content-Type: application/json
 }
 ```
 
-**Response (Open Group):** `200 OK`
+**Response:** `200 OK`
 
 ```json
 {
-  "message": "Successfully joined group!",
+  "message": "Join request submitted successfully. Awaiting leader approval.",
   "membership": {
     "id": "new-membership-uuid",
     "user_id": "current-user-uuid",
     "email": "you@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
     "display_name": "Your Name",
-    "role": "member",
-    "status": "active",
-    "joined_at": "2024-11-01T15:30:00Z"
-  }
-}
-```
-
-**Response (Closed Group):** `200 OK`
-
-```json
-{
-  "message": "Membership request submitted. Awaiting leader approval.",
-  "membership": {
-    "id": "new-membership-uuid",
-    "user_id": "current-user-uuid",
-    "email": "you@example.com",
-    "display_name": "Your Name",
+    "photo_url": "http://localhost:8001/media/profile_photos/2024/11/photo.jpg",
+    "profile_visibility": "public",
     "role": "member",
     "status": "pending",
     "joined_at": "2024-11-01T15:30:00Z"
@@ -546,6 +580,14 @@ Content-Type: application/json
 ```json
 {
   "error": "You are already a member of this group."
+}
+```
+
+**Error Response:** `400 Bad Request` (Pending request exists)
+
+```json
+{
+  "error": "You already have a pending request for this group."
 }
 ```
 
@@ -663,6 +705,180 @@ Returns the updated group object with new `photo` and `photo_url` fields (same s
 
 ---
 
+### 10. View Pending Join Requests
+
+View all pending membership requests for a group. Only accessible by group leaders and co-leaders.
+
+**Endpoint:** `GET /api/v1/groups/{id}/pending_requests/`
+
+**URL Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | UUID | Group ID |
+
+**Request Example:**
+```http
+GET /api/v1/groups/123e4567-e89b-12d3-a456-426614174000/pending_requests/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "membership-uuid-1",
+    "user_id": "user-uuid-1",
+    "email": "john.doe@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "display_name": "JohnDoe",
+    "photo_url": "http://localhost:8001/media/profile_photos/2024/11/photo.jpg",
+    "profile_visibility": "public",
+    "role": "member",
+    "status": "pending",
+    "joined_at": "2024-11-01T15:30:00Z"
+  },
+  {
+    "id": "membership-uuid-2",
+    "user_id": "user-uuid-2",
+    "email": "jane.smith@example.com",
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "display_name": "JaneSmith",
+    "photo_url": null,
+    "profile_visibility": "community",
+    "role": "member",
+    "status": "pending",
+    "joined_at": "2024-11-01T16:45:00Z"
+  }
+]
+```
+
+**Error Response:** `403 Forbidden` (Not leader/co-leader)
+
+```json
+{
+  "error": "Only group leaders can view pending membership requests."
+}
+```
+
+---
+
+### 11. Approve Join Request
+
+Approve a pending membership request. Only accessible by group leaders and co-leaders.
+
+**Endpoint:** `POST /api/v1/groups/{id}/approve-request/{membership_id}/`
+
+**URL Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | UUID | Group ID |
+| `membership_id` | UUID | Membership request ID |
+
+**Request Example:**
+```http
+POST /api/v1/groups/123e4567-e89b-12d3-a456-426614174000/approve-request/membership-uuid-1/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "message": "Membership request approved for john.doe@example.com.",
+  "membership": {
+    "id": "membership-uuid-1",
+    "user_id": "user-uuid-1",
+    "email": "john.doe@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "display_name": "JohnDoe",
+    "photo_url": "http://localhost:8001/media/profile_photos/2024/11/photo.jpg",
+    "profile_visibility": "public",
+    "role": "member",
+    "status": "active",
+    "joined_at": "2024-11-01T15:30:00Z"
+  }
+}
+```
+
+**Error Response:** `400 Bad Request` (Group is full)
+
+```json
+{
+  "error": "Cannot approve request. Group is full."
+}
+```
+
+**Error Response:** `400 Bad Request` (Request not found)
+
+```json
+{
+  "error": "Pending membership request not found."
+}
+```
+
+**Error Response:** `403 Forbidden` (Not leader/co-leader)
+
+```json
+{
+  "error": "Only group leaders can approve membership requests."
+}
+```
+
+---
+
+### 12. Reject Join Request
+
+Reject a pending membership request. Only accessible by group leaders and co-leaders.
+
+**Endpoint:** `POST /api/v1/groups/{id}/reject-request/{membership_id}/`
+
+**URL Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | UUID | Group ID |
+| `membership_id` | UUID | Membership request ID |
+
+**Request Example:**
+```http
+POST /api/v1/groups/123e4567-e89b-12d3-a456-426614174000/reject-request/membership-uuid-2/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "message": "Membership request rejected for jane.smith@example.com."
+}
+```
+
+**Error Response:** `400 Bad Request` (Request not found)
+
+```json
+{
+  "error": "Pending membership request not found."
+}
+```
+
+**Error Response:** `403 Forbidden` (Not leader/co-leader)
+
+```json
+{
+  "error": "Only group leaders can reject membership requests."
+}
+```
+
+---
+
 ## Data Models
 
 ### Group Object (Full)
@@ -693,6 +909,7 @@ Returns the updated group object with new `photo` and `photo_url` fields (same s
   focus_areas: string[]
   visibility: "public" | "community" | "private"
   user_membership: UserMembership | null
+  group_members: GroupMember[] (all active members including leader)
   created_at: string (ISO 8601 datetime)
   updated_at: string (ISO 8601 datetime)
 }
@@ -718,6 +935,8 @@ Returns the updated group object with new `photo` and `photo_url` fields (same s
   meeting_time: string
   meeting_frequency: string
   focus_areas: string[]
+  membership_status: "leader" | "co_leader" | "active" | "pending" | null
+  request_date: string | null (ISO 8601 datetime)
   created_at: string
 }
 ```
@@ -750,12 +969,18 @@ Returns the updated group object with new `photo` and `photo_url` fields (same s
   id: string (UUID - membership ID)
   user_id: string (UUID)
   email: string
+  first_name: string
+  last_name: string
   display_name: string
+  photo_url: string | null (full URL to profile photo)
+  profile_visibility: "private" | "community" | "public"
   role: "leader" | "co_leader" | "member"
   status: "pending" | "active" | "inactive" | "removed"
   joined_at: string (ISO 8601 datetime)
 }
 ```
+
+**Note:** The `group_members` field in the Group Object (Full) contains an array of GroupMember objects with all active members, including the group leader.
 
 ---
 
@@ -912,20 +1137,337 @@ or
 
 ---
 
+## Related Endpoints
+
+### Get Current User Profile
+
+Get the current authenticated user's profile, including their group membership status.
+
+**Endpoint:** `GET /api/v1/profiles/me/`
+
+**Request Example:**
+```http
+GET /api/v1/profiles/me/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": "user-uuid",
+  "email": "user@example.com",
+  "display_name": "John Doe",
+  "first_name": "John",
+  "last_name": "Doe",
+  "bio": "Passionate about worship and fellowship",
+  "location": "Downtown Area",
+  "post_code": "12345",
+  "profile_visibility": "public",
+  "photo_url": "http://localhost:8001/media/profile_photos/2024/11/photo.jpg",
+  "leadership_info": {
+    "can_lead_group": false,
+    "group": {
+      "id": "group-uuid",
+      "name": "Young Adults Fellowship",
+      "description": "A group for young adults to connect and grow together",
+      "location": "Downtown Campus",
+      "location_type": "in_person",
+      "meeting_time": "19:00:00",
+      "is_open": true,
+      "current_member_count": 8,
+      "member_limit": 12,
+      "available_spots": 4,
+      "photo_url": "http://localhost:8001/media/group_photos/2024/11/photo.jpg",
+      "my_role": "member",
+      "created_by_me": false,
+      "last_updated_by": {
+        "id": "leader-uuid",
+        "email": "leader@example.com",
+        "display_name": "Jane Leader"
+      },
+      "joined_at": "2024-11-01T15:30:00Z",
+      "membership_status": "pending",
+      "request_submitted_at": "2024-11-01T15:30:00Z"
+    }
+  },
+  "created_at": "2024-10-01T10:00:00Z",
+  "updated_at": "2024-11-01T15:30:00Z"
+}
+```
+
+**Response (No Group):**
+```json
+{
+  "id": "user-uuid",
+  "email": "user@example.com",
+  "display_name": "John Doe",
+  "first_name": "John",
+  "last_name": "Doe",
+  "bio": "",
+  "location": "",
+  "post_code": "",
+  "profile_visibility": "private",
+  "photo_url": null,
+  "leadership_info": {
+    "can_lead_group": false,
+    "group": null
+  },
+  "created_at": "2024-10-01T10:00:00Z",
+  "updated_at": "2024-10-01T10:00:00Z"
+}
+```
+
+**Response (Active Group Member):**
+```json
+{
+  "leadership_info": {
+    "can_lead_group": false,
+    "group": {
+      "id": "group-uuid",
+      "name": "Young Adults Fellowship",
+      "membership_status": "active",
+      "my_role": "member",
+      "joined_at": "2024-10-15T12:00:00Z"
+    }
+  }
+}
+```
+
+**Response (Group Leader):**
+```json
+{
+  "leadership_info": {
+    "can_lead_group": true,
+    "group": {
+      "id": "group-uuid",
+      "name": "Young Adults Fellowship",
+      "membership_status": "active",
+      "my_role": "leader",
+      "created_by_me": true,
+      "joined_at": "2024-09-01T10:00:00Z"
+    }
+  }
+}
+```
+
+### leadership_info.group Field
+
+The `group` field in `leadership_info` shows the user's current group status:
+
+| membership_status | Description | group Value |
+|------------------|-------------|-------------|
+| `null` | User has no group | `null` |
+| `"pending"` | User has requested to join, awaiting approval | Group object with `request_submitted_at` |
+| `"active"` | User is an active member | Group object with full details |
+
+**Important Notes:**
+- ✅ Users can only have **ONE** group at a time (either active or pending)
+- ✅ If `membership_status: "pending"`, the group shows the join request details
+- ✅ The `request_submitted_at` field only appears for pending requests
+- ✅ Check `membership_status` to determine UI state (show "Pending Approval" vs "Member")
+
+---
+
 ## Quick Reference
 
 ```
 BASE: /api/v1/groups/
 
-LIST:       GET    /                    → Group[]
-CREATE:     POST   /                    → Group
-DETAIL:     GET    /{id}/               → Group
-UPDATE:     PATCH  /{id}/               → Group
-DELETE:     DELETE /{id}/               → 204
-MEMBERS:    GET    /{id}/members/       → GroupMember[]
-JOIN:       POST   /{id}/join/          → {message, membership}
-LEAVE:      POST   /{id}/leave/         → {message}
-PHOTO:      POST   /{id}/upload_photo/  → Group
+LIST:       GET    /                                   → Group[]
+CREATE:     POST   /                                   → Group
+DETAIL:     GET    /{id}/                              → Group
+UPDATE:     PATCH  /{id}/                              → Group
+DELETE:     DELETE /{id}/                              → 204
+MEMBERS:    GET    /{id}/members/                      → GroupMember[] (active only)
+JOIN:       POST   /{id}/join/                         → {message, membership}
+LEAVE:      POST   /{id}/leave/                        → {message}
+PHOTO:      POST   /{id}/upload_photo/                 → Group
+PENDING:    GET    /{id}/pending_requests/             → GroupMember[] (pending only)
+APPROVE:    POST   /{id}/approve-request/{m_id}/       → {message, membership}
+REJECT:     POST   /{id}/reject-request/{m_id}/        → {message}
 
 Auth: Bearer token required for all endpoints
 ```
+
+---
+
+## Join Request Workflow
+
+### For Members (Users wanting to join):
+
+1. **Request to Join**
+   ```
+   POST /api/v1/groups/{id}/join/
+   → Returns membership with status: "pending"
+   → Message: "Join request submitted successfully. Awaiting leader approval."
+   ```
+
+2. **Check Status**
+   ```
+   GET /api/v1/groups/{id}/
+   → Look at user_membership.status field
+   → "pending" = waiting for approval
+   → "active" = approved and can participate
+   ```
+
+3. **After Approval**
+   - Status changes to "active"
+   - User appears in /members/ endpoint
+   - User appears in group_members array of group details
+
+### For Leaders (Approving/Rejecting requests):
+
+1. **View Pending Requests**
+   ```
+   GET /api/v1/groups/{id}/pending_requests/
+   → Returns array of all pending membership requests
+   → Each request includes user details and profile photo
+   ```
+
+2. **Approve a Request**
+   ```
+   POST /api/v1/groups/{id}/approve-request/{membership_id}/
+   → Changes status from "pending" to "active"
+   → User becomes a full member
+   → Checks group capacity before approving
+   ```
+
+3. **Reject a Request**
+   ```
+   POST /api/v1/groups/{id}/reject-request/{membership_id}/
+   → Deletes the membership request
+   → User can request to join another group
+   ```
+
+### Important Notes:
+
+- ✅ **All join requests require leader approval** (no auto-approval)
+- ✅ Only **active** members appear in the members list
+- ✅ Pending requests are only visible to leaders/co-leaders
+- ✅ Users cannot join if they already have a pending request
+- ✅ Group capacity is checked before approving requests
+- ✅ Both leaders and co-leaders can approve/reject requests
+
+### Viewing Your Pending Requests:
+
+Users can check their pending group requests in two ways:
+
+**1. Using the my_groups filter:**
+```http
+GET /api/v1/groups/?my_groups=true
+→ Returns all groups where user is a leader, co-leader, active member, OR has a pending request
+```
+
+**2. Using the profiles/me endpoint:**
+```http
+GET /api/v1/profiles/me/
+→ Returns user profile with leadership_info.group showing pending status
+→ Check if leadership_info.group.membership_status === "pending"
+```
+
+**Recommended Approach:**
+- Use `GET /api/v1/groups/?my_groups=true` to show a **list of all user's groups** (including pending)
+- Use `GET /api/v1/profiles/me/` to display **current group status** in user profile/dashboard
+- Both endpoints include `membership_status` field to differentiate pending vs active
+
+---
+
+## Security Considerations
+
+### Server-Side Validation
+
+All leadership-protected endpoints implement **multi-layer server-side validation** that cannot be bypassed by frontend manipulation:
+
+#### Protected Endpoints:
+- `GET /{id}/pending_requests/` - View pending requests
+- `POST /{id}/approve-request/{membership_id}/` - Approve requests
+- `POST /{id}/reject-request/{membership_id}/` - Reject requests
+- `POST /{id}/upload_photo/` - Upload group photo
+
+#### Security Layers:
+
+**1. Primary Leader Verification**
+```
+Checks if user.id matches group.leader_id directly in the database
+```
+
+**2. Co-Leader Verification**
+```
+Database query: group.co_leaders.filter(id=user.id).exists()
+Cannot be spoofed or manipulated from frontend
+```
+
+**3. Active Membership Cross-Check**
+```
+Verifies user has active leadership membership in GroupMembership table
+Additional verification layer for data consistency
+```
+
+**4. Group Ownership Validation**
+```
+Double-checks that membership.group.id matches the requested group.id
+Prevents cross-group manipulation attacks
+```
+
+#### What This Means for Frontend Development:
+
+✅ **Do not rely solely on frontend permission checks**
+- The backend will always verify leadership status against the database
+- Even if you hide UI elements, the API will reject unauthorized requests
+
+✅ **Handle 403 Forbidden responses gracefully**
+- User might lose leadership status while viewing the page
+- Token manipulation attempts will be rejected
+- Show appropriate error messages to users
+
+✅ **Validation order in approve/reject requests:**
+1. Leadership verification (403 if fails)
+2. Membership existence check (400 if not found)
+3. Group ownership validation (400 if mismatch)
+4. Status verification (400 if not pending)
+5. Capacity check for approvals (400 if group full)
+
+#### Example Error Responses:
+
+**Unauthorized leadership action:**
+```json
+{
+  "error": "Only group leaders and co-leaders can approve membership requests."
+}
+```
+**Status:** `403 Forbidden`
+
+**Invalid membership request:**
+```json
+{
+  "error": "Pending membership request not found."
+}
+```
+**Status:** `400 Bad Request`
+
+**Cross-group manipulation attempt:**
+```json
+{
+  "error": "Invalid membership request for this group."
+}
+```
+**Status:** `400 Bad Request`
+
+**Group at capacity:**
+```json
+{
+  "error": "Cannot approve request. Group is full."
+}
+```
+**Status:** `400 Bad Request`
+
+### Best Practices:
+
+1. **Always validate responses** - Check for both 4xx and 2xx status codes
+2. **Refresh group data** - After approve/reject actions, fetch updated group data
+3. **Handle edge cases** - User might approve the last spot while another leader is viewing
+4. **Show loading states** - API validates multiple conditions, may take time
+5. **Implement optimistic updates carefully** - Revert if backend validation fails
+
+---

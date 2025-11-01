@@ -346,7 +346,46 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
             }
             return base_info
 
-        # User has no active group
+        # Check if user has a pending membership request
+        pending_membership = GroupMembership.objects.filter(
+            user=user,
+            status='pending'
+        ).select_related('group').first()
+
+        if pending_membership:
+            group = pending_membership.group
+
+            # Get last updated by info
+            last_updated_by_info = None
+            if group.last_updated_by:
+                last_updated_by_info = {
+                    'id': group.last_updated_by.id,
+                    'email': group.last_updated_by.email,
+                    'display_name': getattr(group.last_updated_by.profile, 'display_name', None) if hasattr(group.last_updated_by, 'profile') else None,
+                }
+
+            base_info['group'] = {
+                'id': group.id,
+                'name': group.name,
+                'description': group.description,
+                'location': group.location,
+                'location_type': group.location_type,
+                'meeting_time': group.meeting_time,
+                'is_open': group.is_open,
+                'current_member_count': group.current_member_count,
+                'member_limit': group.member_limit,
+                'available_spots': group.available_spots,
+                'photo_url': self.context['request'].build_absolute_uri(group.photo.url) if group.photo else None,
+                'my_role': 'member',  # Still member role, just pending
+                'created_by_me': False,  # Cannot create group if pending member
+                'last_updated_by': last_updated_by_info,
+                'joined_at': pending_membership.created_at.isoformat(),
+                'membership_status': 'pending',
+                'request_submitted_at': pending_membership.joined_at.isoformat()
+            }
+            return base_info
+
+        # User has no active or pending group
         base_info['group'] = None
         return base_info
 

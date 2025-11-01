@@ -113,7 +113,9 @@ class GroupAdmin(admin.ModelAdmin):
 
     filter_horizontal = ('co_leaders',)
     autocomplete_fields = ['leader']
-    inlines = [GroupMembershipInline]
+    # Temporarily disabled due to Python 3.13/Django multipart parser issue
+    # Re-enable when Django fixes the compatibility issue
+    # inlines = [GroupMembershipInline]
 
     def get_queryset(self, request):
         """Optimize queryset with select_related and prefetch_related."""

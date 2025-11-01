@@ -95,6 +95,37 @@ class GroupViewSet(viewsets.ModelViewSet):
             return GroupCreateSerializer
         return GroupSerializer
 
+    def _is_group_leader(self, group, user):
+        """
+        Verify if user is a leader or co-leader of the group.
+
+        This method performs database-level verification to ensure
+        the user has leadership permissions, preventing frontend bypass.
+
+        Args:
+            group: Group instance
+            user: User instance
+
+        Returns:
+            bool: True if user is leader or co-leader, False otherwise
+        """
+        # Check if user is the primary leader
+        if group.leader_id == user.id:
+            return True
+
+        # Check if user is a co-leader (database query to prevent manipulation)
+        is_co_leader = group.co_leaders.filter(id=user.id).exists()
+
+        # Additional verification: Check if user has active leadership membership
+        has_leadership_membership = GroupMembership.objects.filter(
+            group=group,
+            user=user,
+            role__in=['leader', 'co_leader'],
+            status='active'
+        ).exists()
+
+        return is_co_leader or has_leadership_membership
+
     def get_queryset(self):
         """Filter queryset based on user permissions and query parameters."""
         queryset = super().get_queryset()
@@ -140,13 +171,14 @@ class GroupViewSet(viewsets.ModelViewSet):
                 Q(member_count__lt=F('member_limit')) & Q(is_open=True)
             )
 
-        # Filter by my groups (groups user is a member of or created)
+        # Filter by my groups (groups user is a member of, created, or has pending request for)
         my_groups = self.request.query_params.get('my_groups')
         if my_groups and my_groups.lower() == 'true':
             queryset = queryset.filter(
                 Q(leader=user) |
                 Q(co_leaders=user) |
-                Q(memberships__user=user, memberships__status='active')
+                Q(memberships__user=user, memberships__status='active') |
+                Q(memberships__user=user, memberships__status='pending')
             ).distinct()
 
         return queryset
@@ -213,38 +245,57 @@ class GroupViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=['get'])
     def members(self, request, pk=None):
-        """Get all members of a group."""
+        """Get all active members of a group."""
         group = self.get_object()
         memberships = GroupMembership.objects.filter(
             group=group,
             status='active'
-        ).select_related('user').order_by('role', 'joined_at')
+        ).select_related(
+            'user',
+            'user__basic_profile',
+            'user__profile_photo'
+        ).order_by('role', 'joined_at')
 
-        serializer = GroupMemberSerializer(memberships, many=True)
+        serializer = GroupMemberSerializer(
+            memberships,
+            many=True,
+            context={'request': request}
+        )
         return Response(serializer.data)
 
     @extend_schema(
         summary="Join group",
-        description="Request to join a group. Auto-approved for open groups, pending for closed groups.",
+        description="Request to join a group. All requests require leader approval.",
         tags=["Groups"],
         request=JoinGroupSerializer,
         responses={
-            200: {"description": "Successfully joined group"},
+            200: {"description": "Join request submitted successfully"},
             400: {"description": "Cannot join group (already member, group full, etc.)"},
         },
     )
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):
-        """Join a group."""
+        """Request to join a group."""
         group = self.get_object()
         user = request.user
 
         # Check if already a member
-        if GroupMembership.objects.filter(group=group, user=user).exists():
-            return Response(
-                {"error": "You are already a member of this group."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        existing_membership = GroupMembership.objects.filter(
+            group=group,
+            user=user
+        ).first()
+
+        if existing_membership:
+            if existing_membership.status == 'pending':
+                return Response(
+                    {"error": "You already have a pending request for this group."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            elif existing_membership.status == 'active':
+                return Response(
+                    {"error": "You are already a member of this group."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         # Check if group can accept members
         if not group.can_accept_members:
@@ -253,8 +304,7 @@ class GroupViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Create membership
-        membership_status = 'active' if group.is_open else 'pending'
+        # Create membership with pending status (requires leader approval)
         serializer = JoinGroupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -262,18 +312,13 @@ class GroupViewSet(viewsets.ModelViewSet):
             group=group,
             user=user,
             role='member',
-            status=membership_status,
+            status='pending',  # Always pending - requires leader approval
             notes=serializer.validated_data.get('message', '')
         )
 
-        message = (
-            "Successfully joined group!" if membership_status == 'active'
-            else "Membership request submitted. Awaiting leader approval."
-        )
-
         return Response({
-            "message": message,
-            "membership": GroupMemberSerializer(membership).data
+            "message": "Join request submitted successfully. Awaiting leader approval.",
+            "membership": GroupMemberSerializer(membership, context={'request': request}).data
         })
 
     @extend_schema(
@@ -342,10 +387,10 @@ class GroupViewSet(viewsets.ModelViewSet):
         group = self.get_object()
         user = request.user
 
-        # Only leaders can upload photos
-        if not (user == group.leader or user in group.co_leaders.all()):
+        # Verify leadership status with database-level validation
+        if not self._is_group_leader(group, user):
             return Response(
-                {"error": "Only group leaders can upload photos."},
+                {"error": "Only group leaders and co-leaders can upload photos."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -363,3 +408,154 @@ class GroupViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(group)
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="List pending join requests",
+        description="Get all pending membership requests for the group. Only accessible by group leaders.",
+        tags=["Groups"],
+        responses={
+            200: GroupMemberSerializer(many=True),
+            403: {"description": "Permission denied - only leaders can view pending requests"},
+        },
+    )
+    @action(detail=True, methods=['get'])
+    def pending_requests(self, request, pk=None):
+        """List all pending membership requests for the group."""
+        group = self.get_object()
+        user = request.user
+
+        # Verify leadership status with database-level validation
+        if not self._is_group_leader(group, user):
+            return Response(
+                {"error": "Only group leaders and co-leaders can view pending membership requests."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get all pending memberships
+        pending_memberships = GroupMembership.objects.filter(
+            group=group,
+            status='pending'
+        ).select_related(
+            'user',
+            'user__basic_profile',
+            'user__profile_photo'
+        ).order_by('joined_at')
+
+        serializer = GroupMemberSerializer(
+            pending_memberships,
+            many=True,
+            context={'request': request}
+        )
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Approve membership request",
+        description="Approve a pending membership request. Only accessible by group leaders.",
+        tags=["Groups"],
+        responses={
+            200: {"description": "Membership request approved"},
+            400: {"description": "Invalid request or membership not found"},
+            403: {"description": "Permission denied - only leaders can approve requests"},
+        },
+    )
+    @action(detail=True, methods=['post'], url_path='approve-request/(?P<membership_id>[^/.]+)')
+    def approve_request(self, request, pk=None, membership_id=None):
+        """Approve a pending membership request."""
+        group = self.get_object()
+        user = request.user
+
+        # Verify leadership status with database-level validation
+        if not self._is_group_leader(group, user):
+            return Response(
+                {"error": "Only group leaders and co-leaders can approve membership requests."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get the membership with additional validation
+        try:
+            membership = GroupMembership.objects.select_related('user').get(
+                id=membership_id,
+                group=group,
+                status='pending'
+            )
+        except GroupMembership.DoesNotExist:
+            return Response(
+                {"error": "Pending membership request not found."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verify the membership belongs to the correct group (double-check)
+        if membership.group.id != group.id:
+            return Response(
+                {"error": "Invalid membership request for this group."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if group is full
+        if group.is_full:
+            return Response(
+                {"error": "Cannot approve request. Group is full."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Approve the membership
+        membership.status = 'active'
+        membership.save()
+
+        return Response({
+            "message": f"Membership request approved for {membership.user.email}.",
+            "membership": GroupMemberSerializer(membership, context={'request': request}).data
+        })
+
+    @extend_schema(
+        summary="Reject membership request",
+        description="Reject a pending membership request. Only accessible by group leaders.",
+        tags=["Groups"],
+        responses={
+            200: {"description": "Membership request rejected"},
+            400: {"description": "Invalid request or membership not found"},
+            403: {"description": "Permission denied - only leaders can reject requests"},
+        },
+    )
+    @action(detail=True, methods=['post'], url_path='reject-request/(?P<membership_id>[^/.]+)')
+    def reject_request(self, request, pk=None, membership_id=None):
+        """Reject a pending membership request."""
+        group = self.get_object()
+        user = request.user
+
+        # Verify leadership status with database-level validation
+        if not self._is_group_leader(group, user):
+            return Response(
+                {"error": "Only group leaders and co-leaders can reject membership requests."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get the membership with additional validation
+        try:
+            membership = GroupMembership.objects.select_related('user').get(
+                id=membership_id,
+                group=group,
+                status='pending'
+            )
+        except GroupMembership.DoesNotExist:
+            return Response(
+                {"error": "Pending membership request not found."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verify the membership belongs to the correct group (double-check)
+        if membership.group.id != group.id:
+            return Response(
+                {"error": "Invalid membership request for this group."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Store email before deletion for response message
+        user_email = membership.user.email
+
+        # Delete the membership request (or you could set status to 'rejected' if you want to keep history)
+        membership.delete()
+
+        return Response({
+            "message": f"Membership request rejected for {user_email}."
+        })
