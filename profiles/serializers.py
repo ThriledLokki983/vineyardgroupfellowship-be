@@ -39,8 +39,12 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfileBasic
         fields = [
+            'first_name',
+            'last_name',
             'display_name',
             'bio',
+            'location',
+            'post_code',
             'timezone',
             'profile_visibility',
             'leadership_info',

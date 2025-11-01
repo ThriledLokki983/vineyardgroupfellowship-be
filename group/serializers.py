@@ -1,0 +1,290 @@
+"""
+Group serializers for DRF API endpoints.
+"""
+
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema_field
+
+from .models import Group, GroupMembership
+
+User = get_user_model()
+
+
+class GroupLeaderSerializer(serializers.ModelSerializer):
+    """Serializer for group leader information."""
+
+    display_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'display_name']
+        read_only_fields = ['id', 'email', 'display_name']
+
+    def get_display_name(self, obj):
+        """Get leader's display name from profile."""
+        try:
+            return obj.basic_profile.display_name_or_email
+        except:
+            return obj.email
+
+
+class GroupMemberSerializer(serializers.ModelSerializer):
+    """Serializer for group member information."""
+
+    user_id = serializers.UUIDField(source='user.id', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    display_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GroupMembership
+        fields = [
+            'id',
+            'user_id',
+            'email',
+            'display_name',
+            'role',
+            'status',
+            'joined_at',
+        ]
+        read_only_fields = [
+            'id',
+            'user_id',
+            'email',
+            'display_name',
+            'joined_at',
+        ]
+
+    def get_display_name(self, obj):
+        """Get member's display name from profile."""
+        try:
+            return obj.user.basic_profile.display_name_or_email
+        except:
+            return obj.user.email
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Group model with full details.
+    """
+
+    # Leader information
+    leader_info = GroupLeaderSerializer(source='leader', read_only=True)
+    co_leaders_info = GroupLeaderSerializer(
+        many=True, source='co_leaders', read_only=True)
+
+    # Computed fields
+    current_member_count = serializers.IntegerField(read_only=True)
+    is_full = serializers.BooleanField(read_only=True)
+    available_spots = serializers.IntegerField(read_only=True)
+    can_accept_members = serializers.BooleanField(read_only=True)
+
+    # Photo URL
+    photo_url = serializers.SerializerMethodField()
+
+    # User's membership status
+    user_membership = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Group
+        fields = [
+            'id',
+            'name',
+            'description',
+            'location',
+            'location_type',
+            'member_limit',
+            'current_member_count',
+            'is_full',
+            'available_spots',
+            'is_open',
+            'is_active',
+            'can_accept_members',
+            'leader',
+            'leader_info',
+            'co_leaders',
+            'co_leaders_info',
+            'photo',
+            'photo_url',
+            'meeting_day',
+            'meeting_time',
+            'meeting_frequency',
+            'focus_areas',
+            'visibility',
+            'user_membership',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'current_member_count',
+            'is_full',
+            'available_spots',
+            'can_accept_members',
+            'leader_info',
+            'co_leaders_info',
+            'photo_url',
+            'user_membership',
+            'created_at',
+            'updated_at',
+        ]
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_photo_url(self, obj):
+        """Get the full URL for the group photo."""
+        if obj.photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.photo.url)
+        return None
+
+    @extend_schema_field(serializers.DictField(allow_null=True))
+    def get_user_membership(self, obj):
+        """Get current user's membership status in this group."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+
+        try:
+            membership = GroupMembership.objects.get(
+                group=obj,
+                user=request.user
+            )
+            return {
+                'id': str(membership.id),
+                'role': membership.role,
+                'status': membership.status,
+                'joined_at': membership.joined_at.isoformat(),
+            }
+        except GroupMembership.DoesNotExist:
+            return None
+
+    def validate_member_limit(self, value):
+        """Validate member limit."""
+        if value < 2:
+            raise serializers.ValidationError(
+                "Group must allow at least 2 members.")
+        if value > 100:
+            raise serializers.ValidationError(
+                "Group cannot exceed 100 members.")
+        return value
+
+    def validate_leader(self, value):
+        """Validate that leader has leadership permissions."""
+        try:
+            profile = value.basic_profile
+            if not profile.leadership_info.get('can_lead_group', False):
+                raise serializers.ValidationError(
+                    "User does not have permission to lead groups. "
+                    "Please complete leadership onboarding first."
+                )
+        except:
+            raise serializers.ValidationError(
+                "User profile not found or incomplete."
+            )
+        return value
+
+
+class GroupListSerializer(serializers.ModelSerializer):
+    """
+    Simplified serializer for listing groups.
+    """
+
+    leader_info = GroupLeaderSerializer(source='leader', read_only=True)
+    current_member_count = serializers.IntegerField(read_only=True)
+    available_spots = serializers.IntegerField(read_only=True)
+    photo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Group
+        fields = [
+            'id',
+            'name',
+            'description',
+            'location',
+            'location_type',
+            'member_limit',
+            'current_member_count',
+            'available_spots',
+            'is_open',
+            'is_active',
+            'leader_info',
+            'photo_url',
+            'meeting_day',
+            'meeting_time',
+            'meeting_frequency',
+            'focus_areas',
+            'created_at',
+        ]
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_photo_url(self, obj):
+        """Get the full URL for the group photo."""
+        if obj.photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.photo.url)
+        return None
+
+
+class GroupCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating a new group.
+    """
+
+    class Meta:
+        model = Group
+        fields = [
+            'name',
+            'description',
+            'location',
+            'location_type',
+            'member_limit',
+            'is_open',
+            'meeting_day',
+            'meeting_time',
+            'meeting_frequency',
+            'focus_areas',
+            'visibility',
+        ]
+
+    def validate(self, attrs):
+        """Validate group creation data."""
+        # Leader is set automatically to the current user
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError("Authentication required.")
+
+        # Check if user can lead groups
+        try:
+            profile = request.user.basic_profile
+            if not profile.leadership_info.get('can_lead_group', False):
+                raise serializers.ValidationError(
+                    "You do not have permission to create groups. "
+                    "Please complete leadership onboarding first."
+                )
+        except:
+            raise serializers.ValidationError(
+                "Profile not found. Please complete your profile first."
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        """Create group with current user as leader."""
+        request = self.context['request']
+        validated_data['leader'] = request.user
+        return super().create(validated_data)
+
+
+class JoinGroupSerializer(serializers.Serializer):
+    """
+    Serializer for joining a group.
+    """
+
+    message = serializers.CharField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        help_text="Optional message to group leader"
+    )

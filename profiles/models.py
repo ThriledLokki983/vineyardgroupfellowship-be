@@ -39,11 +39,43 @@ class UserProfileBasic(models.Model):
         help_text=_('Optional public name shown to other users')
     )
 
+    # First Name
+    first_name = models.CharField(
+        _('first name'),
+        max_length=30,
+        blank=True,
+        help_text=_('Optional first name')
+    )
+
+    # Last Name
+    last_name = models.CharField(
+        _('last name'),
+        max_length=30,
+        blank=True,
+        help_text=_('Optional last name')
+    )
+
     bio = models.TextField(
         _('bio'),
         max_length=1500,
         blank=True,
         help_text=_('Optional short description about yourself')
+    )
+
+    # Location information
+    location = models.CharField(
+        _('location'),
+        max_length=255,
+        blank=True,
+        help_text=_('User location (city, state, or general area)')
+    )
+
+    # Post code information
+    post_code = models.CharField(
+        _('post code'),
+        max_length=255,
+        blank=True,
+        help_text=_('User post code (city, state, or general area)')
     )
 
     # Basic settings
