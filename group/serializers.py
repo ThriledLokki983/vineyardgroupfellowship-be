@@ -38,6 +38,7 @@ class GroupMemberSerializer(serializers.ModelSerializer):
     last_name = serializers.SerializerMethodField()
     display_name = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
+    profile_visibility = serializers.SerializerMethodField()
 
     class Meta:
         model = GroupMembership
@@ -49,6 +50,7 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             'last_name',
             'display_name',
             'photo_url',
+            'profile_visibility',
             'role',
             'status',
             'joined_at',
@@ -61,6 +63,7 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             'last_name',
             'display_name',
             'photo_url',
+            'profile_visibility',
             'joined_at',
         ]
 
@@ -96,6 +99,13 @@ class GroupMemberSerializer(serializers.ModelSerializer):
         except:
             pass
         return None
+
+    def get_profile_visibility(self, obj):
+        """Get member's profile visibility setting."""
+        try:
+            return obj.user.basic_profile.profile_visibility
+        except:
+            return 'private'  # Default to private if not set
 
 
 class GroupSerializer(serializers.ModelSerializer):
