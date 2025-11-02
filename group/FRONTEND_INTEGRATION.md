@@ -175,7 +175,7 @@ if (group.membership_status === 'pending' && group.request_date) {
   const requestDate = new Date(group.request_date);
   const now = new Date();
   const daysPending = Math.floor((now - requestDate) / (1000 * 60 * 60 * 24));
-  
+
   console.log(`Request pending for ${daysPending} days`);
   // Show "Pending for 3 days" badge
 }
@@ -566,6 +566,7 @@ Content-Type: application/json
     "first_name": "John",
     "last_name": "Doe",
     "display_name": "Your Name",
+    "bio": "Passionate about worship and fellowship",
     "photo_url": "http://localhost:8001/media/profile_photos/2024/11/photo.jpg",
     "profile_visibility": "public",
     "role": "member",
@@ -734,6 +735,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "first_name": "John",
     "last_name": "Doe",
     "display_name": "JohnDoe",
+    "bio": "Passionate about worship and fellowship",
     "photo_url": "http://localhost:8001/media/profile_photos/2024/11/photo.jpg",
     "profile_visibility": "public",
     "role": "member",
@@ -747,6 +749,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "first_name": "Jane",
     "last_name": "Smith",
     "display_name": "JaneSmith",
+    "bio": "Seeking spiritual growth and community",
     "photo_url": null,
     "profile_visibility": "community",
     "role": "member",
@@ -798,6 +801,7 @@ Content-Type: application/json
     "first_name": "John",
     "last_name": "Doe",
     "display_name": "JohnDoe",
+    "bio": "Passionate about worship and fellowship",
     "photo_url": "http://localhost:8001/media/profile_photos/2024/11/photo.jpg",
     "profile_visibility": "public",
     "role": "member",
@@ -972,6 +976,7 @@ Content-Type: application/json
   first_name: string
   last_name: string
   display_name: string
+  bio: string
   photo_url: string | null (full URL to profile photo)
   profile_visibility: "private" | "community" | "public"
   role: "leader" | "co_leader" | "member"

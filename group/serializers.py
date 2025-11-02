@@ -37,6 +37,7 @@ class GroupMemberSerializer(serializers.ModelSerializer):
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
     display_name = serializers.SerializerMethodField()
+    bio = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
     profile_visibility = serializers.SerializerMethodField()
 
@@ -49,6 +50,7 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'display_name',
+            'bio',
             'photo_url',
             'profile_visibility',
             'role',
@@ -62,6 +64,7 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'display_name',
+            'bio',
             'photo_url',
             'profile_visibility',
             'joined_at',
@@ -87,6 +90,13 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             return obj.user.basic_profile.display_name_or_email
         except:
             return obj.user.email
+
+    def get_bio(self, obj):
+        """Get member's bio from profile."""
+        try:
+            return obj.user.basic_profile.bio or ''
+        except:
+            return ''
 
     def get_photo_url(self, obj):
         """Get member's photo URL."""
@@ -327,7 +337,7 @@ class GroupListSerializer(serializers.ModelSerializer):
     def get_membership_status(self, obj):
         """
         Get current user's membership status in this group.
-        
+
         Returns:
             - 'leader' if user is the group leader
             - 'co_leader' if user is a co-leader
@@ -363,10 +373,10 @@ class GroupListSerializer(serializers.ModelSerializer):
     def get_request_date(self, obj):
         """
         Get the date when user requested to join this group.
-        
+
         Returns the timestamp when the join request was submitted.
         Only applicable for pending requests.
-        
+
         Returns:
             - ISO 8601 datetime string if user has a pending or active membership
             - None if user has no relationship with this group
