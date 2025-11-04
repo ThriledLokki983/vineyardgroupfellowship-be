@@ -23,6 +23,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
     display_name_or_email = serializers.CharField(read_only=True)
 
     # User information (read-only)
+    username = serializers.CharField(source='user.username', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     date_joined = serializers.DateTimeField(
         source='user.date_joined', read_only=True)
@@ -52,6 +53,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
             'profile_visibility',
             'leadership_info',
             'display_name_or_email',
+            'username',
             'email',
             'date_joined',
             'created_at',
@@ -64,6 +66,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'display_name_or_email',
+            'username',
             'email',
             'date_joined',
             'created_at',

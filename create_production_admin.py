@@ -3,12 +3,15 @@
 Script to create admin user for production deployment.
 Run with: railway run python create_production_admin.py
 """
+from django.utils import timezone
+from django.contrib.auth import get_user_model
 import os
 import sys
 import django
 
 # Set up Django - Railway automatically provides DATABASE_URL
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'vineyard_group_fellowship.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE',
+                      'vineyard_group_fellowship.settings')
 
 # Add the current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,8 +19,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Import Django and configure
 django.setup()
 
-from django.contrib.auth import get_user_model
-from django.utils import timezone
 
 User = get_user_model()
 
@@ -56,7 +57,7 @@ def create_admin_user():
             first_name='Admin',
             last_name='User'
         )
-        
+
         # Mark email as verified
         admin_user.email_verified = True
         admin_user.email_verified_at = timezone.now()
@@ -80,7 +81,7 @@ def create_admin_user():
 
 if __name__ == "__main__":
     print("🚀 Creating admin user for production deployment...")
-    
+
     if ADMIN_EMAIL:
         print(f"📧 Admin email: {ADMIN_EMAIL}")
     else:
