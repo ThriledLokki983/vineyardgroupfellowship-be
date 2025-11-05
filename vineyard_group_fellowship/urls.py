@@ -23,8 +23,13 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from core.views import home, health_check
 
 urlpatterns = [
+    # Home page
+    path('', home, name='home'),
+    path('health-check/', health_check, name='health-check'),
+
     # Admin
     path('admin/', admin.site.urls),
 
@@ -57,7 +62,7 @@ urlpatterns = [
     # ================================================================
     # Security Headers and Monitoring
     # ================================================================
-    path('', include('core.urls.security', namespace='security-core')),
+    path('security/', include('core.urls.security', namespace='security-core')),
     path('api/v1/health/', include('authentication.url_modules.health')),
 ]
 
