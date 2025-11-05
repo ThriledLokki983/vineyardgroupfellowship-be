@@ -82,7 +82,7 @@ def health_check(request):
 
     # Determine overall system status
     system_status = 'healthy' if db_status == 'operational' and cache_status == 'operational' else 'unhealthy'
-    
+
     context = {
         'status': system_status,
         'overall_status': system_status,  # Template expects overall_status
