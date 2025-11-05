@@ -6,6 +6,11 @@
   <meta name="description" content="{% block meta_description %}Vineyard Group Fellowship - Connect with small groups, Bible studies, and Christian community{% endblock %}">
   <title>{% block title %}Vineyard Group Fellowship API{% endblock %}</title>
 
+  <!-- Favicon -->
+  {% load static %}
+  <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+
   <!-- Open Props CDN -->
   <link rel="stylesheet" href="https://unpkg.com/open-props"/>
   <link rel="stylesheet" href="https://unpkg.com/open-props/normalize.min.css"/>
