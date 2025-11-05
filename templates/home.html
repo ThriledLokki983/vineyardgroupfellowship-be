@@ -1,5 +1,10 @@
-{% extends "base.html" %} {% block title %}AddictFree - Backend API
-Dashboard{%endblock%} {% block extra_styles %}
+{% extends "base_openprops.html" %}
+
+{% block title %}Vineyard Group Fellowship API - Home{% endblock %}
+
+{% block meta_description %}Connect with small groups, Bible studies, and Christian fellowship in your community. API for managing church fellowship groups.{% endblock %}
+
+{% block extra_styles %}
 <style>
   /* Status Color System */
   .dashboard-container {
@@ -94,298 +99,249 @@ Dashboard{%endblock%} {% block extra_styles %}
       font-weight: var(--font-weight-6);
   }
 
-  .link-card p {
-      font-size: var(--font-size-1);
-      opacity: 0.7;
-      font-weight: var(--font-weight-4);
+  /* Feature Card Styles */
+  .feature-card {
+    background: var(--surface-2);
+    padding: var(--size-7);
+    border-radius: var(--radius-3);
+    text-decoration: none;
+    color: var(--text-1);
+    box-shadow: var(--shadow-2);
+    transition: all 0.3s var(--ease-3);
+    border: 1px solid var(--border-subtle);
+    display: block;
+    position: relative;
+    overflow: hidden;
   }
 
-  .info-section {
-      background: white;
-      border-radius: var(--radius-3);
-      padding: var(--size-8);
-      margin-top: var(--size-12);
-      box-shadow: var(--shadow-soft);
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--brand) 0%, var(--brand-secondary) 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s var(--ease-3);
   }
 
-  .info-section h2 {
-      font-size: var(--font-size-4);
-      font-weight: var(--font-weight-6);
-      margin-bottom: var(--size-8);
-      color: var(--brand-primary);
+  .feature-card:hover::before {
+    transform: scaleX(1);
   }
 
-  .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: var(--size-6);
-      margin-bottom: var(--size-8);
+  .feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-3);
+    border-color: var(--brand-secondary);
   }
 
-  .info-item {
-      text-align: center;
+  .feature-card .card-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--size-4);
+    transition: transform 0.3s var(--ease-elastic-3);
   }
 
-  .info-item .label {
-      color: rgba(96, 48, 0, 0.5);
-      font-size: var(--font-size-0);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: var(--size-2);
-      font-weight: var(--font-weight-6);
+  .feature-card:hover .card-icon {
+    transform: scale(1.1) rotate(5deg);
   }
 
-  .info-item .value {
-      color: var(--brand-primary);
-      font-size: var(--font-size-3);
-      font-weight: var(--font-weight-6);
+  .feature-card:hover .card-arrow {
+    transform: translateX(4px);
   }
 
-  .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--size-1);
-      padding: var(--size-1) var(--size-2);
-      border-radius: var(--radius-2);
-      font-size: var(--font-size-0);
-      font-weight: var(--font-weight-6);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+  .card-arrow {
+    transition: transform 0.2s var(--ease-2);
   }
 
-  .status-badge.success {
-      background: var(--status-success-light);
-      color: var(--status-success);
-      border: 1px solid rgba(23, 93, 45, 0.3);
+  /* Info Card Styles */
+  .info-card {
+    padding: var(--size-5);
+    background: var(--surface-1);
+    border-radius: var(--radius-2);
+    transition: all 0.2s var(--ease-2);
+    border: 1px solid transparent;
   }
 
-  .status-badge.warning {
-      background: var(--status-warning-light);
-      color: var(--status-warning);
-      border: 1px solid rgba(235, 140, 0, 0.3);
+  .info-card:hover {
+    background: var(--surface-3);
+    border-color: var(--border-medium);
+    transform: translateY(-2px);
   }
 
-  .status-badge.error {
-      background: var(--status-error-light);
-      color: var(--status-error);
-      border: 1px solid rgba(197, 42, 26, 0.3);
-  }
-
-  .status-badge::before {
-      content: "●";
-      font-size: 0.6rem;
-  }
-
-  .quick-status {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: var(--size-3);
-      margin-bottom: var(--size-8);
-      padding: var(--size-6);
-      background: var(--surface-canvas);
-      border-radius: var(--radius-2);
-      border: 1px solid rgba(96, 48, 0, 0.08);
-  }
-
-  .quick-status-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--size-2);
-  }
-
-  .quick-status-label {
-      font-size: var(--font-size-0);
-      color: rgba(96, 48, 0, 0.6);
-      font-weight: var(--font-weight-5);
-  }
-
-  .endpoint-list {
-      text-align: left;
-  }
-
-  .endpoint-list h3 {
-      font-size: var(--font-size-4);
-      font-weight: var(--font-weight-6);
-      margin-bottom: var(--size-4);
-      color: var(--brand-primary);
-  }
-
-  .endpoint {
-      background: var(--surface-elevated);
-      padding: var(--size-4);
-      margin-bottom: var(--size-3);
-      border-radius: var(--radius-2);
-      border-left: 3px solid var(--status-success);
-      transition: all var(--animation-duration-fast) var(--ease-out);
-  }
-
-  .endpoint:hover {
-      background: var(--surface-canvas);
-      border-left-color: var(--brand-primary);
-  }
-
-  .endpoint code {
-      background: rgba(96, 48, 0, 0.05);
-      padding: var(--size-1) var(--size-2);
-      border-radius: var(--radius-2);
-      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
-      font-size: var(--font-size-1);
-      color: var(--brand-primary);
-  }
-
-  .endpoint p {
-      margin-top: var(--size-2);
-      color: rgba(96, 48, 0, 0.6);
-      font-size: var(--font-size-1);
-  }
-
-  .method {
-      display: inline-block;
-      padding: var(--size-1) var(--size-2);
-      border-radius: var(--radius-2);
-      font-size: var(--font-size-0);
-      font-weight: var(--font-weight-6);
-      margin-right: var(--size-3);
-  }
-
-  .method.get {
-      background: var(--status-success-light);
-      color: var(--status-success);
-      border: 1px solid rgba(23, 93, 45, 0.3);
-  }
-
-  .method.post {
-      background: rgba(235, 140, 0, 0.1);
-      color: var(--status-warning);
-      border: 1px solid rgba(235, 140, 0, 0.3);
-  }
-
-  .method.put,
-  .method.patch {
-      background: rgba(96, 48, 0, 0.1);
-      color: var(--brand-primary);
-      border: 1px solid rgba(96, 48, 0, 0.2);
-  }
-
-  .method.delete {
-      background: var(--status-error-light);
-      color: var(--status-error);
-      border: 1px solid rgba(197, 42, 26, 0.3);
+  /* Animations */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 </style>
-{% endblock %} {% block content %}
-<div class="dashboard-container">
-  <h1 class="page-title">Backend API Dashboard</h1>
-  <p class="page-subtitle">Recovery Support Platform</p>
+{% endblock %}
 
-  <div class="status">System Online</div>
-
-  <div class="links">
-    <a
-      href="/admin/"
-      class="link-card"
-    >
-      <div class="icon">⚙️</div>
-      <h3>Admin Panel</h3>
-      <p>Manage users, content & settings</p>
-    </a>
-
-    <a
-      href="/api/docs/"
-      class="link-card"
-    >
-      <div class="icon">📚</div>
-      <h3>API Docs</h3>
-      <p>Interactive API documentation</p>
-    </a>
-
-    <a
-      href="/api/redoc/"
-      class="link-card"
-    >
-      <div class="icon">📖</div>
-      <h3>ReDoc</h3>
-      <p>Beautiful API reference</p>
-    </a>
-
-    <a
-      href="/health/"
-      class="link-card"
-    >
-      <div class="icon">💚</div>
-      <h3>Health Check</h3>
-      <p>System status & monitoring</p>
-    </a>
+{% block content %}
+<!-- Hero Section -->
+<div style="text-align: center; margin-bottom: var(--size-fluid-7);">
+  <div style="display: inline-block; background: linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: var(--size-4);">
+    <h1 style="font-size: var(--font-size-fluid-3); font-weight: var(--font-weight-9); letter-spacing: -0.02em; line-height: 1.1;">
+      Vineyard Group Fellowship
+    </h1>
   </div>
+  <p style="font-size: var(--font-size-3); color: var(--text-2); max-inline-size: var(--size-content-3); margin-inline: auto; line-height: var(--font-lineheight-4);">
+    A platform for connecting church members through small groups, Bible studies, shared meals, and Christian fellowship
+  </p>
+</div>
 
-  <div class="info-section">
-    <h2>System Information</h2>
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="label">Django Version</div>
-        <div class="value">{{ django_version }}</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Environment</div>
-        <div class="value">{{ environment }}</div>
-      </div>
-      <div class="info-item">
-        <div class="label">API Version</div>
-        <div class="value">v1.0.0</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Debug Mode</div>
-        <div class="value">{{ debug_status }}</div>
-      </div>
+<!-- Status Badge -->
+<div style="display: flex; justify-content: center; margin-bottom: var(--size-fluid-6); animation: var(--animation-fade-in);">
+  <div style="display: inline-flex; align-items: center; gap: var(--size-2); background: var(--success-color-light); color: var(--success-color-dark); padding: var(--size-3) var(--size-6); border-radius: var(--radius-3); font-weight: var(--font-weight-6); border: 1px solid var(--success-color); box-shadow: var(--shadow-1);">
+    <span style="inline-size: 8px; block-size: 8px; background: var(--success-color); border-radius: var(--radius-round); animation: pulse 2s infinite;"></span>
+    API Online & Healthy
+  </div>
+</div>
+
+<!-- Quick Access Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--size-5); margin-bottom: var(--size-fluid-8);">
+
+  <!-- API Docs Card -->
+  <a href="/api/docs/" class="feature-card">
+    <div class="card-icon">📚</div>
+    <h3 style="font-size: var(--font-size-4); font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1);">API Documentation</h3>
+    <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+      Interactive Swagger and ReDoc documentation for all REST endpoints
+    </p>
+    <span class="card-arrow" style="display: block; margin-top: var(--size-3); color: var(--brand-secondary); font-weight: var(--font-weight-6);">
+      Explore API →
+    </span>
+  </a>
+
+  <!-- Health Check Card -->
+  <a href="/health-check/" class="feature-card">
+    <div class="card-icon">💚</div>
+    <h3 style="font-size: var(--font-size-4); font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1);">System Health</h3>
+    <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+      Real-time monitoring of database, cache, email services, and authentication
+    </p>
+    <span class="card-arrow" style="display: block; margin-top: var(--size-3); color: var(--brand-secondary); font-weight: var(--font-weight-6);">
+      Check Status →
+    </span>
+  </a>
+
+  <!-- Admin Panel Card -->
+  <a href="/admin/" class="feature-card">
+    <div class="card-icon">🔧</div>
+    <h3 style="font-size: var(--font-size-4); font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1);">Admin Panel</h3>
+    <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+      Django administration interface for platform management
+    </p>
+    <span class="card-arrow" style="display: block; margin-top: var(--size-3); color: var(--brand-secondary); font-weight: var(--font-weight-6);">
+      Go to Admin →
+    </span>
+  </a>
+
+</div>
+
+<!-- Platform Features Section -->
+<div style="background: var(--surface-2); padding: var(--size-fluid-5); border-radius: var(--radius-3); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-2); margin-bottom: var(--size-fluid-7);">
+  <h2 style="font-size: var(--font-size-5); font-weight: var(--font-weight-8); margin-bottom: var(--size-3); color: var(--brand); text-align: center;">
+    Platform Features
+  </h2>
+  <p style="text-align: center; color: var(--text-2); margin-bottom: var(--size-7); max-inline-size: var(--size-content-2); margin-inline: auto;">
+    Everything you need to build meaningful Christian community
+  </p>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--size-6);">
+
+    <div class="info-card">
+      <div style="font-size: 2rem; margin-bottom: var(--size-3);">👥</div>
+      <h4 style="font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1); font-size: var(--font-size-3);">Group Management</h4>
+      <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+        Create and manage small groups for Bible study, shared meals, and Christian programs
+      </p>
     </div>
 
-    <div class="quick-status">
-      <div class="quick-status-item">
-        <span class="quick-status-label">Database</span>
-        <span class="status-badge success">Online</span>
-      </div>
-      <div class="quick-status-item">
-        <span class="quick-status-label">Cache</span>
-        <span class="status-badge success">Ready</span>
-      </div>
-      <div class="quick-status-item">
-        <span class="quick-status-label">API</span>
-        <span class="status-badge success">Active</span>
-      </div>
-      <div class="quick-status-item">
-        <span class="quick-status-label">Auth</span>
-        <span class="status-badge success">Secure</span>
-      </div>
+    <div class="info-card">
+      <div style="font-size: 2rem; margin-bottom: var(--size-3);">🔒</div>
+      <h4 style="font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1); font-size: var(--font-size-3);">Secure Authentication</h4>
+      <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+        JWT-based authentication with email verification and secure password management
+      </p>
     </div>
 
-    <div class="endpoint-list">
-      <h3>Quick API Endpoints</h3>
-
-      <div class="endpoint">
-        <span class="method get">GET</span>
-        <code>/api/v1/auth/users/</code>
-        <p>List users</p>
-      </div>
-
-      <div class="endpoint">
-        <span class="method post">POST</span>
-        <code>/api/v1/auth/register/</code>
-        <p>Register new user</p>
-      </div>
-
-      <div class="endpoint">
-        <span class="method post">POST</span>
-        <code>/api/v1/auth/login/</code>
-        <p>User login</p>
-      </div>
-
-      <div class="endpoint">
-        <span class="method get">GET</span>
-        <code>/health/</code>
-        <p>Health check endpoint</p>
-      </div>
+    <div class="info-card">
+      <div style="font-size: 2rem; margin-bottom: var(--size-3);">�</div>
+      <h4 style="font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1); font-size: var(--font-size-3);">Location-Based Discovery</h4>
+      <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+        Find and join groups near you with intelligent location-based filtering
+      </p>
     </div>
+
+    <div class="info-card">
+      <div style="font-size: 2rem; margin-bottom: var(--size-3);">✉️</div>
+      <h4 style="font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1); font-size: var(--font-size-3);">Email Notifications</h4>
+      <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+        Automated email notifications for group updates and membership requests
+      </p>
+    </div>
+
+    <div class="info-card">
+      <div style="font-size: 2rem; margin-bottom: var(--size-3);">👤</div>
+      <h4 style="font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1); font-size: var(--font-size-3);">User Profiles</h4>
+      <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+        Rich user profiles with photos, bios, and privacy controls
+      </p>
+    </div>
+
+    <div class="info-card">
+      <div style="font-size: 2rem; margin-bottom: var(--size-3);">🛡️</div>
+      <h4 style="font-weight: var(--font-weight-7); margin-bottom: var(--size-2); color: var(--text-1); font-size: var(--font-size-3);">GDPR Compliant</h4>
+      <p style="color: var(--text-2); font-size: var(--font-size-1); line-height: var(--font-lineheight-3);">
+        Complete data export and deletion capabilities for user privacy
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<!-- API Endpoints Overview -->
+<div style="background: var(--surface-2); padding: var(--size-fluid-5); border-radius: var(--radius-3); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-2);">
+  <h2 style="font-size: var(--font-size-5); font-weight: var(--font-weight-8); margin-bottom: var(--size-3); color: var(--brand);">
+    API Endpoints
+  </h2>
+  <p style="color: var(--text-2); margin-bottom: var(--size-6); max-inline-size: var(--size-content-2);">
+    RESTful API with comprehensive endpoints for authentication, groups, profiles, and more
+  </p>
+
+  <div style="display: grid; gap: var(--size-4);">
+
+    <div style="background: var(--surface-1); padding: var(--size-5); border-radius: var(--radius-2); border-left: 4px solid var(--brand-secondary);">
+      <div style="display: flex; align-items: center; gap: var(--size-3); margin-bottom: var(--size-2);">
+        <code style="background: var(--brand-secondary); color: white; padding: var(--size-1) var(--size-3); border-radius: var(--radius-2); font-weight: var(--font-weight-6); font-size: var(--font-size-0);">POST</code>
+        <code style="color: var(--text-1); font-family: var(--font-mono); font-size: var(--font-size-1);">/api/v1/auth/register/</code>
+      </div>
+      <p style="color: var(--text-2); font-size: var(--font-size-1);">User registration with email verification</p>
+    </div>
+
+    <div style="background: var(--surface-1); padding: var(--size-5); border-radius: var(--radius-2); border-left: 4px solid var(--success-color);">
+      <div style="display: flex; align-items: center; gap: var(--size-3); margin-bottom: var(--size-2);">
+        <code style="background: var(--success-color); color: white; padding: var(--size-1) var(--size-3); border-radius: var(--radius-2); font-weight: var(--font-weight-6); font-size: var(--font-size-0);">GET</code>
+        <code style="color: var(--text-1); font-family: var(--font-mono); font-size: var(--font-size-1);">/api/v1/groups/</code>
+      </div>
+      <p style="color: var(--text-2); font-size: var(--font-size-1);">List all groups with filtering and pagination</p>
+    </div>
+
+    <div style="background: var(--surface-1); padding: var(--size-5); border-radius: var(--radius-2); border-left: 4px solid var(--success-color);">
+      <div style="display: flex; align-items: center; gap: var(--size-3); margin-bottom: var(--size-2);">
+        <code style="background: var(--success-color); color: white; padding: var(--size-1) var(--size-3); border-radius: var(--radius-2); font-weight: var(--font-weight-6); font-size: var(--font-size-0);">GET</code>
+        <code style="color: var(--text-1); font-family: var(--font-mono); font-size: var(--font-size-1);">/api/v1/profiles/me/</code>
+      </div>
+      <p style="color: var(--text-2); font-size: var(--font-size-1);">Get current user's profile information</p>
+    </div>
+
+    <div style="text-align: center; margin-top: var(--size-4);">
+      <a href="/api/docs/" style="display: inline-block; background: linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%); color: white; padding: var(--size-3) var(--size-7); border-radius: var(--radius-2); text-decoration: none; font-weight: var(--font-weight-6); box-shadow: var(--shadow-2); transition: all 0.2s var(--ease-2);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-3)';" onmouseout="this.style.transform=''; this.style.boxShadow='var(--shadow-2)';">
+        View Full API Documentation
+      </a>
+    </div>
+
   </div>
 </div>
 {% endblock %}

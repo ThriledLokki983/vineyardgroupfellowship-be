@@ -2,53 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
-    <meta
-      http-equiv="X-UA-Compatible"
-      content="IE=edge"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Verify Your Email Address</title>
     <style>
-      /* Vineyard Group Fellowship Design System - Consistent with Dashboard */
-      :root {
-        /* Brand Colors */
-        --brand-primary: #603000;
-        --brand-primary-light: rgba(96, 48, 0, 0.1);
-        --brand-primary-border: rgba(96, 48, 0, 0.3);
-
-        /* Status Colors - Matching Health Dashboard */
-        --status-success: #175d2d;
-        --status-success-light: rgba(23, 93, 45, 0.1);
-        --status-success-border: rgba(23, 93, 45, 0.3);
-
-        --status-warning: #eb8c00;
-        --status-warning-light: rgba(235, 140, 0, 0.1);
-        --status-warning-border: rgba(235, 140, 0, 0.3);
-
-        --status-error: #c52a1a;
-        --status-error-light: rgba(197, 42, 26, 0.1);
-        --status-error-border: rgba(197, 42, 26, 0.3);
-
-        /* Accent Colors */
-        --accent-warm: #d4a574;
-
-        /* Neutral Colors */
-        --color-gray-50: #f9fafb;
-        --color-gray-100: #f3f4f6;
-        --color-gray-200: #e5e7eb;
-        --color-gray-300: #d1d5db;
-        --color-gray-400: #9ca3af;
-        --color-gray-500: #6b7280;
-        --color-gray-600: #4b5563;
-        --color-gray-700: #374151;
-        --color-gray-800: #1f2937;
-        --color-gray-900: #111827;
-      }
-
-      /* Reset and base styles */
       * {
         margin: 0;
         padding: 0;
@@ -56,255 +13,162 @@
       }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-          Oxygen, Ubuntu, Cantarell, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         line-height: 1.6;
-        color: var(--brand-primary);
-        background-color: var(--color-gray-50);
+        background-color: #f5f5f7;
         margin: 0;
-        padding: 0;
+        padding: 40px 20px;
       }
 
-      /* Container styles */
       .email-container {
-        max-width: 600px;
+        max-width: 560px;
         margin: 0 auto;
         background-color: #ffffff;
-        border-radius: 8px;
+        border-radius: 16px;
         overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(96, 48, 0, 0.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
-      /* Header styles - Using brand primary */
       .email-header {
-        background: linear-gradient(135deg, var(--brand-primary) 0%, #402000 100%);
+        background: hsl(256 65% 55%);
         color: #ffffff;
-        padding: 30px 40px;
+        padding: 48px 40px;
         text-align: center;
       }
 
       .email-header h1 {
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 600;
-        margin-bottom: 8px;
+        margin: 0;
         letter-spacing: -0.02em;
       }
 
-      .email-header p {
-        font-size: 16px;
-        opacity: 0.9;
-        margin: 0;
-      }
-
-      /* Content styles */
       .email-content {
-        padding: 40px;
+        padding: 48px 40px;
       }
 
       .greeting {
         font-size: 18px;
-        font-weight: 500;
-        margin-bottom: 20px;
-        color: var(--brand-primary);
+        font-weight: 600;
+        color: #1d1d1f;
+        margin-bottom: 24px;
       }
 
       .message {
         font-size: 16px;
+        color: #52525b;
         line-height: 1.7;
-        margin-bottom: 30px;
-        color: rgba(96, 48, 0, 0.7);
+        margin-bottom: 32px;
       }
 
-      /* Button styles - Using success green */
-      .verify-button {
+      .cta-container {
+        text-align: center;
+        margin: 32px 0;
+      }
+
+      .cta-button {
         display: inline-block;
-        background: linear-gradient(135deg, var(--status-success) 0%, #0f4221 100%);
+        background: hsl(256 65% 55%);
         color: #ffffff !important;
         text-decoration: none;
-        padding: 16px 32px;
-        border-radius: 6px;
+        padding: 14px 32px;
+        border-radius: 10px;
         font-weight: 600;
-        font-size: 16px;
-        text-align: center;
-        margin: 20px 0;
+        font-size: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(23, 93, 45, 0.2);
       }
 
-      .verify-button:hover {
+      .cta-button:hover {
+        background: hsl(256 65% 50%);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         transform: translateY(-1px);
-        box-shadow: 0 6px 12px rgba(23, 93, 45, 0.3);
-        background: linear-gradient(135deg, #0f4221 0%, var(--status-success) 100%);
       }
 
-      .button-container {
-        text-align: center;
-        margin: 30px 0;
+      .divider {
+        border: 0;
+        height: 1px;
+        background: #e5e5e7;
+        margin: 32px 0;
       }
 
-      /* Alternative link styles */
-      .alternative-link {
-        background-color: var(--color-gray-50);
-        border: 1px solid rgba(96, 48, 0, 0.08);
-        border-radius: 6px;
-        padding: 20px;
-        margin: 20px 0;
-      }
-
-      .alternative-link p {
+      .small-text {
         font-size: 14px;
-        color: rgba(96, 48, 0, 0.6);
-        margin-bottom: 10px;
+        color: #71717a;
+        line-height: 1.6;
+        text-align: center;
       }
 
-      .verification-url {
-        word-break: break-all;
-        color: var(--status-success);
+      .link-text {
         font-size: 13px;
-        background-color: var(--status-success-light);
-        padding: 8px 12px;
-        border-radius: 4px;
-        border: 1px solid var(--status-success-border);
-        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        color: #71717a;
+        word-break: break-all;
+        background: #f5f5f7;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-top: 12px;
+        display: block;
+        font-family: 'Courier New', monospace;
       }
 
-      /* Security notice styles - Using warning colors */
-      .security-notice {
-        background-color: var(--status-warning-light);
-        border-left: 4px solid var(--status-warning);
-        padding: 20px;
-        margin: 25px 0;
-        border-radius: 0 6px 6px 0;
+      .notice {
+        background: #fef9e7;
+        border-left: 3px solid #f59e0b;
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 32px;
       }
 
-      .security-notice h3 {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--status-warning);
-        margin-bottom: 10px;
+      .notice p {
+        font-size: 13px;
+        color: #92400e;
+        margin: 0;
       }
 
-      .security-notice ul {
-        margin: 10px 0 0 20px;
-        color: var(--brand-primary);
-      }
-
-      .security-notice li {
-        margin-bottom: 5px;
-        font-size: 14px;
-      }
-
-      /* Footer styles */
       .email-footer {
-        background-color: var(--color-gray-50);
-        padding: 30px 40px;
+        background: #fafafa;
+        padding: 32px 40px;
         text-align: center;
-        border-top: 1px solid rgba(96, 48, 0, 0.08);
+        border-top: 1px solid #e5e5e7;
       }
 
-      .footer-text {
-        font-size: 14px;
-        color: rgba(96, 48, 0, 0.5);
-        margin-bottom: 10px;
+      .email-footer p {
+        font-size: 13px;
+        color: #a1a1aa;
+        margin: 6px 0;
       }
 
-      .footer-links {
-        margin-top: 15px;
-      }
-
-      .footer-links a {
-        color: var(--brand-primary);
+      .email-footer a {
+        color: hsl(256 65% 55%);
         text-decoration: none;
-        margin: 0 10px;
-        font-size: 14px;
-        transition: color 0.2s ease;
       }
 
-      .footer-links a:hover {
-        color: var(--accent-warm);
+      .email-footer a:hover {
         text-decoration: underline;
       }
 
-      /* Responsive design */
       @media only screen and (max-width: 600px) {
-        .email-container {
-          margin: 0;
-          border-radius: 0;
+        body {
+          padding: 20px 10px;
         }
 
-        .email-header {
-          padding: 25px 20px;
+        .email-container {
+          border-radius: 12px;
+        }
+
+        .email-header,
+        .email-content,
+        .email-footer {
+          padding: 32px 24px;
         }
 
         .email-header h1 {
-          font-size: 24px;
+          font-size: 22px;
         }
 
-        .email-content {
-          padding: 30px 20px;
-        }
-
-        .verify-button {
-          display: block;
-          margin: 20px 0;
-          padding: 16px 20px;
-        }
-
-        .email-footer {
-          padding: 25px 20px;
-        }
-      }
-
-      /* Dark mode support */
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: var(--color-gray-900);
-        }
-
-        .email-container {
-          background-color: var(--color-gray-800);
-          border-color: var(--color-gray-700);
-        }
-
-        .email-content {
-          background-color: var(--color-gray-800);
-        }
-
-        .greeting {
-          color: var(--color-gray-100);
-        }
-
-        .message {
-          color: var(--color-gray-300);
-        }
-
-        .alternative-link {
-          background-color: var(--color-gray-700);
-          border-color: var(--color-gray-600);
-        }
-
-        .alternative-link p {
-          color: var(--color-gray-400);
-        }
-
-        .verification-url {
-          background-color: var(--color-gray-700);
-          border-color: var(--color-gray-600);
-          color: var(--color-gray-100);
-        }
-
-        .email-footer {
-          background-color: var(--color-gray-700);
-          border-color: var(--color-gray-600);
-        }
-
-        .footer-text {
-          color: var(--color-gray-400);
-        }
-
-        .footer-links a {
-          color: var(--accent-warm);
+        .cta-button {
+          padding: 12px 28px;
+          font-size: 14px;
         }
       }
     </style>
@@ -312,93 +176,62 @@
   <body>
     <div class="email-container">
       <!-- Header -->
-      <div class="email-header" style="background: linear-gradient(135deg, #603000 0%, #402000 100%); color: #ffffff; padding: 30px 40px; text-align: center;">
-        <h1 style="font-size: 28px; font-weight: 600; margin: 0 0 8px 0; letter-spacing: -0.02em; color: #ffffff;">{{ site_name }}</h1>
-        <p style="font-size: 16px; opacity: 0.9; margin: 0; color: #ffffff;">Community & Fellowship Platform</p>
+      <div class="email-header">
+        <h1>Vineyard Group Fellowship</h1>
       </div>
 
       <!-- Main Content -->
       <div class="email-content">
-        <div class="greeting">
-          Hello {{ user.get_full_name|default:user.username }},
-        </div>
+        <div class="greeting">Hello {{ user.get_full_name|default:user.username }},</div>
 
-        <div class="message">
-          <p>
-            Thank you for joining Vineyard Group Fellowship! To complete your registration and start connecting with your faith community, please verify your email address by clicking the button below:
-          </p>
-        </div>
+        <p class="message">
+          Welcome to Vineyard Group Fellowship! To complete your registration and start connecting with your faith community, please verify your email address.
+        </p>
 
-        <!-- Verification Button -->
-        <div class="button-container" style="text-align: center; margin: 30px 0;">
-          <a
-            href="{{ verification_url }}"
-            class="verify-button"
-            style="display: inline-block; background: linear-gradient(135deg, #175d2d 0%, #0f4221 100%); color: #ffffff !important; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center; box-shadow: 0 2px 4px rgba(23, 93, 45, 0.2);"
-          >
+        <!-- CTA Button -->
+        <div class="cta-container">
+          <a href="{{ verification_url }}" class="cta-button">
             Verify Email Address
           </a>
         </div>
 
-        <!-- Alternative Link -->
-        <div class="alternative-link">
-          <p>
-            If the button above doesn't work, copy and paste this link into your browser:
-          </p>
-          <div class="verification-url">{{ verification_url }}</div>
-        </div>
+        <hr class="divider" />
+
+        <p class="small-text" style="text-align: left; margin-bottom: 16px;">
+          <strong style="color: #52525b;">Once verified, you'll be able to:</strong>
+        </p>
+        <ul style="margin: 0 0 32px 0; padding-left: 24px; color: #71717a; font-size: 14px; line-height: 1.8;">
+          <li>Join small groups in your area</li>
+          <li>Connect with members for Bible studies</li>
+          <li>Stay updated on community events</li>
+        </ul>
+
+        <p class="small-text">
+          If the button doesn't work, copy and paste this link:
+        </p>
+        <div class="link-text">{{ verification_url }}</div>
 
         <!-- Security Notice -->
-        <div class="security-notice">
-          <h3>Security Notice</h3>
-          <ul>
-            <li>
-              This verification link will expire in {{ token_expiry_hours }} hours
-            </li>
-            <li>
-              If you didn't create an account with us, please ignore this email
-            </li>
-            <li>
-              Never share this verification link with anyone
-            </li>
-            <li>
-              Our team will never ask for your password via email
-            </li>
-          </ul>
-        </div>
-
-        <div class="message">
-          <p>Once verified, you'll be able to:</p>
-          <ul style="margin: 10px 0 0 20px; color: #4a5568">
-            <li>Join small groups in your area</li>
-            <li>Connect with fellow church members</li>
-            <li>Participate in Bible studies and fellowship activities</li>
-            <li>Share meals and build meaningful relationships</li>
-            <li>Engage in Christian programs and community events</li>
-          </ul>
-        </div>
-
-        <div class="message">
+        <div class="notice">
           <p>
-            If you have any questions or need assistance, don't hesitate to reach out to our support team.
-          </p>
+            <strong>⏱ This link expires in {{ token_expiry_hours|default:"24" }} hours.</strong><br>
+            Didn't request this? You can safely ignore this email.
           </p>
         </div>
       </div>
 
       <!-- Footer -->
       <div class="email-footer">
-        <div class="footer-text">
-          This email was sent to {{ user.email }}
-        </div>
-        <div class="footer-text">
-          © {{ current_year }} {{ site_name }}. All rights reserved.
-        </div>
-        <div class="footer-links">
-          <a href="mailto:{{ support_email }}">Support</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-        </div>
+        <p style="font-weight: 600; color: #52525b; margin-bottom: 12px;">
+          Vineyard Group Fellowship
+        </p>
+        <p>Building Christian community through fellowship and connection</p>
+        <p style="margin-top: 16px;">
+          <a href="mailto:{{ support_email|default:'support@vineyardgroupfellowship.org' }}">Contact Support</a>
+        </p>
+        <p style="margin-top: 16px;">
+          © {{ current_year|default:"2025" }} Vineyard Group Fellowship
+        </p>
       </div>
     </div>
   </body>

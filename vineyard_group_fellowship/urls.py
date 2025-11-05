@@ -50,6 +50,11 @@ urlpatterns = [
     path('api/v1/management/', include('core.urls.management')),
 
     # ================================================================
+    # Email Template Previews (staff only, development)
+    # ================================================================
+    path('email-previews/', include('core.urls.email_preview')),
+
+    # ================================================================
     # Security Headers and Monitoring
     # ================================================================
     path('', include('core.urls.security', namespace='security-core')),

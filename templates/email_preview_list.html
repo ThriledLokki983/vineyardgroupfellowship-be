@@ -1,0 +1,84 @@
+{% extends "base_openprops.html" %}
+
+{% block title %}Email Template Previews - Vineyard Group Fellowship{% endblock %}
+
+{% block content %}
+<div style="max-inline-size: var(--size-content-3); margin-inline: auto;">
+  <h1 style="font-size: var(--font-size-fluid-2); font-weight: var(--font-weight-7); color: var(--brand); margin-bottom: var(--size-3);">
+    📧 Email Template Previews
+  </h1>
+  <p style="color: var(--text-2); margin-bottom: var(--size-8); font-size: var(--font-size-2);">
+    Preview how emails will look before sending them to users. Click on any template to see the full preview.
+  </p>
+
+  <div style="display: grid; gap: var(--size-5);">
+    {% for template in templates %}
+    <a href="{% url template.url %}"
+       style="background: var(--surface-2);
+              padding: var(--size-6);
+              border-radius: var(--radius-3);
+              text-decoration: none;
+              color: var(--text-1);
+              box-shadow: var(--shadow-2);
+              transition: all 0.2s var(--ease-2);
+              border: 1px solid var(--border-subtle);
+              display: block;"
+       onmouseover="this.style.transform='translateX(4px)'; this.style.boxShadow='var(--shadow-3)';"
+       onmouseout="this.style.transform=''; this.style.boxShadow='var(--shadow-2)';">
+
+      <h3 style="font-size: var(--font-size-4);
+                 font-weight: var(--font-weight-6);
+                 margin-bottom: var(--size-2);
+                 color: var(--brand);">
+        {{ template.name }}
+      </h3>
+
+      <p style="color: var(--text-2);
+                font-size: var(--font-size-1);
+                margin-bottom: var(--size-3);">
+        {{ template.description }}
+      </p>
+
+      <span style="color: var(--link-color);
+                   font-size: var(--font-size-1);
+                   font-weight: var(--font-weight-5);">
+        Preview Template →
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div style="background: var(--surface-2);
+              padding: var(--size-6);
+              border-radius: var(--radius-3);
+              margin-top: var(--size-8);
+              border: 1px solid var(--border-subtle);">
+    <h3 style="font-size: var(--font-size-3);
+               font-weight: var(--font-weight-6);
+               margin-bottom: var(--size-3);
+               color: var(--brand);">
+      💡 Tips for Email Template Testing
+    </h3>
+    <ul style="color: var(--text-2);
+               font-size: var(--font-size-1);
+               line-height: var(--font-lineheight-4);
+               padding-inline-start: var(--size-6);">
+      <li style="margin-bottom: var(--size-2);">Use browser dev tools to test responsive design</li>
+      <li style="margin-bottom: var(--size-2);">Test in both light and dark modes using the theme toggle</li>
+      <li style="margin-bottom: var(--size-2);">Check links and buttons are properly aligned</li>
+      <li style="margin-bottom: var(--size-2);">Verify colors have good contrast for accessibility</li>
+      <li>Remember: Email clients may render differently than browsers</li>
+    </ul>
+  </div>
+
+  <div style="margin-top: var(--size-8);
+              text-align: center;">
+    <a href="/"
+       style="color: var(--link-color);
+              text-decoration: none;
+              font-weight: var(--font-weight-5);">
+      ← Back to Home
+    </a>
+  </div>
+</div>
+{% endblock %}

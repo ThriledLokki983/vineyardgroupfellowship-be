@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{% block meta_description %}Vineyard Group Fellowship - Connect with small groups, Bible studies, and Christian community{% endblock %}">
+  <title>{% block title %}Vineyard Group Fellowship API{% endblock %}</title>
+
+  <!-- Open Props CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/open-props"/>
+  <link rel="stylesheet" href="https://unpkg.com/open-props/normalize.min.css"/>
+
+  <style>
+    /* ===========================================
+       VINEYARD GROUP FELLOWSHIP DESIGN SYSTEM
+       Built with Open Props
+    =========================================== */
+
+    html {
+      /*  BRAND FOUNDATION */
+      --brand-hue: 256;
+      --brand-saturation: 41%;
+      --brand-lightness: 14%;
+
+      /* Secondary brand accent */
+      --accent-hue: 75;
+      --accent: hsl(75, 80%, 50%);
+
+      /* LIGHT THEME PALETTE */
+      --brand-light: hsl(var(--brand-hue) var(--brand-saturation) var(--brand-lightness));
+      --text1-light: hsl(var(--brand-hue) var(--brand-saturation) 10%);
+      --text2-light: hsl(var(--brand-hue) 10% 45%);
+      --surface1-light: hsl(var(--brand-hue) 15% 98%);
+      --surface2-light: hsl(var(--brand-hue) 15% 95%);
+      --surface3-light: hsl(var(--brand-hue) 10% 90%);
+      --surface4-light: hsl(var(--brand-hue) 10% 85%);
+      --surface-shadow-light: var(--brand-hue) 30% 20%;
+      --shadow-strength-light: .02;
+
+      /* DARK THEME PALETTE */
+      --brand-dark: hsl(
+        var(--brand-hue)
+        calc(var(--brand-saturation) * 1.2)
+        calc(var(--brand-lightness) * 3)
+      );
+
+      /* Text */
+      --text1-dark: hsl(var(--brand-hue) 15% 90%);
+      --text2-dark: hsl(var(--brand-hue) 5% 65%);
+
+      /* Surfaces */
+      --surface1-dark: hsl(var(--brand-hue) 15% 8%);
+      --surface2-dark: hsl(var(--brand-hue) 15% 12%);
+      --surface3-dark: hsl(var(--brand-hue) 10% 16%);
+      --surface4-dark: hsl(var(--brand-hue) 10% 20%);
+      --surface-shadow-dark: var(--brand-hue) 50% 3%;
+
+      /* Shadows */
+      --shadow-strength-dark: .8;
+
+      /* BRAND-SPECIFIC COLORS */
+      --brand: hsl(var(--brand-hue) var(--brand-saturation) var(--brand-lightness));
+      --brand-secondary: hsl(264 48% 51%);
+      --brand-accent: hsl(75 80% 50%);
+      --btn-hover-clr: hsl(var(--brand-hue) var(--brand-saturation) 10%);
+
+      /* HSL COLOR COMPONENTS (for gradients & opacity) */
+      --brand-hsl: var(--brand-hue) var(--brand-saturation) var(--brand-lightness);
+      --brand-secondary-hsl: 264 48% 51%;
+
+      /* Status Colors (consistent across themes) */
+      --error-color: #ff4757;
+      --error-color-light: #ffe6ea;
+      --error-color-dark: #d63447;
+
+      --warning-color: #ffa502;
+      --warning-color-light: #fff3e0;
+      --warning-color-text: #e55100;
+
+      --success-color: #2ed573;
+      --success-color-light: #e8f5e8;
+      --success-color-dark: #1ea557;
+
+      --link-color-light: hsl(264 48% 51%);
+      --link-color-dark: hsl(264 60% 70%);
+
+      /* Border Colors */
+      --border-subtle-light: hsl(var(--brand-hue) 15% 92%);
+      --border-medium-light: hsl(var(--brand-hue) 15% 85%);
+      --border-subtle-dark: hsl(var(--brand-hue) 10% 20%);
+      --border-medium-dark: hsl(var(--brand-hue) 10% 25%);
+
+      /* Layout */
+      --header-block-size: 70px;
+      --footer-block-size: 80px;
+      --max-content-width: 1200px;
+    }
+
+    /* LIGHT THEME (default) */
+    :where(html[data-theme="light"]), :root {
+      color-scheme: light;
+
+      --brand: var(--brand-light);
+      --text-1: var(--text1-light);
+      --text-2: var(--text2-light);
+      --surface-1: var(--surface1-light);
+      --surface-2: var(--surface2-light);
+      --surface-3: var(--surface3-light);
+      --surface-4: var(--surface4-light);
+      --surface-shadow: var(--surface-shadow-light);
+      --shadow-strength: var(--shadow-strength-light);
+
+      --link-color: var(--link-color-light);
+      --border-subtle: var(--border-subtle-light);
+      --border-medium: var(--border-medium-light);
+
+      /* Enhanced Shadows */
+      --shadow-1: 0 1px 2px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + 2%));
+      --shadow-2:
+        0 3px 5px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + 3%)),
+        0 1px 2px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + 2%));
+      --shadow-3:
+        0 10px 20px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + 4%)),
+        0 3px 6px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + 3%));
+    }
+
+    /* DARK THEME */
+    @media (prefers-color-scheme: dark) {
+      :where(html:not([data-theme])), [data-theme="dark"] {
+        color-scheme: dark;
+
+        --brand: var(--brand-dark);
+        --text-1: var(--text1-dark);
+        --text-2: var(--text2-dark);
+        --surface-1: var(--surface1-dark);
+        --surface-2: var(--surface2-dark);
+        --surface-3: var(--surface3-dark);
+        --surface-4: var(--surface4-dark);
+        --surface-shadow: var(--surface-shadow-dark);
+        --shadow-strength: var(--shadow-strength-dark);
+
+        --link-color: var(--link-color-dark);
+        --border-subtle: var(--border-subtle-dark);
+        --border-medium: var(--border-medium-dark);
+
+        /* Enhanced Shadows for dark mode */
+        --shadow-1: 0 1px 2px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + .05));
+        --shadow-2:
+          0 3px 5px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + .1)),
+          0 1px 2px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + .05));
+        --shadow-3:
+          0 10px 20px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + .15)),
+          0 3px 6px hsl(var(--surface-shadow) / calc(var(--shadow-strength) + .1));
+      }
+    }
+
+    /* BASE STYLES */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--surface-1);
+      color: var(--text-1);
+      line-height: var(--font-lineheight-3);
+      min-block-size: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER STYLES */
+    .site-header {
+      background: var(--surface-2);
+      block-size: var(--header-block-size);
+      box-shadow: var(--shadow-2);
+      position: sticky;
+      top: 0;
+      z-index: var(--layer-5);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .header-container {
+      max-inline-size: var(--max-content-width);
+      margin-inline: auto;
+      padding-inline: var(--size-fluid-3);
+      block-size: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .site-logo {
+      font-size: var(--font-size-4);
+      font-weight: var(--font-weight-7);
+      color: var(--brand);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: var(--size-2);
+    }
+
+    .site-logo:hover {
+      color: var(--brand-secondary);
+    }
+
+    .site-nav {
+      display: flex;
+      gap: var(--size-5);
+      align-items: center;
+    }
+
+    .nav-link {
+      color: var(--text-2);
+      text-decoration: none;
+      padding: var(--size-2) var(--size-3);
+      border-radius: var(--radius-2);
+      font-weight: var(--font-weight-5);
+      transition: all 0.2s var(--ease-2);
+    }
+
+    .nav-link:hover {
+      background: var(--surface-3);
+      color: var(--text-1);
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+      flex: 1;
+      max-inline-size: var(--max-content-width);
+      margin-inline: auto;
+      padding: var(--size-fluid-5) var(--size-fluid-3);
+      inline-size: 100%;
+    }
+
+    /* FOOTER STYLES */
+    .site-footer {
+      background: var(--surface-2);
+      border-top: 1px solid var(--border-subtle);
+      padding: var(--size-8) 0;
+      margin-top: auto;
+    }
+
+    .footer-container {
+      max-inline-size: var(--max-content-width);
+      margin-inline: auto;
+      padding-inline: var(--size-fluid-3);
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: var(--size-6);
+      justify-content: center;
+      margin-bottom: var(--size-4);
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      color: var(--link-color);
+      text-decoration: none;
+      font-size: var(--font-size-1);
+      transition: color 0.2s var(--ease-2);
+    }
+
+    .footer-link:hover {
+      color: var(--brand);
+      text-decoration: underline;
+    }
+
+    .footer-text {
+      color: var(--text-2);
+      font-size: var(--font-size-1);
+    }
+
+    /* THEME TOGGLE */
+    .theme-toggle {
+      background: var(--surface-3);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-round);
+      padding: var(--size-2);
+      cursor: pointer;
+      font-size: var(--font-size-3);
+      transition: all 0.2s var(--ease-2);
+      inline-size: 40px;
+      block-size: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-toggle:hover {
+      background: var(--surface-4);
+      transform: scale(1.05);
+    }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="/" class="site-logo">
+        🍇 Vineyard Group Fellowship
+      </a>
+      <nav class="site-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/health-check/" class="nav-link">Health Check</a>
+        <a href="/api/docs/" class="nav-link">API Docs</a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <span class="theme-icon">🌙</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-links">
+        <a href="/api/docs/" class="footer-link">API Documentation</a>
+        <a href="/admin/" class="footer-link">Admin</a>
+        <a href="mailto:support@vineyardgroupfellowship.org" class="footer-link">Support</a>
+        <a href="https://github.com/ThriledLokki983/vineyardgroupfellowship-be" class="footer-link" target="_blank">GitHub</a>
+      </div>
+      <p class="footer-text">
+        © 2025 Vineyard Group Fellowship - Community & Fellowship Platform
+      </p>
+    </div>
+  </footer>
+
+  <!-- Theme Toggle Script -->
+  <script>
+    // Initialize theme from localStorage or system preference
+    const theme = localStorage.getItem('theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+    updateThemeIcon(theme);
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme);
+    }
+
+    function updateThemeIcon(theme) {
+      const icon = document.querySelector('.theme-icon');
+      icon.textContent = theme === 'light' ? '🌙' : '☀️';
+    }
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
