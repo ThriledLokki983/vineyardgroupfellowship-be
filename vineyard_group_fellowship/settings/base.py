@@ -392,7 +392,8 @@ CACHES = {
 
 # File upload settings (optimized for base64 storage)
 # Must be integers for Django's multipart parser
-FILE_UPLOAD_MAX_MEMORY_SIZE = int(1.5 * 1024 * 1024)  # 1.5MB raw file size (1572864 bytes)
+# 1.5MB raw file size (1572864 bytes)
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(1.5 * 1024 * 1024)
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(1.5 * 1024 * 1024)  # 1.5MB (1572864 bytes)
 
 # Profile photo specific settings for base64 storage
