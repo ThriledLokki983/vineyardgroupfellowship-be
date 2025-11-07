@@ -44,7 +44,7 @@ from group.models import GroupMembership, Group
 class FeedItemFilter(FilterSet):
     """
     Custom filter for FeedItem to handle content_type aliases.
-    
+
     Allows both 'prayer' and 'prayer_request' to work for prayer requests.
     This provides better frontend compatibility.
     """
@@ -58,11 +58,11 @@ class FeedItemFilter(FilterSet):
             ('scripture', 'Scripture'),
         ]
     )
-    
+
     class Meta:
         model = FeedItem
         fields = ['group', 'content_type']
-    
+
     def filter_content_type(self, queryset, name, value):
         """Normalize content_type value before filtering."""
         # Map prayer_request -> prayer for database query
@@ -377,12 +377,18 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     Endpoints:
     - GET /feed/ - List feed items for user's groups
     - GET /feed/{id}/ - Get specific feed item
+    - POST /feed/{id}/mark-viewed/ - Mark item as viewed
+    - POST /feed/mark-all-viewed/ - Mark all items as viewed
 
     Feed items are auto-populated via signals, no manual creation.
-    
+
     Supports content_type filtering with aliases:
     - 'discussion' or 'prayer' or 'testimony' or 'scripture'
     - 'prayer_request' (alias for 'prayer')
+    
+    View Tracking:
+    - Each feed item has a 'has_viewed' field indicating if current user viewed it
+    - Uses optimized prefetch_related to avoid N+1 queries
     """
 
     serializer_class = FeedItemSerializer
@@ -393,7 +399,12 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        """Return feed items from user's groups only."""
+        """
+        Return feed items from user's groups with optimized view tracking.
+        
+        Uses prefetch_related to efficiently load view status for current user,
+        avoiding N+1 query problems.
+        """
         user = self.request.user
 
         # Get groups user is a member of
@@ -402,14 +413,81 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
             status='active'
         ).values_list('group_id', flat=True)
 
+        # Import FeedItemView here to avoid circular imports
+        from .models import FeedItemView
+
         # Return feed items from those groups (not deleted)
-        # Note: content_type is GenericForeignKey, not a real FK, so don't select_related
+        # Optimize: prefetch only current user's views
         queryset = FeedItem.objects.filter(
             group_id__in=user_groups,
             is_deleted=False
-        ).select_related('group', 'author').order_by('-created_at')
+        ).select_related('group', 'author').prefetch_related(
+            Prefetch(
+                'views',
+                queryset=FeedItemView.objects.filter(user=user),
+                to_attr='user_views'
+            )
+        ).order_by('-created_at')
 
         return queryset
+    
+    @action(detail=True, methods=['post'], url_path='mark-viewed')
+    def mark_viewed(self, request, pk=None):
+        """
+        Mark a specific feed item as viewed by current user.
+        
+        Creates a FeedItemView record if it doesn't exist.
+        Idempotent: calling multiple times has the same effect as calling once.
+        
+        Returns:
+            200: Item marked as viewed (includes viewed_at timestamp)
+        """
+        from .models import FeedItemView
+        
+        feed_item = self.get_object()
+        view, created = FeedItemView.objects.get_or_create(
+            feed_item=feed_item,
+            user=request.user
+        )
+        
+        return Response({
+            'detail': 'Marked as viewed',
+            'viewed_at': view.viewed_at,
+            'was_new': created
+        })
+    
+    @action(detail=False, methods=['post'], url_path='mark-all-viewed')
+    def mark_all_viewed(self, request):
+        """
+        Mark all feed items in current queryset as viewed.
+        
+        Useful for "mark all as read" functionality.
+        Uses bulk_create for efficiency with ignore_conflicts=True to handle duplicates.
+        
+        Query parameters:
+        - All standard filters apply (group, content_type, etc.)
+        
+        Returns:
+            200: Count of items marked as viewed
+        """
+        from .models import FeedItemView
+        
+        # Get filtered queryset (respects all query params like group, content_type)
+        feed_items = self.filter_queryset(self.get_queryset())
+        
+        # Create view records (bulk operation for efficiency)
+        views_to_create = [
+            FeedItemView(feed_item=item, user=request.user)
+            for item in feed_items
+        ]
+        
+        # Use ignore_conflicts to handle items already viewed
+        FeedItemView.objects.bulk_create(views_to_create, ignore_conflicts=True)
+        
+        return Response({
+            'detail': 'Marked all items as viewed',
+            'count': len(views_to_create)
+        })
 
 
 class NotificationPreferenceViewSet(viewsets.ModelViewSet):
@@ -894,7 +972,7 @@ class ScriptureViewSet(viewsets.ModelViewSet):
         Look up Bible verse using Bible API.
 
         Returns verse text and reference for easy scripture sharing.
-        
+
         Query parameters:
         - reference: Bible verse reference (e.g., "John 3:16" or "Romans 8:28-30")
         - translation: Bible translation (default: KJV)
