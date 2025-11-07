@@ -16,7 +16,8 @@ def enable_postgis(apps, schema_editor):
         # PostGIS not available - log warning but don't fail migration
         print(f"⚠️  PostGIS extension not available: {e}")
         print("⚠️  Location-based features will be limited without PostGIS")
-        print("ℹ️  To enable PostGIS: Install postgresql-XX-postgis on your database server")
+        print(
+            "ℹ️  To enable PostGIS: Install postgresql-XX-postgis on your database server")
 
 
 class Migration(migrations.Migration):
@@ -26,5 +27,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(enable_postgis, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(
+            enable_postgis, reverse_code=migrations.RunPython.noop),
     ]

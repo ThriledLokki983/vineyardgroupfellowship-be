@@ -17,10 +17,14 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FeedItemView',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('viewed_at', models.DateTimeField(auto_now_add=True, help_text='When the user viewed this item')),
-                ('feed_item', models.ForeignKey(help_text='Feed item that was viewed', on_delete=django.db.models.deletion.CASCADE, related_name='views', to='messaging.feeditem')),
-                ('user', models.ForeignKey(help_text='User who viewed the item', on_delete=django.db.models.deletion.CASCADE, related_name='feed_item_views', to=settings.AUTH_USER_MODEL)),
+                ('id', models.UUIDField(default=uuid.uuid4,
+                 editable=False, primary_key=True, serialize=False)),
+                ('viewed_at', models.DateTimeField(auto_now_add=True,
+                 help_text='When the user viewed this item')),
+                ('feed_item', models.ForeignKey(help_text='Feed item that was viewed',
+                 on_delete=django.db.models.deletion.CASCADE, related_name='views', to='messaging.feeditem')),
+                ('user', models.ForeignKey(help_text='User who viewed the item',
+                 on_delete=django.db.models.deletion.CASCADE, related_name='feed_item_views', to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'db_table': 'messaging_feed_item_view',
@@ -29,11 +33,13 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='feeditemview',
-            index=models.Index(fields=['user', '-viewed_at'], name='feed_view_user_time_idx'),
+            index=models.Index(
+                fields=['user', '-viewed_at'], name='feed_view_user_time_idx'),
         ),
         migrations.AddIndex(
             model_name='feeditemview',
-            index=models.Index(fields=['feed_item', 'user'], name='feed_view_item_user_idx'),
+            index=models.Index(
+                fields=['feed_item', 'user'], name='feed_view_item_user_idx'),
         ),
         migrations.AlterUniqueTogether(
             name='feeditemview',

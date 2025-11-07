@@ -531,18 +531,18 @@ class FeedItem(models.Model):
 class FeedItemView(models.Model):
     """
     Track which users have viewed which feed items.
-    
+
     This enables "read/unread" status for feed items, helping users
     keep track of what they've already seen. Each record represents
     one user viewing one feed item.
-    
+
     Features:
     - Per-user, per-item tracking
     - Timestamp of when viewed
     - Unique constraint prevents duplicate views
     - Efficient indexing for fast lookups
     """
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     feed_item = models.ForeignKey(
         FeedItem,
@@ -560,16 +560,18 @@ class FeedItemView(models.Model):
         auto_now_add=True,
         help_text=_('When the user viewed this item')
     )
-    
+
     class Meta:
         db_table = 'messaging_feed_item_view'
         unique_together = [['feed_item', 'user']]
         indexes = [
-            models.Index(fields=['user', '-viewed_at'], name='feed_view_user_time_idx'),
-            models.Index(fields=['feed_item', 'user'], name='feed_view_item_user_idx'),
+            models.Index(fields=['user', '-viewed_at'],
+                         name='feed_view_user_time_idx'),
+            models.Index(fields=['feed_item', 'user'],
+                         name='feed_view_item_user_idx'),
         ]
         ordering = ['-viewed_at']
-    
+
     def __str__(self):
         return f"{self.user.email} viewed {self.feed_item.title} at {self.viewed_at}"
 

@@ -385,7 +385,7 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     Supports content_type filtering with aliases:
     - 'discussion' or 'prayer' or 'testimony' or 'scripture'
     - 'prayer_request' (alias for 'prayer')
-    
+
     View Tracking:
     - Each feed item has a 'has_viewed' field indicating if current user viewed it
     - Uses optimized prefetch_related to avoid N+1 queries
@@ -401,7 +401,7 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """
         Return feed items from user's groups with optimized view tracking.
-        
+
         Uses prefetch_related to efficiently load view status for current user,
         avoiding N+1 query problems.
         """
@@ -430,60 +430,61 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
         ).order_by('-created_at')
 
         return queryset
-    
+
     @action(detail=True, methods=['post'], url_path='mark-viewed')
     def mark_viewed(self, request, pk=None):
         """
         Mark a specific feed item as viewed by current user.
-        
+
         Creates a FeedItemView record if it doesn't exist.
         Idempotent: calling multiple times has the same effect as calling once.
-        
+
         Returns:
             200: Item marked as viewed (includes viewed_at timestamp)
         """
         from .models import FeedItemView
-        
+
         feed_item = self.get_object()
         view, created = FeedItemView.objects.get_or_create(
             feed_item=feed_item,
             user=request.user
         )
-        
+
         return Response({
             'detail': 'Marked as viewed',
             'viewed_at': view.viewed_at,
             'was_new': created
         })
-    
+
     @action(detail=False, methods=['post'], url_path='mark-all-viewed')
     def mark_all_viewed(self, request):
         """
         Mark all feed items in current queryset as viewed.
-        
+
         Useful for "mark all as read" functionality.
         Uses bulk_create for efficiency with ignore_conflicts=True to handle duplicates.
-        
+
         Query parameters:
         - All standard filters apply (group, content_type, etc.)
-        
+
         Returns:
             200: Count of items marked as viewed
         """
         from .models import FeedItemView
-        
+
         # Get filtered queryset (respects all query params like group, content_type)
         feed_items = self.filter_queryset(self.get_queryset())
-        
+
         # Create view records (bulk operation for efficiency)
         views_to_create = [
             FeedItemView(feed_item=item, user=request.user)
             for item in feed_items
         ]
-        
+
         # Use ignore_conflicts to handle items already viewed
-        FeedItemView.objects.bulk_create(views_to_create, ignore_conflicts=True)
-        
+        FeedItemView.objects.bulk_create(
+            views_to_create, ignore_conflicts=True)
+
         return Response({
             'detail': 'Marked all items as viewed',
             'count': len(views_to_create)

@@ -224,7 +224,7 @@ class BibleAPIService:
             bible_api_translation = self.BIBLE_API_TRANSLATIONS.get(
                 translation, 'kjv'
             )
-            
+
             url = f"{self.BIBLE_API_BASE}/{reference}"
             params = {'translation': bible_api_translation}
 

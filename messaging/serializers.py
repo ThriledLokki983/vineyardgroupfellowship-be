@@ -456,7 +456,7 @@ class ReactionCreateSerializer(serializers.ModelSerializer):
 class FeedItemSerializer(serializers.ModelSerializer):
     """
     Serializer for feed items (read-only, auto-populated).
-    
+
     Includes 'has_viewed' field to indicate if current user has viewed the item.
     This field uses prefetch_related optimization to avoid N+1 queries.
     """
@@ -484,23 +484,23 @@ class FeedItemSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = fields
-    
+
     def get_has_viewed(self, obj):
         """
         Check if current user has viewed this feed item.
-        
+
         Uses prefetched 'user_views' attribute to avoid N+1 queries.
         The viewset should prefetch views for the current user.
         """
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        
+
         # Check if we have prefetched views (optimization)
         if hasattr(obj, 'user_views'):
             # user_views is prefetched and filtered for current user
             return len(obj.user_views) > 0
-        
+
         # Fallback: direct query (less efficient)
         return obj.views.filter(user=request.user).exists()
 

@@ -45,13 +45,13 @@ Create a dedicated model to track view events:
 class FeedItemView(models.Model):
     """Track which users have viewed which feed items."""
     feed_item = models.ForeignKey(
-        FeedItem, 
-        on_delete=models.CASCADE, 
+        FeedItem,
+        on_delete=models.CASCADE,
         related_name='views'
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     viewed_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         db_table = 'messaging_feed_item_view'
         unique_together = ['feed_item', 'user']
@@ -59,7 +59,7 @@ class FeedItemView(models.Model):
             models.Index(fields=['user', '-viewed_at']),
             models.Index(fields=['feed_item', 'user']),
         ]
-    
+
     def __str__(self):
         return f"{self.user.email} viewed {self.feed_item.title}"
 ```
@@ -70,14 +70,14 @@ class FeedItemView(models.Model):
 ```python
 class FeedItemSerializer(serializers.ModelSerializer):
     has_viewed = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = FeedItem
         fields = [
             # ... existing fields ...
             'has_viewed',
         ]
-    
+
     def get_has_viewed(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
@@ -92,7 +92,7 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = FeedItem.objects.filter(...)
-        
+
         # Optimize: prefetch only current user's views
         queryset = queryset.prefetch_related(
             Prefetch(
@@ -123,14 +123,14 @@ def mark_viewed(self, request, pk=None):
 def mark_all_viewed(self, request):
     """Mark all feed items in current queryset as viewed."""
     feed_items = self.filter_queryset(self.get_queryset())
-    
+
     # Bulk create view records (efficient)
     views = [
         FeedItemView(feed_item=item, user=request.user)
         for item in feed_items
     ]
     FeedItemView.objects.bulk_create(views, ignore_conflicts=True)
-    
+
     return Response({
         'detail': f'Marked {len(views)} items as viewed'
     })
@@ -180,7 +180,7 @@ Add a ManyToMany relationship directly on FeedItem:
 ```python
 class FeedItem(models.Model):
     # ... existing fields ...
-    
+
     viewed_by = models.ManyToManyField(
         User,
         related_name='viewed_feed_items',
@@ -195,7 +195,7 @@ class FeedItem(models.Model):
 ```python
 class FeedItemSerializer(serializers.ModelSerializer):
     has_viewed = serializers.SerializerMethodField()
-    
+
     def get_has_viewed(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
@@ -260,12 +260,12 @@ class FeedViewCache:
     def mark_viewed(user_id, feed_item_id):
         cache_key = f"feed_view:{user_id}:{feed_item_id}"
         cache.set(cache_key, True, timeout=None)
-    
+
     @staticmethod
     def has_viewed(user_id, feed_item_id):
         cache_key = f"feed_view:{user_id}:{feed_item_id}"
         return cache.get(cache_key, False)
-    
+
     @staticmethod
     def mark_all_viewed(user_id, feed_item_ids):
         """Batch mark multiple items as viewed."""
@@ -280,7 +280,7 @@ class FeedViewCache:
 ```python
 class FeedItemSerializer(serializers.ModelSerializer):
     has_viewed = serializers.SerializerMethodField()
-    
+
     def get_has_viewed(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
@@ -332,7 +332,7 @@ Combine database persistence with Redis caching:
 ```python
 class FeedViewTracker:
     CACHE_TTL = 3600  # 1 hour
-    
+
     @staticmethod
     def mark_viewed(feed_item_id, user_id):
         """Mark item as viewed (database + cache)."""
@@ -341,60 +341,60 @@ class FeedViewTracker:
             feed_item_id=feed_item_id,
             user_id=user_id
         )
-        
+
         # Update cache
         cache_key = f"feed_view:{user_id}:{feed_item_id}"
         cache.set(cache_key, True, timeout=FeedViewTracker.CACHE_TTL)
-        
+
         return view
-    
+
     @staticmethod
     def has_viewed(feed_item_id, user_id):
         """Check if user has viewed item (cache-first)."""
         cache_key = f"feed_view:{user_id}:{feed_item_id}"
-        
+
         # Try cache first
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
-        
+
         # Check database
         exists = FeedItemView.objects.filter(
             feed_item_id=feed_item_id,
             user_id=user_id
         ).exists()
-        
+
         # Cache the result
         cache.set(cache_key, exists, timeout=FeedViewTracker.CACHE_TTL)
         return exists
-    
+
     @staticmethod
     def bulk_check_viewed(feed_item_ids, user_id):
         """Check multiple items efficiently."""
         # Try to get all from cache first
         cache_keys = [f"feed_view:{user_id}:{fid}" for fid in feed_item_ids]
         cached_results = cache.get_many(cache_keys)
-        
+
         # Find items not in cache
         uncached_ids = [
             fid for i, fid in enumerate(feed_item_ids)
             if cache_keys[i] not in cached_results
         ]
-        
+
         # Query database for uncached items
         if uncached_ids:
             viewed_ids = set(FeedItemView.objects.filter(
                 feed_item_id__in=uncached_ids,
                 user_id=user_id
             ).values_list('feed_item_id', flat=True))
-            
+
             # Cache the results
             to_cache = {
                 f"feed_view:{user_id}:{fid}": fid in viewed_ids
                 for fid in uncached_ids
             }
             cache.set_many(to_cache, timeout=FeedViewTracker.CACHE_TTL)
-        
+
         # Combine results
         results = {}
         for i, fid in enumerate(feed_item_ids):
@@ -402,7 +402,7 @@ class FeedViewTracker:
                 results[fid] = cached_results[cache_keys[i]]
             else:
                 results[fid] = fid in viewed_ids
-        
+
         return results
 ```
 
@@ -451,7 +451,7 @@ class GroupMembership(models.Model):
 class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
-        
+
         # Update last_feed_fetch for user's group memberships
         group_id = request.query_params.get('group')
         if group_id:
@@ -459,7 +459,7 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
                 user=request.user,
                 group_id=group_id
             ).update(last_feed_fetch=timezone.now())
-        
+
         return response
 ```
 
@@ -467,20 +467,20 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
 ```python
 class FeedItemSerializer(serializers.ModelSerializer):
     has_viewed = serializers.SerializerMethodField()
-    
+
     def get_has_viewed(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        
+
         membership = GroupMembership.objects.filter(
             user=request.user,
             group=obj.group
         ).first()
-        
+
         if not membership or not membership.last_feed_fetch:
             return False
-        
+
         # If created before last fetch, consider it viewed
         return obj.created_at < membership.last_feed_fetch
 ```
@@ -624,24 +624,24 @@ class Migration(migrations.Migration):
 def test_mark_feed_item_as_viewed():
     user = User.objects.create(email='test@example.com')
     feed_item = FeedItem.objects.create(...)
-    
+
     # Mark as viewed
     view = FeedItemView.objects.create(feed_item=feed_item, user=user)
-    
+
     assert FeedItemView.objects.filter(feed_item=feed_item, user=user).exists()
     assert view.viewed_at is not None
 
 def test_has_viewed_field_in_serializer():
     user = User.objects.create(email='test@example.com')
     feed_item = FeedItem.objects.create(...)
-    
+
     # Not viewed yet
     serializer = FeedItemSerializer(feed_item, context={'request': mock_request(user)})
     assert serializer.data['has_viewed'] is False
-    
+
     # Mark as viewed
     FeedItemView.objects.create(feed_item=feed_item, user=user)
-    
+
     # Should show as viewed
     serializer = FeedItemSerializer(feed_item, context={'request': mock_request(user)})
     assert serializer.data['has_viewed'] is True
@@ -652,7 +652,7 @@ def test_has_viewed_field_in_serializer():
 def test_feed_query_performance():
     # Create 100 feed items
     feed_items = [FeedItem.objects.create(...) for _ in range(100)]
-    
+
     # Query with prefetch (should be ~1-2 queries)
     with self.assertNumQueries(2):
         queryset = FeedItem.objects.all().prefetch_related(

@@ -109,10 +109,11 @@ DATABASE_URL = config('DATABASE_URL', default='')
 if DATABASE_URL:
     # Parse DATABASE_URL (Railway style)
     import dj_database_url
-    
+
     # Railway uses custom scheme 'railwaypostgres://' - convert to 'postgresql://'
-    database_url_normalized = DATABASE_URL.replace('railwaypostgres://', 'postgresql://')
-    
+    database_url_normalized = DATABASE_URL.replace(
+        'railwaypostgres://', 'postgresql://')
+
     DATABASES = {
         'default': dj_database_url.parse(
             database_url_normalized,
