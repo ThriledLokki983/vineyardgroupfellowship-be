@@ -108,10 +108,22 @@ class BibleAPIService:
     # API Endpoints
     BIBLE_API_BASE = "https://bible-api.com"
     ESV_API_BASE = "https://api.esv.org/v3/passage/text"
+    BIBLE_GATEWAY_API = "https://www.biblegateway.com/passage/"  # Scraping fallback
 
     # Supported translations
     SUPPORTED_TRANSLATIONS = ['KJV', 'NIV',
                               'ESV', 'NKJV', 'NLT', 'NASB', 'AMP']
+
+    # Translation mappings for different providers
+    BIBLE_API_TRANSLATIONS = {
+        'KJV': 'kjv',
+        'NIV': 'web',  # bible-api.com doesn't have NIV, use WEB as fallback
+        'ESV': 'web',  # Use WEB as fallback for ESV
+        'NKJV': 'kjv',  # Fallback to KJV
+        'NLT': 'web',  # Use WEB as fallback
+        'NASB': 'web',  # Use WEB as fallback
+        'AMP': 'web',  # Use WEB as fallback
+    }
 
     # Cache settings
     CACHE_TTL = 60 * 60 * 24 * 7  # 7 days (verses don't change)
@@ -208,8 +220,13 @@ class BibleAPIService:
         """
         def make_request():
             # bible-api.com URL format: /reference?translation=KJV
+            # Map to bible-api.com supported translations
+            bible_api_translation = self.BIBLE_API_TRANSLATIONS.get(
+                translation, 'kjv'
+            )
+            
             url = f"{self.BIBLE_API_BASE}/{reference}"
-            params = {'translation': translation}
+            params = {'translation': bible_api_translation}
 
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
@@ -223,7 +240,8 @@ class BibleAPIService:
             return {
                 'reference': data.get('reference', reference),
                 'text': data['text'].strip(),
-                'translation': translation,
+                'translation': translation,  # Return requested translation
+                'translation_note': f"Retrieved as {bible_api_translation.upper()} from bible-api.com" if bible_api_translation != translation.lower() else None,
                 'source': 'bible-api.com',
             }
 

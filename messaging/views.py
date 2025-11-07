@@ -10,7 +10,8 @@ from rest_framework import viewsets, status, filters, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet
+import django_filters
 
 from .models import (
     Discussion, Comment, CommentHistory, Reaction,
@@ -38,6 +39,36 @@ from .throttling import (
     ReactionCreateThrottle, BurstProtectionThrottle
 )
 from group.models import GroupMembership, Group
+
+
+class FeedItemFilter(FilterSet):
+    """
+    Custom filter for FeedItem to handle content_type aliases.
+    
+    Allows both 'prayer' and 'prayer_request' to work for prayer requests.
+    This provides better frontend compatibility.
+    """
+    content_type = django_filters.ChoiceFilter(
+        method='filter_content_type',
+        choices=[
+            ('discussion', 'Discussion'),
+            ('prayer', 'Prayer Request'),
+            ('prayer_request', 'Prayer Request'),  # Alias for 'prayer'
+            ('testimony', 'Testimony'),
+            ('scripture', 'Scripture'),
+        ]
+    )
+    
+    class Meta:
+        model = FeedItem
+        fields = ['group', 'content_type']
+    
+    def filter_content_type(self, queryset, name, value):
+        """Normalize content_type value before filtering."""
+        # Map prayer_request -> prayer for database query
+        if value == 'prayer_request':
+            value = 'prayer'
+        return queryset.filter(content_type=value)
 
 
 class DiscussionViewSet(viewsets.ModelViewSet):
@@ -348,12 +379,16 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     - GET /feed/{id}/ - Get specific feed item
 
     Feed items are auto-populated via signals, no manual creation.
+    
+    Supports content_type filtering with aliases:
+    - 'discussion' or 'prayer' or 'testimony' or 'scripture'
+    - 'prayer_request' (alias for 'prayer')
     """
 
     serializer_class = FeedItemSerializer
     permission_classes = [IsAuthenticated, IsGroupMember]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['group', 'content_type']
+    filterset_class = FeedItemFilter  # Use custom filter instead of filterset_fields
     ordering_fields = ['created_at', 'comment_count', 'reaction_count']
     ordering = ['-created_at']
 
@@ -853,17 +888,21 @@ class ScriptureViewSet(viewsets.ModelViewSet):
         """Set author to current user."""
         serializer.save(author=self.request.user)
 
-    @action(detail=False, methods=['post'], url_path='verse-lookup')
+    @action(detail=False, methods=['get'], url_path='verse-lookup')
     def verse_lookup(self, request):
         """
         Look up Bible verse using Bible API.
 
         Returns verse text and reference for easy scripture sharing.
+        
+        Query parameters:
+        - reference: Bible verse reference (e.g., "John 3:16" or "Romans 8:28-30")
+        - translation: Bible translation (default: KJV)
         """
         from .services.bible_api import bible_service
 
-        # Validate request
-        serializer = self.get_serializer(data=request.data)
+        # Validate request - use query_params for GET requests
+        serializer = self.get_serializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
         reference = serializer.validated_data['reference']
