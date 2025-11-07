@@ -45,7 +45,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Create non-root user for security
 RUN groupadd -r django && useradd -r -g django django
 
-# Install runtime dependencies only (including GDAL)
+# Install runtime dependencies only (including GDAL 36 for Debian Trixie)
+# Note: libgdal36 is the correct package for GDAL 3.6.x in Debian Trixie
 RUN apt-get update && apt-get install -y \
     libpq5 \
     libmagic1 \
