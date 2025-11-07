@@ -51,7 +51,7 @@ RUN apt-get update && apt-get install -y \
     libmagic1 \
     curl \
     gdal-bin \
-    libgdal32 \
+    libgdal36 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
