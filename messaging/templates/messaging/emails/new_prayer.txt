@@ -1,0 +1,23 @@
+🙏 New Prayer Request
+
+Hi {{ recipient.first_name|default:recipient.username }},
+
+A new prayer request has been shared in {{ group.name }}:
+
+{{ prayer.title }}
+
+{{ prayer.content }}
+
+Category: {{ prayer.get_category_display }}
+Requested by: {{ prayer.author.first_name|default:prayer.author.username }}
+Date: {{ prayer.created_at|date:"F j, Y \a\t g:i A" }}
+
+Please join in praying for this request. Your prayers make a difference!
+
+View & Pray:
+{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/prayer-requests/{{ prayer.id }}
+
+---
+{{ group.name }}
+Manage notification preferences: {{ preferences_url }}
+Unsubscribe: {{ settings.FRONTEND_URL }}/unsubscribe/{{ unsubscribe_token }}

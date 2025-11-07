@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vineyard Group Fellowship{% endblock %}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .email-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .email-header .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .email-body {
+            padding: 30px 20px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .content {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.8;
+        }
+        .prayer-box, .testimony-box, .scripture-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .prayer-box.urgent {
+            background-color: #fff5f5;
+            border-left-color: #e53e3e;
+        }
+        .prayer-box.answered {
+            background-color: #f0fff4;
+            border-left-color: #38a169;
+        }
+        .testimony-box {
+            border-left-color: #805ad5;
+        }
+        .scripture-box {
+            border-left-color: #3182ce;
+            font-style: italic;
+        }
+        .box-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin: 0 0 10px 0;
+        }
+        .box-content {
+            color: #4a5568;
+            margin: 10px 0;
+        }
+        .box-meta {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .cta-button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .cta-button:hover {
+            opacity: 0.9;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .unsubscribe {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #a0aec0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 5px 0;
+        }
+        .badge-urgent {
+            background-color: #fed7d7;
+            color: #c53030;
+        }
+        .badge-answered {
+            background-color: #c6f6d5;
+            color: #22543d;
+        }
+        .badge-public {
+            background-color: #bee3f8;
+            color: #2c5282;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <div class="icon">{% block header_icon %}🙏{% endblock %}</div>
+            <h1>{% block header_title %}Vineyard Group Fellowship{% endblock %}</h1>
+        </div>
+
+        <div class="email-body">
+            <div class="greeting">
+                Hi {{ recipient.first_name|default:recipient.username }},
+            </div>
+
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+
+            {% block cta %}{% endblock %}
+        </div>
+
+        <div class="footer">
+            <p><strong>{{ group.name }}</strong></p>
+            <p>You received this email because you're a member of this group.</p>
+            <p><a href="{{ preferences_url }}">Manage notification preferences</a></p>
+            <div class="unsubscribe">
+                <a href="{{ settings.FRONTEND_URL }}/unsubscribe/{{ unsubscribe_token }}">Unsubscribe from all emails</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

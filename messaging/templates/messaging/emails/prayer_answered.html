@@ -1,0 +1,43 @@
+{% extends "messaging/emails/base.html" %}
+
+{% block title %}✅ Prayer Answered!{% endblock %}
+
+{% block header_icon %}✅{% endblock %}
+
+{% block header_title %}Prayer Answered!{% endblock %}
+
+{% block content %}
+    <p>Praise God! A prayer request you've been praying for has been answered:</p>
+
+    <div class="prayer-box answered">
+        <span class="badge badge-answered">✅ ANSWERED</span>
+        <h2 class="box-title">{{ prayer.title }}</h2>
+
+        <div class="box-content">
+            <p><strong>Original Request:</strong></p>
+            <p>{{ prayer.content }}</p>
+
+            {% if prayer.answer_description %}
+            <p style="margin-top: 20px;"><strong>How God Answered:</strong></p>
+            <p style="color: #22543d; font-weight: 500;">{{ prayer.answer_description }}</p>
+            {% endif %}
+        </div>
+
+        <div class="box-meta">
+            <strong>Category:</strong> {{ prayer.get_category_display }}<br>
+            <strong>Requested by:</strong> {{ prayer.author.first_name|default:prayer.author.username }}<br>
+            <strong>Requested on:</strong> {{ prayer.created_at|date:"F j, Y" }}<br>
+            <strong>Answered on:</strong> {{ prayer.answered_at|date:"F j, Y" }}
+        </div>
+    </div>
+
+    <p>Let's give thanks together for God's faithfulness! 🙌</p>
+{% endblock %}
+
+{% block cta %}
+    <center>
+        <a href="{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/prayer-requests/{{ prayer.id }}" class="cta-button">
+            🎉 View Answered Prayer
+        </a>
+    </center>
+{% endblock %}

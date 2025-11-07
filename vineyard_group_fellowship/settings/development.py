@@ -21,7 +21,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 # No SQLite fallback to ensure development-production consistency
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': config('DB_NAME'),
         'USER': config('DB_USER'),
         'PASSWORD': config('DB_PASSWORD'),
@@ -34,7 +34,7 @@ DATABASES = {
     }
 }
 
-# Enable PostgreSQL specific features
+# Enable PostgreSQL specific features (gis is already in base.py)
 INSTALLED_APPS += ['django.contrib.postgres']
 
 # ============================================================================

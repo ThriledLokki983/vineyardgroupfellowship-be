@@ -1,0 +1,23 @@
+📢 New Testimony Shared
+
+Hi {{ recipient.first_name|default:recipient.username }},
+
+A member of your group has shared an encouraging testimony:
+
+{{ testimony.title }}
+
+{{ testimony.content|truncatewords:75 }}{% if testimony.content|wordcount > 75 %}...{% endif %}
+
+{% if testimony.answered_prayer %}Linked to Prayer: {{ testimony.answered_prayer.title }}
+{% endif %}Shared by: {{ testimony.author.first_name|default:testimony.author.username }}
+Date: {{ testimony.created_at|date:"F j, Y \a\t g:i A" }}
+
+Be encouraged by this testimony of God's faithfulness!
+
+Read Full Testimony:
+{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/testimonies/{{ testimony.id }}
+
+---
+{{ group.name }}
+Manage notification preferences: {{ preferences_url }}
+Unsubscribe: {{ settings.FRONTEND_URL }}/unsubscribe/{{ unsubscribe_token }}

@@ -1,0 +1,14 @@
+# Nixpacks configuration for Railway deployment
+# This ensures GDAL (required for PostGIS/GeoDjango) is installed
+
+[phases.setup]
+nixPkgs = ["...", "gdal"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[phases.build]
+cmds = ["python manage.py collectstatic --noinput"]
+
+[start]
+cmd = "./start.sh"

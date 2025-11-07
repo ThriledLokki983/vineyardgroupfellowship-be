@@ -10,11 +10,13 @@ FROM python:3.13-slim AS builder
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 
-# Install system dependencies for building
+# Install system dependencies for building (including GDAL)
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     gcc \
+    gdal-bin \
+    libgdal-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
@@ -43,11 +45,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Create non-root user for security
 RUN groupadd -r django && useradd -r -g django django
 
-# Install runtime dependencies only
+# Install runtime dependencies only (including GDAL)
 RUN apt-get update && apt-get install -y \
     libpq5 \
     libmagic1 \
     curl \
+    gdal-bin \
+    libgdal32 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

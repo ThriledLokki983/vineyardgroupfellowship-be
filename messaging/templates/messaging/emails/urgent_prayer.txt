@@ -1,0 +1,24 @@
+URGENT Prayer Request
+
+Hi {{ recipient.first_name|default:recipient.username }},
+
+An URGENT prayer request has been submitted in your group: {{ group.name }}
+
+🔥 URGENT: {{ prayer.title }}
+
+{{ prayer.content }}
+
+Category: {{ prayer.get_category_display }}
+Requested by: {{ prayer.author.first_name|default:prayer.author.username }}
+Date: {{ prayer.created_at|date:"F j, Y \a\t g:i A" }}
+
+This prayer request has been marked as urgent and needs immediate prayer coverage.
+Please take a moment to pray for this need.
+
+View Prayer Request & Pray:
+{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/prayer-requests/{{ prayer.id }}
+
+---
+{{ group.name }}
+Manage notification preferences: {{ preferences_url }}
+Unsubscribe: {{ settings.FRONTEND_URL }}/unsubscribe/{{ unsubscribe_token }}

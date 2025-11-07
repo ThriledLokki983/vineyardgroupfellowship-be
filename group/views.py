@@ -50,6 +50,30 @@ from .serializers import (
                 required=False,
                 type=bool
             ),
+            OpenApiParameter(
+                name='nearby',
+                description='Filter groups by proximity to user location. Requires user to have location in profile or provide lat/lng params.',
+                required=False,
+                type=bool
+            ),
+            OpenApiParameter(
+                name='radius',
+                description='Search radius in kilometers for nearby groups (default: 5km, max: 10km). Only used when nearby=true.',
+                required=False,
+                type=float
+            ),
+            OpenApiParameter(
+                name='lat',
+                description='User latitude for location-based search. Overrides profile location.',
+                required=False,
+                type=float
+            ),
+            OpenApiParameter(
+                name='lng',
+                description='User longitude for location-based search. Overrides profile location.',
+                required=False,
+                type=float
+            ),
         ]
     ),
     create=extend_schema(
@@ -180,6 +204,77 @@ class GroupViewSet(viewsets.ModelViewSet):
                 Q(memberships__user=user, memberships__status='active') |
                 Q(memberships__user=user, memberships__status='pending')
             ).distinct()
+
+        # Location-based filtering
+        nearby = self.request.query_params.get('nearby')
+        if nearby and nearby.lower() == 'true':
+            queryset = self._apply_location_filter(queryset, user)
+
+        return queryset
+
+    def _apply_location_filter(self, queryset, user):
+        """
+        Apply location-based filtering to find groups near the user.
+
+        Expects query parameters:
+        - nearby=true: Enable location filtering
+        - radius: Search radius in kilometers (default: 5km, max: 10km)
+        - lat: User's latitude (overrides profile location)
+        - lng: User's longitude (overrides profile location)
+        """
+        from django.contrib.gis.geos import Point
+        from group.utils.distance import find_nearby_groups
+
+        # Get radius from query params (default 5km, max 10km)
+        try:
+            radius_km = float(self.request.query_params.get('radius', 5.0))
+        except (ValueError, TypeError):
+            radius_km = 5.0
+
+        # Get user location from query params or profile
+        lat = self.request.query_params.get('lat')
+        lng = self.request.query_params.get('lng')
+
+        if lat and lng:
+            # Use provided coordinates
+            try:
+                user_point = Point(float(lng), float(lat), srid=4326)
+            except (ValueError, TypeError):
+                # Invalid coordinates, skip location filtering
+                return queryset
+        else:
+            # Try to get from user profile
+            try:
+                profile = user.basic_profile
+                if profile.latitude and profile.longitude:
+                    user_point = Point(
+                        float(profile.longitude),
+                        float(profile.latitude),
+                        srid=4326
+                    )
+                else:
+                    # User has no location, skip location filtering
+                    return queryset
+            except:
+                # Profile doesn't exist or no coordinates
+                return queryset
+
+        # Use the find_nearby_groups utility which enforces max radius
+        # and returns queryset with distance annotation
+        from django.contrib.gis.db.models.functions import Distance
+        from django.contrib.gis.measure import D
+
+        # Apply the same filters as find_nearby_groups but on the existing queryset
+        max_radius_km = 10.0
+        if radius_km > max_radius_km:
+            radius_km = max_radius_km
+
+        queryset = queryset.filter(
+            coordinates__isnull=False,
+            coordinates__distance_lte=(user_point, D(km=radius_km))
+        ).annotate(
+            distance=Distance('coordinates', user_point)
+        ).order_by('distance')
 
         return queryset
 

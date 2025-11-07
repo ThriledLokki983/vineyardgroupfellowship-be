@@ -1,0 +1,37 @@
+{% extends "messaging/emails/base.html" %}
+
+{% block title %}📖 Scripture Shared{% endblock %}
+
+{% block header_icon %}📖{% endblock %}
+
+{% block header_title %}Scripture Shared{% endblock %}
+
+{% block content %}
+    <p>A member of your group has shared an encouraging scripture:</p>
+
+    <div class="scripture-box">
+        <h2 class="box-title">{{ scripture.reference }} ({{ scripture.translation }})</h2>
+        <div class="box-content">
+            <p>"{{ scripture.verse_text }}"</p>
+
+            {% if scripture.personal_reflection %}
+            <p style="margin-top: 20px; font-style: normal;"><strong>Personal Reflection:</strong></p>
+            <p style="font-style: normal; color: #4a5568;">{{ scripture.personal_reflection }}</p>
+            {% endif %}
+        </div>
+        <div class="box-meta">
+            <strong>Shared by:</strong> {{ scripture.author.first_name|default:scripture.author.username }}<br>
+            <strong>Date:</strong> {{ scripture.created_at|date:"F j, Y \a\t g:i A" }}
+        </div>
+    </div>
+
+    <p>May this Word of God encourage and strengthen you today!</p>
+{% endblock %}
+
+{% block cta %}
+    <center>
+        <a href="{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/scriptures/{{ scripture.id }}" class="cta-button">
+            📖 View Scripture & Discuss
+        </a>
+    </center>
+{% endblock %}

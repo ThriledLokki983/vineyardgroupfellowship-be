@@ -115,6 +115,8 @@ if DATABASE_URL:
             conn_max_age=60,
         )
     }
+    # Override engine to use PostGIS
+    DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
     # Add SSL options for Railway PostgreSQL
     DATABASES['default']['OPTIONS'] = {
         'sslmode': 'prefer',  # Less strict than 'require'
@@ -145,7 +147,7 @@ else:
 
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
             'NAME': db_name,
             'USER': db_user,
             'PASSWORD': db_password,

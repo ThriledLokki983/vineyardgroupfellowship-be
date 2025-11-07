@@ -67,12 +67,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',  # PostGIS support for location features
 
     # Third-party Apps
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'django_filters',  # For DRF filtering
     'drf_spectacular',  # OpenAPI documentation
     'django_otp',
     'csp',
@@ -86,6 +88,7 @@ INSTALLED_APPS = [
     'monitoring',
     'onboarding',
     'group',
+    'messaging',  # Phase 1: Group messaging
 ]
 
 # ============================================================================
@@ -244,6 +247,11 @@ REST_FRAMEWORK = {
         'email_verification_confirm': '10/hour',
         'email_verification_resend': '5/hour',
         'onboarding': '20/hour',  # Allow reasonable onboarding interactions
+        # Messaging app throttling
+        'discussion_create': '10/hour',  # Prevent discussion spam
+        'comment_create': '50/hour',  # Allow active commenting
+        'reaction_create': '100/hour',  # Allow generous reaction usage
+        'burst': '20/min',  # Short burst protection
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_RENDERER_CLASSES': [

@@ -1,0 +1,37 @@
+{% extends "messaging/emails/base.html" %}
+
+{% block title %}🌍 Testimony Approved!{% endblock %}
+
+{% block header_icon %}🌍{% endblock %}
+
+{% block header_title %}Testimony Approved for Public Sharing!{% endblock %}
+
+{% block content %}
+    <p>Great news! Your testimony has been approved for public sharing and will inspire believers beyond your group.</p>
+
+    <div class="testimony-box">
+        <span class="badge badge-public">🌍 PUBLIC</span>
+        <h2 class="box-title">{{ testimony.title }}</h2>
+        <div class="box-content">
+            <p>{{ testimony.content|truncatewords:50 }}</p>
+        </div>
+        <div class="box-meta">
+            {% if testimony.answered_prayer %}
+            <strong>Linked to Prayer:</strong> {{ testimony.answered_prayer.title }}<br>
+            {% endif %}
+            <strong>Approved by:</strong> {{ approved_by.first_name|default:approved_by.username }}<br>
+            <strong>Shared on:</strong> {{ testimony.created_at|date:"F j, Y" }}<br>
+            <strong>Approved on:</strong> {{ testimony.public_shared_at|date:"F j, Y" }}
+        </div>
+    </div>
+
+    <p>Thank you for sharing your testimony! Your story of God's faithfulness will encourage many. 🙌</p>
+{% endblock %}
+
+{% block cta %}
+    <center>
+        <a href="{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/testimonies/{{ testimony.id }}" class="cta-button">
+            📢 View Your Testimony
+        </a>
+    </center>
+{% endblock %}

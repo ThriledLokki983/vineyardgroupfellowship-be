@@ -1,0 +1,33 @@
+{% extends "messaging/emails/base.html" %}
+
+{% block title %}🙏 New Prayer Request{% endblock %}
+
+{% block header_icon %}🙏{% endblock %}
+
+{% block header_title %}New Prayer Request{% endblock %}
+
+{% block content %}
+    <p>A new prayer request has been shared in your group:</p>
+
+    <div class="prayer-box">
+        <h2 class="box-title">{{ prayer.title }}</h2>
+        <div class="box-content">
+            <p>{{ prayer.content }}</p>
+        </div>
+        <div class="box-meta">
+            <strong>Category:</strong> {{ prayer.get_category_display }}<br>
+            <strong>Requested by:</strong> {{ prayer.author.first_name|default:prayer.author.username }}<br>
+            <strong>Date:</strong> {{ prayer.created_at|date:"F j, Y \a\t g:i A" }}
+        </div>
+    </div>
+
+    <p>Please join in praying for this request. Your prayers make a difference!</p>
+{% endblock %}
+
+{% block cta %}
+    <center>
+        <a href="{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/prayer-requests/{{ prayer.id }}" class="cta-button">
+            🙏 View & Pray
+        </a>
+    </center>
+{% endblock %}

@@ -46,6 +46,7 @@ urlpatterns = [
     path('api/v1/privacy/', include('privacy.urls')),
     path('api/v1/onboarding/', include('onboarding.urls')),
     path('api/v1/groups/', include('group.urls')),
+    path('api/v1/messaging/', include('messaging.urls')),
     path('api/v1/monitoring/', include('monitoring.urls')),
     path('api/v1/security/', include('core.urls.security', namespace='security-api')),
 

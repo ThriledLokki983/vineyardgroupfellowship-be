@@ -151,6 +151,16 @@ class GroupSerializer(serializers.ModelSerializer):
     # Group members list
     group_members = serializers.SerializerMethodField()
 
+    # Location-based fields
+    distance_km = serializers.SerializerMethodField()
+    latitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, required=False, allow_null=True
+    )
+    longitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, required=False, allow_null=True
+    )
+    geocoded_address = serializers.CharField(read_only=True, allow_blank=True)
+
     class Meta:
         model = Group
         fields = [
@@ -186,6 +196,10 @@ class GroupSerializer(serializers.ModelSerializer):
             'visibility',
             'user_membership',
             'group_members',
+            'latitude',
+            'longitude',
+            'geocoded_address',
+            'distance_km',
             'created_at',
             'updated_at',
         ]
@@ -207,6 +221,8 @@ class GroupSerializer(serializers.ModelSerializer):
             'photo_url',
             'user_membership',
             'group_members',
+            'geocoded_address',
+            'distance_km',
             'created_at',
             'updated_at',
         ]
@@ -240,6 +256,21 @@ class GroupSerializer(serializers.ModelSerializer):
             }
         except GroupMembership.DoesNotExist:
             return None
+
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_distance_km(self, obj):
+        """
+        Get distance from user's location in kilometers.
+
+        This field is populated when groups are filtered by location
+        using the find_nearby_groups utility or when the distance
+        annotation is added to the queryset.
+        """
+        # Check if distance was annotated by the queryset
+        if hasattr(obj, 'distance'):
+            # Distance is a Distance object, convert to km
+            return round(obj.distance.km, 2)
+        return None
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_group_members(self, obj):

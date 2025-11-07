@@ -1,0 +1,35 @@
+{% extends "messaging/emails/base.html" %}
+
+{% block title %}📢 New Testimony Shared{% endblock %}
+
+{% block header_icon %}📢{% endblock %}
+
+{% block header_title %}New Testimony Shared{% endblock %}
+
+{% block content %}
+    <p>A member of your group has shared an encouraging testimony:</p>
+
+    <div class="testimony-box">
+        <h2 class="box-title">{{ testimony.title }}</h2>
+        <div class="box-content">
+            <p>{{ testimony.content|truncatewords:75 }}{% if testimony.content|wordcount > 75 %}... <em>(view full testimony)</em>{% endif %}</p>
+        </div>
+        <div class="box-meta">
+            {% if testimony.answered_prayer %}
+            <strong>Linked to Prayer:</strong> {{ testimony.answered_prayer.title }}<br>
+            {% endif %}
+            <strong>Shared by:</strong> {{ testimony.author.first_name|default:testimony.author.username }}<br>
+            <strong>Date:</strong> {{ testimony.created_at|date:"F j, Y \a\t g:i A" }}
+        </div>
+    </div>
+
+    <p>Be encouraged by this testimony of God's faithfulness!</p>
+{% endblock %}
+
+{% block cta %}
+    <center>
+        <a href="{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/testimonies/{{ testimony.id }}" class="cta-button">
+            📖 Read Full Testimony
+        </a>
+    </center>
+{% endblock %}

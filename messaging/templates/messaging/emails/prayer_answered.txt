@@ -1,0 +1,31 @@
+✅ Prayer Answered!
+
+Hi {{ recipient.first_name|default:recipient.username }},
+
+Praise God! A prayer request you've been praying for has been answered:
+
+{{ group.name }}
+
+✅ ANSWERED: {{ prayer.title }}
+
+Original Request:
+{{ prayer.content }}
+
+{% if prayer.answer_description %}How God Answered:
+{{ prayer.answer_description }}
+{% endif %}
+
+Category: {{ prayer.get_category_display }}
+Requested by: {{ prayer.author.first_name|default:prayer.author.username }}
+Requested on: {{ prayer.created_at|date:"F j, Y" }}
+Answered on: {{ prayer.answered_at|date:"F j, Y" }}
+
+Let's give thanks together for God's faithfulness! 🙌
+
+View Answered Prayer:
+{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/prayer-requests/{{ prayer.id }}
+
+---
+{{ group.name }}
+Manage notification preferences: {{ preferences_url }}
+Unsubscribe: {{ settings.FRONTEND_URL }}/unsubscribe/{{ unsubscribe_token }}

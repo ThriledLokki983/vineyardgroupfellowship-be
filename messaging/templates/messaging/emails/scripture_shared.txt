@@ -1,0 +1,26 @@
+📖 Scripture Shared
+
+Hi {{ recipient.first_name|default:recipient.username }},
+
+A member of your group has shared an encouraging scripture:
+
+{{ scripture.reference }} ({{ scripture.translation }})
+
+"{{ scripture.verse_text }}"
+
+{% if scripture.personal_reflection %}Personal Reflection:
+{{ scripture.personal_reflection }}
+{% endif %}
+
+Shared by: {{ scripture.author.first_name|default:scripture.author.username }}
+Date: {{ scripture.created_at|date:"F j, Y \a\t g:i A" }}
+
+May this Word of God encourage and strengthen you today!
+
+View Scripture & Discuss:
+{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/scriptures/{{ scripture.id }}
+
+---
+{{ group.name }}
+Manage notification preferences: {{ preferences_url }}
+Unsubscribe: {{ settings.FRONTEND_URL }}/unsubscribe/{{ unsubscribe_token }}

@@ -1,0 +1,24 @@
+🌍 Testimony Approved for Public Sharing!
+
+Hi {{ recipient.first_name|default:recipient.username }},
+
+Great news! Your testimony has been approved for public sharing and will inspire believers beyond your group.
+
+🌍 PUBLIC: {{ testimony.title }}
+
+{{ testimony.content|truncatewords:50 }}
+
+{% if testimony.answered_prayer %}Linked to Prayer: {{ testimony.answered_prayer.title }}
+{% endif %}Approved by: {{ approved_by.first_name|default:approved_by.username }}
+Shared on: {{ testimony.created_at|date:"F j, Y" }}
+Approved on: {{ testimony.public_shared_at|date:"F j, Y" }}
+
+Thank you for sharing your testimony! Your story of God's faithfulness will encourage many. 🙌
+
+View Your Testimony:
+{{ settings.FRONTEND_URL }}/groups/{{ group.id }}/testimonies/{{ testimony.id }}
+
+---
+{{ group.name }}
+Manage notification preferences: {{ preferences_url }}
+Unsubscribe: {{ settings.FRONTEND_URL }}/unsubscribe/{{ unsubscribe_token }}

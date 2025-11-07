@@ -9,6 +9,7 @@ This guide documents all Group API endpoints, request payloads, and response str
 - [Endpoint Details](#endpoint-details)
 - [Data Models](#data-models)
 - [Error Responses](#error-responses)
+- [Location-Based Filtering (NEW)](#location-based-filtering-new)
 
 ## Authentication
 
@@ -67,6 +68,10 @@ Get a list of all groups visible to the authenticated user.
 | `is_open` | boolean | No | Filter by open/closed status | `?is_open=true` |
 | `has_space` | boolean | No | Show only groups with available spots | `?has_space=true` |
 | `my_groups` | boolean | No | Show only groups where user is a member, co-leader, leader, or has a pending join request | `?my_groups=true` |
+| `nearby` | boolean | No | Filter groups by proximity to user location. Uses user's profile location or provided lat/lng coordinates | `?nearby=true` |
+| `radius` | float | No | Search radius in kilometers for nearby groups (default: 5km, max: 10km). Only used when `nearby=true` | `?radius=3` |
+| `lat` | float | No | User latitude for location-based search. Overrides profile location when provided | `?lat=38.8977` |
+| `lng` | float | No | User longitude for location-based search. Overrides profile location when provided | `?lng=-77.0365` |
 
 **Request Example:**
 ```http
@@ -77,6 +82,21 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 **Request Example (Get My Groups):**
 ```http
 GET /api/v1/groups/?my_groups=true
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Request Example (Find Nearby Groups):**
+```http
+# Use user's profile location with default 5km radius
+GET /api/v1/groups/?nearby=true
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Find groups within 3km using custom coordinates
+GET /api/v1/groups/?nearby=true&radius=3&lat=38.8977&lng=-77.0365
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Combine location filter with other filters
+GET /api/v1/groups/?nearby=true&radius=5&is_open=true&has_space=true
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
@@ -105,6 +125,10 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "meeting_time": "19:00:00",
     "meeting_frequency": "weekly",
     "focus_areas": ["worship", "bible_study", "fellowship"],
+    "latitude": "38.897700",
+    "longitude": "-77.036500",
+    "geocoded_address": "1600 Pennsylvania Avenue NW, Washington, DC 20500, USA",
+    "distance_km": 2.34,
     "membership_status": null,
     "request_date": null,
     "created_at": "2024-11-01T10:00:00Z"
@@ -912,6 +936,13 @@ Content-Type: application/json
   meeting_frequency: "weekly" | "biweekly" | "monthly"
   focus_areas: string[]
   visibility: "public" | "community" | "private"
+
+  // Location-based fields (NEW)
+  latitude: string | null (decimal, 9 digits, 6 decimal places)
+  longitude: string | null (decimal, 9 digits, 6 decimal places)
+  geocoded_address: string (full address from geocoding service)
+  distance_km: number | null (distance from user in kilometers, only present when using nearby filter)
+
   user_membership: UserMembership | null
   group_members: GroupMember[] (all active members including leader)
   created_at: string (ISO 8601 datetime)
@@ -939,6 +970,13 @@ Content-Type: application/json
   meeting_time: string
   meeting_frequency: string
   focus_areas: string[]
+
+  // Location-based fields (NEW)
+  latitude: string | null
+  longitude: string | null
+  geocoded_address: string
+  distance_km: number | null (only present when using nearby filter, sorted by distance ascending)
+
   membership_status: "leader" | "co_leader" | "active" | "pending" | null
   request_date: string | null (ISO 8601 datetime)
   created_at: string
@@ -1474,5 +1512,386 @@ Prevents cross-group manipulation attacks
 3. **Handle edge cases** - User might approve the last spot while another leader is viewing
 4. **Show loading states** - API validates multiple conditions, may take time
 5. **Implement optimistic updates carefully** - Revert if backend validation fails
+
+---
+
+## Location-Based Filtering (NEW)
+
+### Overview
+
+The Group API now supports location-based filtering to help users find groups near them. This feature uses PostGIS for efficient geographic queries and integrates with the Nominatim geocoding service.
+
+### How It Works
+
+1. **User Location**: Can come from user's profile or be provided explicitly via query params
+2. **Distance Calculation**: Groups are filtered by distance from user's location
+3. **Radius Control**: Frontend can specify search radius (default: 5km, max: 10km)
+4. **Sorted Results**: Groups are automatically sorted by distance (closest first)
+5. **Distance Display**: Each group includes `distance_km` field showing kilometers from user
+
+### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `nearby` | boolean | Yes | - | Enable location-based filtering |
+| `radius` | float | No | 5.0 | Search radius in kilometers (max: 10km) |
+| `lat` | float | Conditional | - | User's latitude (required if no profile location) |
+| `lng` | float | Conditional | - | User's longitude (required if no profile location) |
+
+### Usage Examples
+
+#### Example 1: Use Profile Location (Default 5km)
+
+```javascript
+// Assuming user has location in their profile
+const response = await fetch('/api/v1/groups/?nearby=true', {
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+
+const groups = await response.json();
+// Groups sorted by distance, each with distance_km field
+```
+
+#### Example 2: Custom Radius
+
+```javascript
+// Find groups within 3km using profile location
+const response = await fetch('/api/v1/groups/?nearby=true&radius=3', {
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+```
+
+#### Example 3: Custom Coordinates
+
+```javascript
+// Use specific coordinates (e.g., from browser geolocation API)
+navigator.geolocation.getCurrentPosition(async (position) => {
+  const { latitude, longitude } = position.coords;
+
+  const response = await fetch(
+    `/api/v1/groups/?nearby=true&lat=${latitude}&lng=${longitude}&radius=5`,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }
+  );
+
+  const groups = await response.json();
+});
+```
+
+#### Example 4: Combine with Other Filters
+
+```javascript
+// Find nearby groups that are open and have space
+const params = new URLSearchParams({
+  nearby: 'true',
+  radius: '5',
+  is_open: 'true',
+  has_space: 'true'
+});
+
+const response = await fetch(`/api/v1/groups/?${params}`, {
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+```
+
+### Response Structure
+
+When using `nearby=true`, each group in the response includes:
+
+```typescript
+{
+  // ... all standard group fields
+  latitude: "38.897700",
+  longitude: "-77.036500",
+  geocoded_address: "1600 Pennsylvania Avenue NW, Washington, DC 20500, USA",
+  distance_km: 2.34  // Distance from user's location in kilometers
+}
+```
+
+**Response Example:**
+
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "Downtown Fellowship",
+    "location": "123 Main St, Downtown",
+    "latitude": "38.897700",
+    "longitude": "-77.036500",
+    "geocoded_address": "123 Main Street, Washington, DC 20001, USA",
+    "distance_km": 0.85,
+    "is_open": true,
+    "current_member_count": 8,
+    "available_spots": 4
+  },
+  {
+    "id": "223e4567-e89b-12d3-a456-426614174001",
+    "name": "Westside Group",
+    "location": "456 West Ave",
+    "latitude": "38.912300",
+    "longitude": "-77.045600",
+    "geocoded_address": "456 West Avenue, Washington, DC 20015, USA",
+    "distance_km": 2.34,
+    "is_open": true,
+    "current_member_count": 10,
+    "available_spots": 2
+  }
+]
+```
+
+### Frontend Implementation Guide
+
+#### 1. Get User's Location
+
+```javascript
+// Option A: Use browser geolocation
+async function getUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation not supported'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+      },
+      (error) => reject(error),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+
+// Option B: Use profile location (already stored in backend)
+async function getNearbyGroups() {
+  const response = await fetch('/api/v1/groups/?nearby=true&radius=5', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return response.json();
+}
+```
+
+#### 2. Display Distance to User
+
+```javascript
+// React component example
+function GroupCard({ group }) {
+  return (
+    <div className="group-card">
+      <h3>{group.name}</h3>
+      <p>{group.description}</p>
+
+      {/* Show distance if available */}
+      {group.distance_km !== null && (
+        <div className="distance-badge">
+          📍 {group.distance_km} km away
+        </div>
+      )}
+
+      <div className="location">
+        {group.geocoded_address || group.location}
+      </div>
+    </div>
+  );
+}
+```
+
+#### 3. Map Integration
+
+```javascript
+// Example with Google Maps or Mapbox
+function GroupMap({ groups }) {
+  const mapRef = useRef(null);
+
+  useEffect(() => {
+    if (!mapRef.current || !groups.length) return;
+
+    // Add markers for each group
+    groups.forEach(group => {
+      if (group.latitude && group.longitude) {
+        new google.maps.Marker({
+          position: {
+            lat: parseFloat(group.latitude),
+            lng: parseFloat(group.longitude)
+          },
+          map: mapRef.current,
+          title: group.name,
+          label: {
+            text: `${group.distance_km} km`,
+            color: 'white'
+          }
+        });
+      }
+    });
+  }, [groups]);
+
+  return <div ref={mapRef} className="map-container" />;
+}
+```
+
+#### 4. Radius Slider UI
+
+```javascript
+function NearbyGroupsFilter({ onRadiusChange }) {
+  const [radius, setRadius] = useState(5);
+
+  const handleRadiusChange = (value) => {
+    const clampedValue = Math.min(10, Math.max(1, value));
+    setRadius(clampedValue);
+    onRadiusChange(clampedValue);
+  };
+
+  return (
+    <div className="radius-filter">
+      <label>Search Radius: {radius} km</label>
+      <input
+        type="range"
+        min="1"
+        max="10"
+        value={radius}
+        onChange={(e) => handleRadiusChange(Number(e.target.value))}
+      />
+      <small>Maximum: 10km</small>
+    </div>
+  );
+}
+```
+
+### Important Notes
+
+1. **Radius Limits**:
+   - Default: 5km
+   - Maximum: 10km (enforced by backend)
+   - Frontend should validate and clamp values
+
+2. **Fallback Behavior**:
+   - If user has no profile location and doesn't provide lat/lng, location filtering is skipped
+   - Groups without coordinates are excluded from location-based results
+
+3. **Distance Field**:
+   - `distance_km` is only present when using `nearby=true`
+   - Value is rounded to 2 decimal places
+   - Results are automatically sorted by distance (ascending)
+
+4. **Geocoding**:
+   - Groups are geocoded when created/updated (if location provided)
+   - Uses Nominatim (OpenStreetMap) geocoding service
+   - Respects rate limits (1 request/second)
+   - Results cached for 30 days
+
+5. **Performance**:
+   - PostGIS provides efficient spatial queries
+   - Coordinates stored as geography type for accurate distance calculations
+   - Indexes on coordinate fields for fast lookups
+
+### Error Handling
+
+```javascript
+async function fetchNearbyGroups(lat, lng, radius = 5) {
+  try {
+    // Validate radius
+    if (radius > 10) {
+      console.warn('Radius exceeds maximum (10km), using maximum');
+      radius = 10;
+    }
+
+    const params = new URLSearchParams({
+      nearby: 'true',
+      radius: radius.toString()
+    });
+
+    // Add coordinates if provided
+    if (lat && lng) {
+      params.append('lat', lat.toString());
+      params.append('lng', lng.toString());
+    }
+
+    const response = await fetch(`/api/v1/groups/?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const groups = await response.json();
+
+    // Filter out groups without coordinates if needed
+    return groups.filter(g => g.latitude && g.longitude);
+
+  } catch (error) {
+    console.error('Failed to fetch nearby groups:', error);
+
+    // Fallback to regular group list without location filtering
+    const response = await fetch('/api/v1/groups/', {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+
+    return response.json();
+  }
+}
+```
+
+### TypeScript Interfaces
+
+```typescript
+// Extended group interface with location fields
+interface Group {
+  id: string;
+  name: string;
+  description: string;
+  location: string;
+  location_type: 'in_person' | 'online' | 'hybrid';
+
+  // Location fields (NEW)
+  latitude: string | null;
+  longitude: string | null;
+  geocoded_address: string;
+  distance_km: number | null; // Only present when using nearby filter
+
+  // ... other fields
+  member_limit: number;
+  current_member_count: number;
+  is_open: boolean;
+  is_active: boolean;
+  // ...
+}
+
+// Query parameters for location filtering
+interface GroupQueryParams {
+  nearby?: boolean;
+  radius?: number; // 1-10 km
+  lat?: number;
+  lng?: number;
+  is_open?: boolean;
+  has_space?: boolean;
+  my_groups?: boolean;
+}
+
+// Helper function types
+type GetNearbyGroupsParams = {
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  filters?: {
+    is_open?: boolean;
+    has_space?: boolean;
+  };
+};
+```
 
 ---

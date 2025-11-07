@@ -10,6 +10,7 @@ from io import BytesIO
 from PIL import Image, ExifTags
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.gis.db import models as gis_models
 from django.utils.translation import gettext_lazy as _
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -78,6 +79,51 @@ class UserProfileBasic(models.Model):
         help_text=_('User post code (city, state, or general area)')
     )
 
+    # Geographic coordinates for location-based features
+    latitude = models.DecimalField(
+        _('latitude'),
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text=_('Latitude coordinate for location-based search')
+    )
+
+    longitude = models.DecimalField(
+        _('longitude'),
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text=_('Longitude coordinate for location-based search')
+    )
+
+    # PostGIS point field for efficient geographic queries
+    coordinates = gis_models.PointField(
+        _('coordinates'),
+        null=True,
+        blank=True,
+        geography=True,
+        srid=4326,  # WGS84 coordinate system
+        help_text=_(
+            'Geographic point for spatial queries (auto-populated from lat/lng)')
+    )
+
+    # Geocoding metadata
+    geocoded_address = models.CharField(
+        _('geocoded address'),
+        max_length=500,
+        blank=True,
+        help_text=_('Full address returned from geocoding service')
+    )
+
+    geocoded_at = models.DateTimeField(
+        _('geocoded at'),
+        null=True,
+        blank=True,
+        help_text=_('When the address was last geocoded')
+    )
+
     # Basic settings
     timezone = models.CharField(
         _('timezone'),
@@ -118,6 +164,20 @@ class UserProfileBasic(models.Model):
 
     def __str__(self):
         return f"Basic Profile for {self.user.email}"
+
+    def save(self, *args, **kwargs):
+        """Override save to auto-populate coordinates from lat/lng."""
+        from django.contrib.gis.geos import Point
+
+        # Auto-populate coordinates field from latitude/longitude
+        if self.latitude is not None and self.longitude is not None:
+            self.coordinates = Point(
+                float(self.longitude),
+                float(self.latitude),
+                srid=4326
+            )
+
+        super().save(*args, **kwargs)
 
     @property
     def display_name_or_email(self):
