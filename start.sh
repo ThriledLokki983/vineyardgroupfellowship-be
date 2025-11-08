@@ -161,8 +161,8 @@ if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
         chmod -R 755 /app/media
         echo -e "${GREEN}✅ Media directory permissions set${NC}"
         
-        # Run gunicorn as django user using su
-        exec su -s /bin/bash django -c "gunicorn vineyard_group_fellowship.wsgi:application \
+        # Run gunicorn as django user using runuser (more reliable than su)
+        exec runuser -u django -- gunicorn vineyard_group_fellowship.wsgi:application \
             --bind 0.0.0.0:$PORT \
             --workers 2 \
             --threads 4 \
@@ -176,7 +176,7 @@ if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
             --log-level info \
             --access-logfile - \
             --error-logfile - \
-            --capture-output" &
+            --capture-output &
     else
         # Already running as non-root user
         exec gunicorn vineyard_group_fellowship.wsgi:application \
