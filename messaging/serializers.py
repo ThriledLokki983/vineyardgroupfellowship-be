@@ -205,19 +205,23 @@ class DiscussionCreateSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     """
-    Serializer for comments (supports threading).
+    Serializer for comments (supports threading and polymorphic content).
     """
     author = UserMinimalSerializer(read_only=True)
     replies = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
     edit_time_remaining = serializers.SerializerMethodField()
+    content_type_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = [
             'id',
-            'discussion',
+            'content_type',
+            'content_id',
+            'content_type_name',
+            'discussion',  # Legacy field for backward compatibility
             'author',
             'parent',
             'content',
@@ -241,7 +245,14 @@ class CommentSerializer(serializers.ModelSerializer):
             'is_deleted',
             'created_at',
             'updated_at',
+            'content_type_name',
         ]
+    
+    def get_content_type_name(self, obj):
+        """Return human-readable content type name."""
+        if obj.content_type:
+            return obj.content_type.model
+        return 'discussion'  # Default for legacy comments
 
     def get_replies(self, obj):
         """Get nested replies (1 level deep to avoid infinite recursion)."""
@@ -338,12 +349,18 @@ class CommentSimpleSerializer(serializers.ModelSerializer):
 
 class CommentCreateSerializer(serializers.ModelSerializer):
     """
-    Serializer for creating comments.
+    Serializer for creating comments (supports polymorphic content).
+    Accepts either:
+    - discussion (legacy) OR
+    - content_type + content_id (new polymorphic approach)
     """
+    scripture = serializers.UUIDField(write_only=True, required=False)
+    prayer = serializers.UUIDField(write_only=True, required=False)
+    testimony = serializers.UUIDField(write_only=True, required=False)
 
     class Meta:
         model = Comment
-        fields = ['discussion', 'parent', 'content']
+        fields = ['discussion', 'scripture', 'prayer', 'testimony', 'content_type', 'content_id', 'parent', 'content']
 
     def validate_content(self, value):
         if not value or len(value.strip()) == 0:
@@ -351,11 +368,58 @@ class CommentCreateSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def validate(self, data):
-        """Validate parent belongs to same discussion."""
+        """
+        Validate that either:
+        1. discussion is provided (legacy), OR
+        2. content_type + content_id are provided, OR
+        3. One of the shorthand fields (scripture, prayer, testimony) is provided
+        """
+        from django.contrib.contenttypes.models import ContentType
+        from messaging.models import Scripture, Prayer, Testimony, Discussion
+        
+        # Count how many content identifiers are provided
+        content_identifiers = [
+            data.get('discussion'),
+            data.get('scripture'),
+            data.get('prayer'),
+            data.get('testimony'),
+            data.get('content_type') and data.get('content_id')
+        ]
+        provided_count = sum(1 for x in content_identifiers if x)
+        
+        if provided_count == 0:
+            raise serializers.ValidationError(
+                "Must provide either discussion, scripture, prayer, testimony, or content_type+content_id"
+            )
+        
+        if provided_count > 1:
+            raise serializers.ValidationError(
+                "Can only comment on one content item at a time"
+            )
+        
+        # Handle shorthand fields by converting to content_type + content_id
+        if data.get('scripture'):
+            data['content_type'] = ContentType.objects.get_for_model(Scripture)
+            data['content_id'] = data.pop('scripture')
+        elif data.get('prayer'):
+            data['content_type'] = ContentType.objects.get_for_model(Prayer)
+            data['content_id'] = data.pop('prayer')
+        elif data.get('testimony'):
+            data['content_type'] = ContentType.objects.get_for_model(Testimony)
+            data['content_id'] = data.pop('testimony')
+        elif data.get('discussion'):
+            # For backward compatibility, set content_type/content_id from discussion
+            data['content_type'] = ContentType.objects.get_for_model(Discussion)
+            data['content_id'] = data['discussion'].id
+        
+        # Validate parent belongs to same content
         if data.get('parent'):
-            if data['parent'].discussion != data['discussion']:
+            parent = data['parent']
+            if parent.content_type != data.get('content_type') or parent.content_id != data.get('content_id'):
                 raise serializers.ValidationError(
-                    "Parent comment must belong to the same discussion.")
+                    "Parent comment must belong to the same content item."
+                )
+        
         return data
 
     def create(self, validated_data):

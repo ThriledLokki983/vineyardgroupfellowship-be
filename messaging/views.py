@@ -30,6 +30,7 @@ from .serializers import (
     ScriptureListSerializer, ScriptureDetailSerializer, ScriptureCreateSerializer,
     ScriptureVerseSearchSerializer,
 )
+from .filters import CommentFilter
 from .permissions import (
     IsGroupMember, IsAuthorOrGroupLeaderOrReadOnly,
     IsAuthorOrReadOnly, CanModerateGroup
@@ -183,22 +184,33 @@ class CommentViewSet(viewsets.ModelViewSet):
     ViewSet for Comment CRUD operations.
 
     Endpoints:
-    - GET /comments/ - List comments (filtered by discussion)
+    - GET /comments/ - List comments (filtered by discussion, scripture, prayer, or testimony)
     - POST /comments/ - Create comment
     - GET /comments/{id}/ - Get comment detail
     - PUT/PATCH /comments/{id}/ - Update comment (within 15 min)
     - DELETE /comments/{id}/ - Soft delete comment
     - GET /comments/{id}/history/ - Get edit history
+    
+    Filtering:
+    - ?discussion=<uuid> - Comments on a discussion
+    - ?scripture=<uuid> - Comments on a scripture
+    - ?prayer=<uuid> - Comments on a prayer request
+    - ?testimony=<uuid> - Comments on a testimony
+    - ?parent=<uuid> - Replies to a specific comment
     """
 
     permission_classes = [IsAuthenticated, IsGroupMember, IsAuthorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['discussion', 'parent']
+    filterset_class = CommentFilter
     ordering_fields = ['created_at']
     ordering = ['created_at']
 
     def get_queryset(self):
-        """Return comments from user's group discussions only."""
+        """
+        Return comments from user's groups only.
+        Works with polymorphic content (discussions, scriptures, prayers, testimonies).
+        """
+        from django.contrib.contenttypes.models import ContentType
         user = self.request.user
 
         # Get groups user is a member of
@@ -207,11 +219,60 @@ class CommentViewSet(viewsets.ModelViewSet):
             status='active'
         ).values_list('group_id', flat=True)
 
-        # Return comments from discussions in those groups
-        queryset = Comment.objects.filter(
-            discussion__group_id__in=user_groups,
-            is_deleted=False
-        ).select_related('discussion', 'author', 'parent')
+        # Get content types for all commentable models
+        discussion_type = ContentType.objects.get_for_model(Discussion)
+        
+        # Build Q objects for filtering by group
+        # For discussions: filter by discussion__group_id
+        # For scriptures/prayers/testimonies: filter by their respective group_id fields
+        
+        # Start with base queryset
+        queryset = Comment.objects.filter(is_deleted=False)
+        
+        # Filter by user's groups based on content type
+        # This uses a Q filter to check different FK paths depending on content_type
+        group_filter = Q()
+        
+        # Discussion comments (both old discussion FK and new polymorphic)
+        group_filter |= Q(discussion__group_id__in=user_groups)
+        group_filter |= Q(
+            content_type=discussion_type,
+            content_id__in=Discussion.objects.filter(group_id__in=user_groups).values_list('id', flat=True)
+        )
+        
+        # Scripture comments
+        try:
+            scripture_type = ContentType.objects.get_for_model(Scripture)
+            group_filter |= Q(
+                content_type=scripture_type,
+                content_id__in=Scripture.objects.filter(group_id__in=user_groups).values_list('id', flat=True)
+            )
+        except:
+            pass
+        
+        # Prayer comments
+        try:
+            prayer_type = ContentType.objects.get_for_model(PrayerRequest)
+            group_filter |= Q(
+                content_type=prayer_type,
+                content_id__in=PrayerRequest.objects.filter(group_id__in=user_groups).values_list('id', flat=True)
+            )
+        except:
+            pass
+        
+        # Testimony comments
+        try:
+            testimony_type = ContentType.objects.get_for_model(Testimony)
+            group_filter |= Q(
+                content_type=testimony_type,
+                content_id__in=Testimony.objects.filter(group_id__in=user_groups).values_list('id', flat=True)
+            )
+        except:
+            pass
+        
+        queryset = queryset.filter(group_filter).select_related(
+            'content_type', 'author', 'parent', 'discussion'
+        ).prefetch_related('replies')
 
         return queryset
 

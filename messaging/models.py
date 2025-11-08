@@ -27,6 +27,8 @@ Phase 3 Models (to be added):
 import uuid
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinLengthValidator
@@ -169,19 +171,41 @@ class Discussion(models.Model):
 
 class Comment(models.Model):
     """
-    Comments on discussions.
+    Comments on any content type (Discussions, Scriptures, Prayers, Testimonies).
 
+    Supports polymorphic relationships via GenericForeignKey.
     Supports threading (replies to comments) and edit tracking.
     Users can edit their own comments within 15 minutes.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Polymorphic relationship - can comment on any content type
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text=_('Type of content being commented on')
+    )
+    content_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text=_('ID of the content being commented on')
+    )
+    content_object = GenericForeignKey('content_type', 'content_id')
+
+    # Legacy field - kept for backward compatibility, will be deprecated
     discussion = models.ForeignKey(
         Discussion,
         on_delete=models.CASCADE,
         related_name='comments',
-        help_text=_('Discussion this comment belongs to')
+        null=True,
+        blank=True,
+        help_text=_(
+            'Discussion this comment belongs to (deprecated - use content_type/content_id)')
     )
+
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -247,8 +271,14 @@ class Comment(models.Model):
         db_table = 'messaging_comment'
         ordering = ['created_at']
         indexes = [
+            # Legacy indexes
             models.Index(fields=['discussion', '-created_at']),
             models.Index(fields=['discussion', 'is_deleted', '-created_at']),
+            # Polymorphic indexes
+            models.Index(fields=['content_type', 'content_id', '-created_at']),
+            models.Index(
+                fields=['content_type', 'content_id', 'is_deleted', '-created_at']),
+            # Author and parent indexes
             models.Index(fields=['author', '-created_at']),
             models.Index(fields=['parent', '-created_at']),
         ]
