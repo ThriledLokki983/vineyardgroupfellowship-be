@@ -9,6 +9,8 @@ from .base import *
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
 
 # ============================================================================
 # SECRET KEY VALIDATION
@@ -56,6 +58,11 @@ MIDDLEWARE.insert(
     MIDDLEWARE.index('whitenoise.middleware.WhiteNoiseMiddleware') + 1,
     'core.middleware.media.MediaSecurityMiddleware',
 )
+
+# Performance Monitoring Middleware (Production)
+MIDDLEWARE.append(
+    'core.middleware.performance.PerformanceMonitoringMiddleware')
+MIDDLEWARE.append('core.middleware.performance.QueryCountWarningMiddleware')
 
 # ============================================================================
 # PRODUCTION SECURITY
@@ -362,17 +369,17 @@ LOGGING['root']['level'] = 'WARNING'
 LOGGING['loggers']['vineyard_group_fellowship']['level'] = 'INFO'
 LOGGING['loggers']['django']['level'] = 'WARNING'
 
-# Add file logging in production
-LOGGING['handlers']['file'] = {
-    'level': 'ERROR',
-    'class': 'logging.handlers.RotatingFileHandler',
-    'filename': '/tmp/django.log',
-    'maxBytes': 1024*1024*10,  # 10 MB
-    'backupCount': 5,
-    'formatter': 'verbose',
-}
-
-LOGGING['loggers']['vineyard_group_fellowship']['handlers'].append('file')
+# File logging disabled for Railway - stdout/stderr are captured by Railway logs
+# If file logging is needed, ensure /app/logs directory has proper permissions
+# LOGGING['handlers']['file'] = {
+#     'level': 'ERROR',
+#     'class': 'logging.handlers.RotatingFileHandler',
+#     'filename': '/app/logs/django.log',
+#     'maxBytes': 1024*1024*10,  # 10 MB
+#     'backupCount': 5,
+#     'formatter': 'verbose',
+# }
+# LOGGING['loggers']['vineyard_group_fellowship']['handlers'].append('file')
 
 # ============================================================================
 # MONITORING - Sentry
@@ -394,13 +401,23 @@ if SENTRY_DSN:
                 middleware_spans=True,
                 signals_spans=True,
             ),
+            CeleryIntegration(
+                monitor_beat_tasks=True,  # Monitor Celery Beat scheduled tasks
+                exclude_beat_tasks=None,
+            ),
+            RedisIntegration(),
             sentry_logging,
         ],
-        traces_sample_rate=0.1,
-        send_default_pii=False,
+        traces_sample_rate=0.1,  # 10% transaction sampling
+        profiles_sample_rate=0.1,  # 10% profiling sampling
+        send_default_pii=False,  # Don't send PII (GDPR compliant)
         environment=config('SENTRY_ENVIRONMENT', default='production'),
         release=config('RAILWAY_GIT_COMMIT_SHA', default='unknown'),
         before_send=lambda event, hint: event if not DEBUG else None,
+
+        # Error filtering - ignore INFO level
+        before_send_transaction=lambda event, hint: event if event.get(
+            'transaction') != '/health/' else None,
     )
 
 # ============================================================================
