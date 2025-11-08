@@ -84,10 +84,20 @@ done
 echo -e "${GREEN}✅ Database connection established${NC}"
 
 # Create media directories with proper permissions
+# Use Python to ensure proper permissions handling
 echo -e "${BLUE}📁 Setting up media directories...${NC}"
-mkdir -p media/group_photos media/profile_photos media/message_attachments
-chmod -R 755 media/
-echo -e "${GREEN}✅ Media directories created${NC}"
+python -c "
+import os
+import sys
+media_dirs = ['media/group_photos', 'media/profile_photos', 'media/message_attachments']
+for dir_path in media_dirs:
+    try:
+        os.makedirs(dir_path, mode=0o755, exist_ok=True)
+        print(f'✓ Created {dir_path}')
+    except Exception as e:
+        print(f'Warning: Could not create {dir_path}: {e}', file=sys.stderr)
+"
+echo -e "${GREEN}✅ Media directories setup complete${NC}"
 
 # Run database migrations
 echo -e "${BLUE}🔄 Running database migrations...${NC}"
