@@ -9,8 +9,14 @@ from .base import *
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
-from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
+
+# Import CeleryIntegration only if Celery is available
+try:
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    CELERY_INTEGRATION_AVAILABLE = True
+except ImportError:
+    CELERY_INTEGRATION_AVAILABLE = False
 
 # ============================================================================
 # SECRET KEY VALIDATION
@@ -393,21 +399,29 @@ if SENTRY_DSN:
         event_level=logging.ERROR
     )
 
+    # Build integrations list
+    integrations = [
+        DjangoIntegration(
+            transaction_style='url',
+            middleware_spans=True,
+            signals_spans=True,
+        ),
+        RedisIntegration(),
+        sentry_logging,
+    ]
+    
+    # Add Celery integration if available
+    if CELERY_INTEGRATION_AVAILABLE:
+        integrations.append(
+            CeleryIntegration(
+                monitor_beat_tasks=True,
+                exclude_beat_tasks=None,
+            )
+        )
+    
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(
-                transaction_style='url',
-                middleware_spans=True,
-                signals_spans=True,
-            ),
-            CeleryIntegration(
-                monitor_beat_tasks=True,  # Monitor Celery Beat scheduled tasks
-                exclude_beat_tasks=None,
-            ),
-            RedisIntegration(),
-            sentry_logging,
-        ],
+        integrations=integrations,
         traces_sample_rate=0.1,  # 10% transaction sampling
         profiles_sample_rate=0.1,  # 10% profiling sampling
         send_default_pii=False,  # Don't send PII (GDPR compliant)
