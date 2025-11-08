@@ -68,8 +68,8 @@ COPY . .
 # Make startup and post-migration scripts executable
 RUN chmod +x start.sh scripts/post-migration.sh
 
-# Create required directories
-RUN mkdir -p /app/staticfiles /app/logs \
+# Create required directories with proper ownership
+RUN mkdir -p /app/staticfiles /app/logs /app/media/group_photos /app/media/profile_photos /app/media/message_attachments \
     && chown -R django:django /app
 
 # Switch to non-root user
