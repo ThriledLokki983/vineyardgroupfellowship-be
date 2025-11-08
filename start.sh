@@ -64,16 +64,16 @@ echo "   Environment: ${DJANGO_ENVIRONMENT}"
 echo "   Port: ${PORT}"
 echo "   Database: $([ -n "$DATABASE_URL" ] && echo "DATABASE_URL configured" || ([ -n "$PGHOST" ] && echo "Railway PG: $PGHOST:${PGPORT:-5432}/$PGDATABASE" || echo "$DB_HOST:${DB_PORT:-5432}/$DB_NAME"))"
 
-# Wait for database to be ready
+# Wait for database to be ready (with retries but don't fail completely)
 echo -e "${BLUE}🗄️  Waiting for database connection...${NC}"
-timeout=30
+timeout=10  # Reduced timeout - Railway healthcheck will handle retries
 counter=0
 
 while ! python manage.py check --database default --fail-level ERROR >/dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
-        echo -e "${RED}❌ Database connection timeout after ${timeout}s${NC}"
-        echo -e "${YELLOW}💡 Check database configuration and network connectivity${NC}"
-        exit 1
+        echo -e "${YELLOW}⚠️  Database check timeout after ${timeout}s - continuing anyway${NC}"
+        echo -e "${YELLOW}💡 Railway healthcheck will retry if needed${NC}"
+        break  # Continue instead of exit
     fi
 
     echo -e "${YELLOW}⏳ Waiting for database... (${counter}s/${timeout}s)${NC}"
@@ -81,7 +81,9 @@ while ! python manage.py check --database default --fail-level ERROR >/dev/null 
     counter=$((counter + 1))
 done
 
-echo -e "${GREEN}✅ Database connection established${NC}"
+if [ $counter -lt $timeout ]; then
+    echo -e "${GREEN}✅ Database connection established${NC}"
+fi
 
 # Note: Media directory creation moved to gunicorn startup section
 # to run as root before dropping to django user
@@ -151,7 +153,7 @@ if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
     # Production: Use Gunicorn with optimized settings
     # Run as django user for security after directory setup
     echo -e "${BLUE}🏭 Starting Gunicorn (production mode) as django user...${NC}"
-    
+
     # Check if we're running as root (for Railway volume permissions)
     if [ "$(id -u)" = "0" ]; then
         echo -e "${YELLOW}Running as root - will drop to django user${NC}"
@@ -160,7 +162,7 @@ if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
         chown -R django:django /app/media
         chmod -R 755 /app/media
         echo -e "${GREEN}✅ Media directory permissions set${NC}"
-        
+
         # Run gunicorn as django user using runuser (more reliable than su)
         exec runuser -u django -- gunicorn vineyard_group_fellowship.wsgi:application \
             --bind 0.0.0.0:$PORT \
