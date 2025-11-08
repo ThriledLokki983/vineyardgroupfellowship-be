@@ -223,7 +223,7 @@ class ProfilePhoto(models.Model):
     """
     Profile photo storage - separate from main profile for performance.
 
-    This replaces the inefficient base64 storage in the authentication app.
+    Uses Base64 encoding to avoid file system dependencies in production.
     """
 
     user = models.OneToOneField(
@@ -232,19 +232,17 @@ class ProfilePhoto(models.Model):
         related_name='profile_photo'
     )
 
-    # File storage (replaces base64)
-    photo = models.ImageField(
-        upload_to='profile_photos/%Y/%m/',
+    # Base64 storage for photos
+    photo = models.TextField(
         null=True,
         blank=True,
-        help_text=_('Profile photo (max 2MB)')
+        help_text=_('Profile photo stored as Base64 data URL (max 5MB)')
     )
 
-    thumbnail = models.ImageField(
-        upload_to='profile_thumbnails/%Y/%m/',
+    thumbnail = models.TextField(
         null=True,
         blank=True,
-        help_text=_('Auto-generated thumbnail (150x150)')
+        help_text=_('Thumbnail stored as Base64 data URL (150x150)')
     )
 
     # Photo metadata
@@ -315,12 +313,9 @@ class ProfilePhoto(models.Model):
         return self.photo_moderation_status == 'approved'
 
     def delete_photo(self):
-        """Delete photo files and reset metadata."""
-        if self.photo:
-            self.photo.delete(save=False)
-        if self.thumbnail:
-            self.thumbnail.delete(save=False)
-
+        """Delete photo data and reset metadata."""
+        self.photo = None
+        self.thumbnail = None
         self.photo_filename = ''
         self.photo_content_type = ''
         self.photo_size_bytes = None
@@ -329,10 +324,8 @@ class ProfilePhoto(models.Model):
         self.save()
 
     def save(self, *args, **kwargs):
-        """Auto-generate thumbnail on save."""
+        """Save profile photo (thumbnail generation handled in serializer)."""
         super().save(*args, **kwargs)
-        if self.photo and not self.thumbnail:
-            self.generate_thumbnail()
 
     def generate_thumbnail(self):
         """Generate optimized thumbnail (150x150) from uploaded photo."""

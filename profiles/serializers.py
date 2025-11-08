@@ -135,27 +135,22 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
                 self._profile_photo_cache = None
         return self._profile_photo_cache
 
-    @extend_schema_field(serializers.URLField(allow_null=True))
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_photo_url(self, obj):
-        """Get the full URL for the profile photo."""
+        """Get the Base64 data URL for the profile photo."""
         photo = self._get_profile_photo(obj)
         if photo and photo.has_photo:
-            # Show photo to the owner regardless of moderation status
-            # For public/community viewing, would need approval check
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(photo.photo.url)
+            # Return Base64 data URL directly
+            return photo.photo
         return None
 
-    @extend_schema_field(serializers.URLField(allow_null=True))
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_photo_thumbnail_url(self, obj):
-        """Get the full URL for the profile photo thumbnail."""
+        """Get the Base64 data URL for the profile photo thumbnail."""
         photo = self._get_profile_photo(obj)
         if photo and photo.has_photo and photo.thumbnail:
-            # Show thumbnail to the owner regardless of moderation status
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(photo.thumbnail.url)
+            # Return Base64 data URL directly
+            return photo.thumbnail
         return None
 
     @extend_schema_field(serializers.ChoiceField(choices=['public', 'private', 'community']))
@@ -458,66 +453,105 @@ class ProfilePhotoSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
 
-    @extend_schema_field(serializers.URLField(allow_null=True))
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_photo_url(self, obj):
-        """Get the full URL for the photo."""
+        """Get the Base64 data URL for the photo."""
         if obj.photo:
-            return self.context['request'].build_absolute_uri(obj.photo.url)
+            return obj.photo
         return None
 
-    @extend_schema_field(serializers.URLField(allow_null=True))
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_thumbnail_url(self, obj):
-        """Get the full URL for the thumbnail."""
+        """Get the Base64 data URL for the thumbnail."""
         if obj.thumbnail:
-            return self.context['request'].build_absolute_uri(obj.thumbnail.url)
+            return obj.thumbnail
         return None
 
     def validate_photo(self, value):
-        """Validate uploaded photo."""
+        """Validate Base64 photo data."""
+        import base64
+        import re
+        
         if not value:
             return value
 
-        # Check file size (2MB limit)
-        max_size = 2 * 1024 * 1024  # 2MB
-        if value.size > max_size:
+        # Check if it's a proper Base64 data URL
+        if not value.startswith('data:image/'):
             raise serializers.ValidationError(
-                "Photo file size cannot exceed 2MB."
+                "Photo must be a Base64 data URL starting with 'data:image/'"
             )
 
-        # Check file type
-        allowed_types = ['image/jpeg', 'image/png', 'image/webp']
-        if value.content_type not in allowed_types:
+        # Extract format and Base64 data
+        match = re.match(r'data:image/(jpeg|jpg|png|webp);base64,(.+)', value)
+        if not match:
             raise serializers.ValidationError(
-                "Only JPEG, PNG, and WebP images are allowed."
+                "Invalid Base64 data URL format. Must be: data:image/<format>;base64,<data>"
+            )
+
+        image_format, base64_data = match.groups()
+
+        # Check Base64 string size (roughly 5MB limit after encoding)
+        # Base64 encoding increases size by ~33%, so 5MB * 1.33 = ~6.7MB
+        max_size = 7 * 1024 * 1024  # 7MB Base64 string ≈ 5MB file
+        if len(value) > max_size:
+            raise serializers.ValidationError(
+                f"Photo size cannot exceed 5MB (current: ~{len(value) / (1024 * 1024):.1f}MB)"
+            )
+
+        # Validate that Base64 data can be decoded
+        try:
+            image_data = base64.b64decode(base64_data)
+        except Exception:
+            raise serializers.ValidationError(
+                "Invalid Base64 encoding"
             )
 
         # Validate image integrity
         try:
-            image = Image.open(value)
+            image = Image.open(BytesIO(image_data))
             image.verify()
         except Exception:
             raise serializers.ValidationError(
-                "Invalid image file."
+                "Invalid image data"
             )
-
-        # Reset file pointer after verification
-        value.seek(0)
 
         return value
 
     def update(self, instance, validated_data):
-        """Handle photo upload and metadata extraction."""
+        """Handle Base64 photo upload and thumbnail generation."""
+        import base64
+        import re
+        
         photo = validated_data.get('photo')
 
         if photo:
-            # Delete old photo if exists
-            if instance.photo:
-                instance.delete_photo()
+            # Delete old thumbnail data
+            instance.thumbnail = None
 
-            # Extract metadata
-            instance.photo_filename = photo.name
-            instance.photo_content_type = photo.content_type
-            instance.photo_size_bytes = photo.size
+            # Extract metadata from Base64 string
+            match = re.match(r'data:image/(jpeg|jpg|png|webp);base64,(.+)', photo)
+            if match:
+                image_format, base64_data = match.groups()
+                instance.photo_content_type = f'image/{image_format}'
+                instance.photo_size_bytes = len(base64_data)
+                
+                # Generate thumbnail
+                try:
+                    image_data = base64.b64decode(base64_data)
+                    img = Image.open(BytesIO(image_data))
+                    
+                    # Create thumbnail (150x150)
+                    img.thumbnail((150, 150), Image.Resampling.LANCZOS)
+                    
+                    # Save thumbnail as Base64
+                    thumbnail_io = BytesIO()
+                    img.save(thumbnail_io, format='JPEG', quality=85)
+                    thumbnail_data = base64.b64encode(thumbnail_io.getvalue()).decode('utf-8')
+                    instance.thumbnail = f'data:image/jpeg;base64,{thumbnail_data}'
+                except Exception:
+                    # If thumbnail generation fails, continue without it
+                    instance.thumbnail = None
+
             # Auto-approve uploaded photos (no moderation required)
             instance.photo_moderation_status = 'approved'
 
@@ -665,9 +699,9 @@ class UserProfilePublicSerializer(serializers.ModelSerializer):
             'created_at',
         ]
 
-    @extend_schema_field(serializers.URLField(allow_null=True))
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_photo_url(self, obj):
-        """Get photo URL if visible to current user."""
+        """Get photo Base64 data URL if visible to current user."""
         try:
             photo = obj.user.profile_photo
             if photo.has_photo and photo.is_approved:
@@ -676,16 +710,16 @@ class UserProfilePublicSerializer(serializers.ModelSerializer):
                 if request and request.user.is_authenticated:
                     # Apply privacy rules here
                     if photo.photo_visibility in ['public', 'community']:
-                        return request.build_absolute_uri(photo.photo.url)
+                        return photo.photo
                 elif photo.photo_visibility == 'public':
-                    return request.build_absolute_uri(photo.photo.url)
+                    return photo.photo
         except (AttributeError, ProfilePhoto.DoesNotExist):
             pass
         return None
 
-    @extend_schema_field(serializers.URLField(allow_null=True))
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_thumbnail_url(self, obj):
-        """Get thumbnail URL if visible to current user."""
+        """Get thumbnail Base64 data URL if visible to current user."""
         try:
             photo = obj.user.profile_photo
             if photo.has_photo and photo.is_approved:
@@ -694,9 +728,9 @@ class UserProfilePublicSerializer(serializers.ModelSerializer):
                 if request and request.user.is_authenticated:
                     # Apply privacy rules here
                     if photo.photo_visibility in ['public', 'community']:
-                        return request.build_absolute_uri(photo.thumbnail.url)
+                        return photo.thumbnail
                 elif photo.photo_visibility == 'public':
-                    return request.build_absolute_uri(photo.thumbnail.url)
+                    return photo.thumbnail
         except (AttributeError, ProfilePhoto.DoesNotExist):
             pass
         return None
