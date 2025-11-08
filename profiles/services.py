@@ -143,8 +143,12 @@ class PhotoService:
     @transaction.atomic
     def upload_photo(user, photo_file):
         """
-        Upload and process a new profile photo.
+        Upload and process a new profile photo (converts to Base64).
         """
+        import base64
+        from PIL import Image
+        from io import BytesIO
+        
         logger.info(
             "PhotoService.upload_photo called",
             user_id=str(user.id),
@@ -171,19 +175,60 @@ class PhotoService:
                 old_filename=old_filename
             )
 
-        # Save new photo
-        logger.info("About to save photo to photo_profile.photo field")
-        photo_profile.photo = photo_file
+        # Convert uploaded file to Base64
+        logger.info("Converting photo to Base64")
+        
+        # Read file data
+        photo_file.seek(0)
+        file_data = photo_file.read()
+        
+        # Encode to Base64
+        base64_data = base64.b64encode(file_data).decode('utf-8')
+        
+        # Determine image format from content type
+        content_type_map = {
+            'image/jpeg': 'jpeg',
+            'image/jpg': 'jpeg',
+            'image/png': 'png',
+            'image/webp': 'webp'
+        }
+        image_format = content_type_map.get(photo_file.content_type, 'jpeg')
+        
+        # Create data URL
+        photo_data_url = f'data:{photo_file.content_type};base64,{base64_data}'
+        
+        # Generate thumbnail
+        try:
+            image = Image.open(BytesIO(file_data))
+            image.thumbnail((150, 150), Image.Resampling.LANCZOS)
+            
+            # Convert to RGB if necessary
+            if image.mode in ('RGBA', 'P'):
+                image = image.convert('RGB')
+            
+            # Save thumbnail as Base64
+            thumbnail_io = BytesIO()
+            image.save(thumbnail_io, format='JPEG', quality=85)
+            thumbnail_data = base64.b64encode(thumbnail_io.getvalue()).decode('utf-8')
+            thumbnail_url = f'data:image/jpeg;base64,{thumbnail_data}'
+        except Exception as e:
+            logger.warning(f"Failed to generate thumbnail: {e}")
+            thumbnail_url = None
+        
+        # Save new photo as Base64
+        logger.info("Saving Base64 photo to photo_profile")
+        photo_profile.photo = photo_data_url
+        photo_profile.thumbnail = thumbnail_url
         photo_profile.photo_filename = photo_file.name
         photo_profile.photo_content_type = photo_file.content_type
-        photo_profile.photo_size_bytes = photo_file.size
+        photo_profile.photo_size_bytes = len(base64_data)
         # Auto-approve uploaded photos (no moderation required)
         photo_profile.photo_moderation_status = 'approved'
 
         logger.info(
             "About to save photo_profile",
-            photo_field_value=str(photo_profile.photo),
-            photo_field_bool=bool(photo_profile.photo)
+            photo_data_length=len(photo_data_url),
+            has_thumbnail=bool(thumbnail_url)
         )
 
         photo_profile.save()
@@ -193,9 +238,8 @@ class PhotoService:
 
         logger.info(
             "Photo profile saved and refreshed",
-            photo_field_after_save=str(photo_profile.photo),
             has_photo_after_save=photo_profile.has_photo,
-            photo_url=photo_profile.photo.url if photo_profile.photo else None
+            photo_data_length=len(photo_profile.photo) if photo_profile.photo else 0
         )
 
         logger.info(
