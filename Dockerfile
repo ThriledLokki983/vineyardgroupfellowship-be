@@ -72,8 +72,9 @@ RUN chmod +x start.sh scripts/post-migration.sh
 RUN mkdir -p /app/staticfiles /app/logs /app/media/group_photos /app/media/profile_photos /app/media/message_attachments \
     && chown -R django:django /app
 
-# Switch to non-root user
-USER django
+# Note: NOT switching to django user here - will be handled in start.sh
+# This allows the startup script to create directories in volume mounts as root
+# Then drop to django user for running the application
 
 # Collect static files with environment variables for build
 # nosec - These are dummy values only used for build-time static collection

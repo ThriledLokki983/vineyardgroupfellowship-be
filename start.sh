@@ -83,21 +83,8 @@ done
 
 echo -e "${GREEN}✅ Database connection established${NC}"
 
-# Create media directories with proper permissions
-# Use Python to ensure proper permissions handling
-echo -e "${BLUE}📁 Setting up media directories...${NC}"
-python -c "
-import os
-import sys
-media_dirs = ['media/group_photos', 'media/profile_photos', 'media/message_attachments']
-for dir_path in media_dirs:
-    try:
-        os.makedirs(dir_path, mode=0o755, exist_ok=True)
-        print(f'✓ Created {dir_path}')
-    except Exception as e:
-        print(f'Warning: Could not create {dir_path}: {e}', file=sys.stderr)
-"
-echo -e "${GREEN}✅ Media directories setup complete${NC}"
+# Note: Media directory creation moved to gunicorn startup section
+# to run as root before dropping to django user
 
 # Run database migrations
 echo -e "${BLUE}🔄 Running database migrations...${NC}"
@@ -162,22 +149,52 @@ echo "================================================"
 # Use gunicorn for production, runserver for development
 if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
     # Production: Use Gunicorn with optimized settings
-    echo -e "${BLUE}🏭 Starting Gunicorn (production mode)...${NC}"
-    exec gunicorn vineyard_group_fellowship.wsgi:application \
-        --bind 0.0.0.0:$PORT \
-        --workers 2 \
-        --threads 4 \
-        --worker-class gthread \
-        --worker-connections 1000 \
-        --max-requests 1000 \
-        --max-requests-jitter 100 \
-        --timeout 30 \
-        --keep-alive 2 \
-        --preload \
-        --log-level info \
-        --access-logfile - \
-        --error-logfile - \
-        --capture-output &
+    # Run as django user for security after directory setup
+    echo -e "${BLUE}🏭 Starting Gunicorn (production mode) as django user...${NC}"
+    
+    # Check if we're running as root (for Railway volume permissions)
+    if [ "$(id -u)" = "0" ]; then
+        echo -e "${YELLOW}Running as root - will drop to django user${NC}"
+        # Ensure media directories exist with proper permissions
+        mkdir -p /app/media/group_photos /app/media/profile_photos /app/media/message_attachments
+        chown -R django:django /app/media
+        chmod -R 755 /app/media
+        echo -e "${GREEN}✅ Media directory permissions set${NC}"
+        
+        # Run gunicorn as django user using su
+        exec su -s /bin/bash django -c "gunicorn vineyard_group_fellowship.wsgi:application \
+            --bind 0.0.0.0:$PORT \
+            --workers 2 \
+            --threads 4 \
+            --worker-class gthread \
+            --worker-connections 1000 \
+            --max-requests 1000 \
+            --max-requests-jitter 100 \
+            --timeout 30 \
+            --keep-alive 2 \
+            --preload \
+            --log-level info \
+            --access-logfile - \
+            --error-logfile - \
+            --capture-output" &
+    else
+        # Already running as non-root user
+        exec gunicorn vineyard_group_fellowship.wsgi:application \
+            --bind 0.0.0.0:$PORT \
+            --workers 2 \
+            --threads 4 \
+            --worker-class gthread \
+            --worker-connections 1000 \
+            --max-requests 1000 \
+            --max-requests-jitter 100 \
+            --timeout 30 \
+            --keep-alive 2 \
+            --preload \
+            --log-level info \
+            --access-logfile - \
+            --error-logfile - \
+            --capture-output &
+    fi
 else
     # Development/Staging: Use Django's development server
     echo -e "${BLUE}🔧 Starting Django development server...${NC}"
