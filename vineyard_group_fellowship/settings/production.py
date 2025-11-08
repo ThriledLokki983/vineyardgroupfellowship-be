@@ -371,21 +371,26 @@ else:
 # LOGGING - Production
 # ============================================================================
 
-LOGGING['root']['level'] = 'WARNING'
-LOGGING['loggers']['vineyard_group_fellowship']['level'] = 'INFO'
-LOGGING['loggers']['django']['level'] = 'WARNING'
+# Remove file handlers - Railway captures stdout/stderr
+LOGGING['handlers'].pop('file', None)
+LOGGING['handlers'].pop('security_file', None)
+LOGGING['handlers'].pop('performance_file', None)
 
-# File logging disabled for Railway - stdout/stderr are captured by Railway logs
-# If file logging is needed, ensure /app/logs directory has proper permissions
-# LOGGING['handlers']['file'] = {
-#     'level': 'ERROR',
-#     'class': 'logging.handlers.RotatingFileHandler',
-#     'filename': '/app/logs/django.log',
-#     'maxBytes': 1024*1024*10,  # 10 MB
-#     'backupCount': 5,
-#     'formatter': 'verbose',
-# }
-# LOGGING['loggers']['vineyard_group_fellowship']['handlers'].append('file')
+# Update loggers to use console only
+LOGGING['root']['level'] = 'WARNING'
+LOGGING['root']['handlers'] = ['console']
+
+LOGGING['loggers']['vineyard_group_fellowship']['level'] = 'INFO'
+LOGGING['loggers']['vineyard_group_fellowship']['handlers'] = ['console']
+
+LOGGING['loggers']['django']['level'] = 'WARNING'
+LOGGING['loggers']['django']['handlers'] = ['console']
+
+if 'security' in LOGGING['loggers']:
+    LOGGING['loggers']['security']['handlers'] = ['console']
+
+if 'performance' in LOGGING['loggers']:
+    LOGGING['loggers']['performance']['handlers'] = ['console']
 
 # ============================================================================
 # MONITORING - Sentry
