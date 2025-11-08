@@ -371,29 +371,54 @@ else:
 # LOGGING - Production
 # ============================================================================
 
-# Remove file handlers - Railway captures stdout/stderr
-LOGGING['handlers'].pop('file', None)
-LOGGING['handlers'].pop('security_file', None)
-LOGGING['handlers'].pop('performance_file', None)
+# Remove all file handlers - Railway captures stdout/stderr automatically
+# We need to both remove the handlers AND update all logger configurations
+LOGGING['handlers'] = {
+    'console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'verbose',
+        'filters': ['sensitive_data_filter'],
+    },
+    'structured_console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'structured',
+        'filters': ['sensitive_data_filter'],
+    },
+}
 
-# Update loggers to use console only
-LOGGING['root']['level'] = 'WARNING'
-LOGGING['root']['handlers'] = ['console']
+# Update all loggers to use console only
+LOGGING['root'] = {
+    'handlers': ['console'],
+    'level': 'WARNING',
+}
 
-LOGGING['loggers']['vineyard_group_fellowship']['level'] = 'INFO'
-LOGGING['loggers']['vineyard_group_fellowship']['handlers'] = ['console']
-
-LOGGING['loggers']['django']['level'] = 'WARNING'
-LOGGING['loggers']['django']['handlers'] = ['console']
-
-if 'security' in LOGGING['loggers']:
-    LOGGING['loggers']['security']['handlers'] = ['console']
-
-if 'performance' in LOGGING['loggers']:
-    LOGGING['loggers']['performance']['handlers'] = ['console']
-
-if 'celery' in LOGGING['loggers']:
-    LOGGING['loggers']['celery']['handlers'] = ['console']
+LOGGING['loggers'] = {
+    'django': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+        'propagate': False,
+    },
+    'vineyard_group_fellowship': {
+        'handlers': ['console'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'security': {
+        'handlers': ['console'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'performance': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+        'propagate': False,
+    },
+    'celery': {
+        'handlers': ['console'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+}
 
 # ============================================================================
 # MONITORING - Sentry
