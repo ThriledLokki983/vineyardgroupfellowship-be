@@ -98,7 +98,7 @@ class IsAuthorOrReadOnly(permissions.BasePermission):
             return True
 
         # Write permissions only for author
-        return obj.author == request.user or obj.user == request.user
+        return obj.author == request.user
 
 
 class CanModerateGroup(permissions.BasePermission):

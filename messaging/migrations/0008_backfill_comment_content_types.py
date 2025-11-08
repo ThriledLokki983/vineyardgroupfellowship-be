@@ -13,19 +13,20 @@ def backfill_comment_content_types(apps, schema_editor):
     Comment = apps.get_model('messaging', 'Comment')
     ContentType = apps.get_model('contenttypes', 'ContentType')
     Discussion = apps.get_model('messaging', 'Discussion')
-    
+
     # Get the ContentType for Discussion
     discussion_content_type = ContentType.objects.get_for_model(Discussion)
-    
+
     # Update all comments that have a discussion
     comments_to_update = Comment.objects.filter(discussion__isnull=False)
-    
+
     for comment in comments_to_update:
         comment.content_type = discussion_content_type
         comment.content_id = comment.discussion_id
         comment.save(update_fields=['content_type', 'content_id'])
-    
-    print(f"✅ Backfilled {comments_to_update.count()} comments with content_type and content_id")
+
+    print(
+        f"✅ Backfilled {comments_to_update.count()} comments with content_type and content_id")
 
 
 def reverse_backfill(apps, schema_editor):

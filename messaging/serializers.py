@@ -247,7 +247,7 @@ class CommentSerializer(serializers.ModelSerializer):
             'updated_at',
             'content_type_name',
         ]
-    
+
     def get_content_type_name(self, obj):
         """Return human-readable content type name."""
         if obj.content_type:
@@ -360,7 +360,8 @@ class CommentCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['discussion', 'scripture', 'prayer', 'testimony', 'content_type', 'content_id', 'parent', 'content']
+        fields = ['discussion', 'scripture', 'prayer', 'testimony',
+                  'content_type', 'content_id', 'parent', 'content']
 
     def validate_content(self, value):
         if not value or len(value.strip()) == 0:
@@ -375,8 +376,8 @@ class CommentCreateSerializer(serializers.ModelSerializer):
         3. One of the shorthand fields (scripture, prayer, testimony) is provided
         """
         from django.contrib.contenttypes.models import ContentType
-        from messaging.models import Scripture, Prayer, Testimony, Discussion
-        
+        from messaging.models import Scripture, PrayerRequest, Testimony, Discussion
+
         # Count how many content identifiers are provided
         content_identifiers = [
             data.get('discussion'),
@@ -386,17 +387,17 @@ class CommentCreateSerializer(serializers.ModelSerializer):
             data.get('content_type') and data.get('content_id')
         ]
         provided_count = sum(1 for x in content_identifiers if x)
-        
+
         if provided_count == 0:
             raise serializers.ValidationError(
                 "Must provide either discussion, scripture, prayer, testimony, or content_type+content_id"
             )
-        
+
         if provided_count > 1:
             raise serializers.ValidationError(
                 "Can only comment on one content item at a time"
             )
-        
+
         # Handle shorthand fields by converting to content_type + content_id
         if data.get('scripture'):
             data['content_type'] = ContentType.objects.get_for_model(Scripture)
@@ -409,9 +410,10 @@ class CommentCreateSerializer(serializers.ModelSerializer):
             data['content_id'] = data.pop('testimony')
         elif data.get('discussion'):
             # For backward compatibility, set content_type/content_id from discussion
-            data['content_type'] = ContentType.objects.get_for_model(Discussion)
+            data['content_type'] = ContentType.objects.get_for_model(
+                Discussion)
             data['content_id'] = data['discussion'].id
-        
+
         # Validate parent belongs to same content
         if data.get('parent'):
             parent = data['parent']
@@ -419,7 +421,7 @@ class CommentCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Parent comment must belong to the same content item."
                 )
-        
+
         return data
 
     def create(self, validated_data):
@@ -457,29 +459,42 @@ class CommentHistorySerializer(serializers.ModelSerializer):
 class ReactionSerializer(serializers.ModelSerializer):
     """
     Serializer for reactions.
+
+    Supports reactions on all content types via GenericForeignKey:
+    - Discussion
+    - Comment
+    - PrayerRequest
+    - Testimony
+    - Scripture
     """
     user = UserMinimalSerializer(read_only=True)
+    content_type_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Reaction
         fields = [
             'id',
             'user',
-            'discussion',
-            'comment',
+            'content_type',
+            'object_id',
+            'content_type_name',
             'reaction_type',
             'created_at',
+            # Legacy fields (deprecated but kept for backward compatibility)
+            'discussion',
+            'comment',
         ]
-        read_only_fields = ['id', 'user', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at', 'content_type_name']
+
+    def get_content_type_name(self, obj):
+        """Get human-readable content type name."""
+        return obj.content_type.model if obj.content_type else None
 
     def validate(self, data):
-        """Validate reaction is for either discussion or comment, not both."""
-        if data.get('discussion') and data.get('comment'):
+        """Validate reaction has valid content_type and object_id."""
+        if not data.get('content_type') or not data.get('object_id'):
             raise serializers.ValidationError(
-                "Reaction must be for either discussion or comment, not both.")
-        if not data.get('discussion') and not data.get('comment'):
-            raise serializers.ValidationError(
-                "Reaction must be for either discussion or comment.")
+                "Both content_type and object_id are required.")
         return data
 
     def create(self, validated_data):
@@ -492,22 +507,40 @@ class ReactionSerializer(serializers.ModelSerializer):
 class ReactionCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating reactions.
+
+    Accepts content_type and object_id for GenericForeignKey support.
+    Supports all content types: Discussion, Comment, PrayerRequest, Testimony, Scripture.
     """
 
     class Meta:
         model = Reaction
-        fields = ['discussion', 'comment', 'reaction_type']
+        fields = ['content_type', 'object_id', 'reaction_type']
 
     def validate(self, data):
-        if data.get('discussion') and data.get('comment'):
+        """Validate content_type and object_id."""
+        from django.contrib.contenttypes.models import ContentType
+
+        if not data.get('content_type') or not data.get('object_id'):
             raise serializers.ValidationError(
-                "Reaction must be for either discussion or comment, not both.")
-        if not data.get('discussion') and not data.get('comment'):
+                "Both content_type and object_id are required.")
+
+        # Validate content type is allowed
+        content_type = data.get('content_type')
+        allowed_models = ['discussion', 'comment',
+                          'prayerrequest', 'testimony', 'scripture']
+        if content_type.model not in allowed_models:
             raise serializers.ValidationError(
-                "Reaction must be for either discussion or comment.")
+                f"Invalid content type. Must be one of: {', '.join(allowed_models)}")
+
+        # Validate object exists
+        model_class = content_type.model_class()
+        if not model_class.objects.filter(pk=data.get('object_id')).exists():
+            raise serializers.ValidationError("Content object does not exist.")
+
         return data
 
     def create(self, validated_data):
+        """Create reaction with current user."""
         request = self.context.get('request')
         validated_data['user'] = request.user
         return super().create(validated_data)

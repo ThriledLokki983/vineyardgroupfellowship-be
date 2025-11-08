@@ -30,5 +30,8 @@ rich==14.1.0
 ipython==8.26.0
 django-debug-toolbar==4.4.6
 
+# === PERFORMANCE TESTING ===
+locust==2.31.8
+
 # === DEPENDENCY MANAGEMENT ===
 pip-tools==7.4.1

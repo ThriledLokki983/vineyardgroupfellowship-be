@@ -479,7 +479,7 @@ class NotificationService:
         user: User,
         notification_type: str,
         status: str,
-        message: str
+        subject: str
     ):
         """
         Log notification attempt.

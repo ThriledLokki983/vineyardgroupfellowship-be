@@ -255,7 +255,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
                 'current_member_count': leader_group.current_member_count,
                 'member_limit': leader_group.member_limit,
                 'available_spots': leader_group.available_spots,
-                'photo_url': self.context['request'].build_absolute_uri(leader_group.photo.url) if leader_group.photo else None,
+                'photo_url': leader_group.photo if leader_group.photo else None,  # Base64 data URL
                 'my_role': 'leader',
                 'created_by_me': leader_group.created_by_id == user.id if leader_group.created_by else False,
                 'last_updated_by': last_updated_by_info,
@@ -298,7 +298,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
                 'current_member_count': co_leader_group.current_member_count,
                 'member_limit': co_leader_group.member_limit,
                 'available_spots': co_leader_group.available_spots,
-                'photo_url': self.context['request'].build_absolute_uri(co_leader_group.photo.url) if co_leader_group.photo else None,
+                'photo_url': co_leader_group.photo if co_leader_group.photo else None,  # Base64 data URL
                 'my_role': 'co_leader',
                 'created_by_me': co_leader_group.created_by_id == user.id if co_leader_group.created_by else False,
                 'last_updated_by': last_updated_by_info,
@@ -340,7 +340,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
                 'current_member_count': group.current_member_count,
                 'member_limit': group.member_limit,
                 'available_spots': group.available_spots,
-                'photo_url': self.context['request'].build_absolute_uri(group.photo.url) if group.photo else None,
+                'photo_url': group.photo if group.photo else None,  # Base64 data URL
                 'my_role': 'member',
                 'created_by_me': group.created_by_id == user.id if group.created_by else False,
                 'last_updated_by': last_updated_by_info,
@@ -378,7 +378,7 @@ class UserProfileBasicSerializer(serializers.ModelSerializer):
                 'current_member_count': group.current_member_count,
                 'member_limit': group.member_limit,
                 'available_spots': group.available_spots,
-                'photo_url': self.context['request'].build_absolute_uri(group.photo.url) if group.photo else None,
+                'photo_url': group.photo if group.photo else None,  # Base64 data URL
                 'my_role': 'member',  # Still member role, just pending
                 'created_by_me': False,  # Cannot create group if pending member
                 'last_updated_by': last_updated_by_info,

@@ -173,13 +173,12 @@ class Group(models.Model):
         help_text=_('User who archived this group')
     )
 
-    # Group Photo
-    photo = models.ImageField(
+    # Group Photo (stored as Base64 for Railway compatibility)
+    photo = models.TextField(
         _('group photo'),
-        upload_to='group_photos/',
         blank=True,
         null=True,
-        help_text=_('Group photo or banner image')
+        help_text=_('Group photo or banner image (Base64 encoded)')
     )
 
     # Meeting Schedule

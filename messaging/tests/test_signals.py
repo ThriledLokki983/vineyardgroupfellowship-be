@@ -239,13 +239,17 @@ class ReactionCountSignalTest(TestCase):
 
     def test_discussion_reaction_count_increments(self):
         """Test discussion reaction count increments on reaction create."""
+        from django.contrib.contenttypes.models import ContentType
+
         self.discussion.refresh_from_db()
         self.assertEqual(self.discussion.reaction_count, 0)
 
         # Create reaction
+        discussion_ct = ContentType.objects.get_for_model(Discussion)
         Reaction.objects.create(
             user=self.user,
-            discussion=self.discussion,
+            content_type=discussion_ct,
+            object_id=self.discussion.id,
             reaction_type='👍',
         )
 
@@ -254,9 +258,13 @@ class ReactionCountSignalTest(TestCase):
 
     def test_discussion_reaction_count_decrements(self):
         """Test discussion reaction count decrements on reaction delete."""
+        from django.contrib.contenttypes.models import ContentType
+
+        discussion_ct = ContentType.objects.get_for_model(Discussion)
         reaction = Reaction.objects.create(
             user=self.user,
-            discussion=self.discussion,
+            content_type=discussion_ct,
+            object_id=self.discussion.id,
             reaction_type='👍',
         )
 
@@ -271,13 +279,17 @@ class ReactionCountSignalTest(TestCase):
 
     def test_comment_reaction_count_increments(self):
         """Test comment reaction count increments on reaction create."""
+        from django.contrib.contenttypes.models import ContentType
+
         self.comment.refresh_from_db()
         self.assertEqual(self.comment.reaction_count, 0)
 
         # Create reaction
+        comment_ct = ContentType.objects.get_for_model(Comment)
         Reaction.objects.create(
             user=self.user,
-            comment=self.comment,
+            content_type=comment_ct,
+            object_id=self.comment.id,
             reaction_type='❤️',
         )
 
@@ -286,13 +298,17 @@ class ReactionCountSignalTest(TestCase):
 
     def test_feeditem_reaction_count_updated(self):
         """Test FeedItem reaction count is updated when reactions change."""
+        from django.contrib.contenttypes.models import ContentType
+
         feed_item = FeedItem.objects.get(content_id=self.discussion.id)
         self.assertEqual(feed_item.reaction_count, 0)
 
         # Create reaction
+        discussion_ct = ContentType.objects.get_for_model(Discussion)
         Reaction.objects.create(
             user=self.user,
-            discussion=self.discussion,
+            content_type=discussion_ct,
+            object_id=self.discussion.id,
             reaction_type='👍',
         )
 

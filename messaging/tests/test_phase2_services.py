@@ -286,10 +286,10 @@ class NotificationServiceTest(TestCase):
             content='Content',
         )
 
-        # Create notification preference
-        NotificationPreference.objects.create(
+        # Get or create notification preference
+        NotificationPreference.objects.get_or_create(
             user=self.other_user,
-            email_enabled=True,
+            defaults={'email_enabled': True}
         )
 
         # Send 5 notifications (the limit)

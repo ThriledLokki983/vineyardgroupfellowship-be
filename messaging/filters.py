@@ -10,7 +10,7 @@ from messaging.models import Comment, Discussion, Scripture, PrayerRequest, Test
 class CommentFilter(django_filters.FilterSet):
     """
     Custom filter for Comment model supporting polymorphic content filtering.
-    
+
     Supports filtering by:
     - discussion (UUID) - legacy support
     - scripture (UUID) - filter by scripture ID
@@ -20,21 +20,26 @@ class CommentFilter(django_filters.FilterSet):
     - content_id (UUID) - filter by specific content ID
     - parent (UUID) - filter by parent comment
     """
-    
-    discussion = django_filters.UUIDFilter(method='filter_by_discussion', label='Discussion ID')
-    scripture = django_filters.UUIDFilter(method='filter_by_scripture', label='Scripture ID')
-    prayer = django_filters.UUIDFilter(method='filter_by_prayer', label='Prayer Request ID')
-    testimony = django_filters.UUIDFilter(method='filter_by_testimony', label='Testimony ID')
-    
+
+    discussion = django_filters.UUIDFilter(
+        method='filter_by_discussion', label='Discussion ID')
+    scripture = django_filters.UUIDFilter(
+        method='filter_by_scripture', label='Scripture ID')
+    prayer = django_filters.UUIDFilter(
+        method='filter_by_prayer', label='Prayer Request ID')
+    testimony = django_filters.UUIDFilter(
+        method='filter_by_testimony', label='Testimony ID')
+
     class Meta:
         model = Comment
-        fields = ['discussion', 'scripture', 'prayer', 'testimony', 'content_type', 'content_id', 'parent']
-    
+        fields = ['discussion', 'scripture', 'prayer',
+                  'testimony', 'content_type', 'content_id', 'parent']
+
     def filter_by_discussion(self, queryset, name, value):
         """Filter comments by discussion ID."""
         discussion_type = ContentType.objects.get_for_model(Discussion)
         return queryset.filter(content_type=discussion_type, content_id=value)
-    
+
     def filter_by_scripture(self, queryset, name, value):
         """Filter comments by scripture ID."""
         try:
@@ -43,7 +48,7 @@ class CommentFilter(django_filters.FilterSet):
         except Exception:
             # If Scripture model doesn't exist yet, return empty queryset
             return queryset.none()
-    
+
     def filter_by_prayer(self, queryset, name, value):
         """Filter comments by prayer request ID."""
         try:
@@ -52,7 +57,7 @@ class CommentFilter(django_filters.FilterSet):
         except Exception:
             # If PrayerRequest model doesn't exist yet, return empty queryset
             return queryset.none()
-    
+
     def filter_by_testimony(self, queryset, name, value):
         """Filter comments by testimony ID."""
         try:

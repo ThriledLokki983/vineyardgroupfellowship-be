@@ -39,28 +39,104 @@ logger = logging.getLogger(__name__)
 @require_http_methods(["GET"])
 def health_check(request):
     """
-    Basic health check endpoint for load balancers and container orchestration.
+    Enhanced health check endpoint with dependency verification.
 
-    Returns 200 OK if the application is healthy, 503 if unhealthy.
+    Checks:
+    - Database connectivity
+    - Redis cache availability
+    - Celery worker availability
+
+    Returns 200 OK if all checks pass, 503 if any check fails.
     """
+    checks = {}
+    overall_healthy = True
+
+    # Database connectivity check
     try:
-        # Basic database connectivity check
+        start_time = time.perf_counter()
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
-
-        return JsonResponse({
+        db_time = (time.perf_counter() - start_time) * 1000
+        checks['database'] = {
             'status': 'healthy',
-            'timestamp': timezone.now().isoformat(),
-            'version': getattr(settings, 'APP_VERSION', 'unknown')
-        })
-
+            'response_time_ms': round(db_time, 2)
+        }
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return JsonResponse({
+        logger.error(f"Database health check failed: {e}")
+        checks['database'] = {
             'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': timezone.now().isoformat()
-        }, status=503)
+            'error': str(e)
+        }
+        overall_healthy = False
+
+    # Redis cache check
+    try:
+        start_time = time.perf_counter()
+        test_key = f'health_check_{timezone.now().timestamp()}'
+        cache.set(test_key, 'test', 10)
+        cache_value = cache.get(test_key)
+        cache.delete(test_key)
+        cache_time = (time.perf_counter() - start_time) * 1000
+
+        if cache_value == 'test':
+            checks['cache'] = {
+                'status': 'healthy',
+                'response_time_ms': round(cache_time, 2)
+            }
+        else:
+            checks['cache'] = {
+                'status': 'unhealthy',
+                'error': 'Cache read/write verification failed'
+            }
+            overall_healthy = False
+    except Exception as e:
+        logger.error(f"Cache health check failed: {e}")
+        checks['cache'] = {
+            'status': 'unhealthy',
+            'error': str(e)
+        }
+        overall_healthy = False
+
+    # Celery worker check
+    try:
+        from celery import current_app
+        start_time = time.perf_counter()
+
+        # Inspect active workers
+        inspect = current_app.control.inspect(timeout=2.0)
+        active_workers = inspect.active()
+        celery_time = (time.perf_counter() - start_time) * 1000
+
+        if active_workers:
+            worker_count = len(active_workers)
+            checks['celery'] = {
+                'status': 'healthy',
+                'workers': worker_count,
+                'response_time_ms': round(celery_time, 2)
+            }
+        else:
+            checks['celery'] = {
+                'status': 'unhealthy',
+                'error': 'No active Celery workers found'
+            }
+            overall_healthy = False
+    except Exception as e:
+        logger.error(f"Celery health check failed: {e}")
+        checks['celery'] = {
+            'status': 'unhealthy',
+            'error': str(e)
+        }
+        overall_healthy = False
+
+    response_data = {
+        'status': 'healthy' if overall_healthy else 'unhealthy',
+        'timestamp': timezone.now().isoformat(),
+        'version': getattr(settings, 'APP_VERSION', 'unknown'),
+        'checks': checks
+    }
+
+    status_code = 200 if overall_healthy else 503
+    return JsonResponse(response_data, status=status_code)
 
 
 @csrf_exempt

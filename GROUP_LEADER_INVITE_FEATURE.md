@@ -1191,31 +1191,31 @@ Your application has excellent foundations for this feature:
 
 1. **Multi-Step Friction:** 7-step process for new users (high drop-off risk)
    - **Mitigation:** Combine invitation + verification into single flow
-   
+
 2. **Email Deliverability:** Entire feature depends on email reaching inbox
    - **Mitigation:** SPF/DKIM/DMARC setup, monitor bounce rates
-   
+
 3. **Shadow Account Pollution:** Uninvited users create database clutter
    - **Mitigation:** Automated cleanup after 30 days
-   
+
 4. **Invitation Expiry:** Users may miss 7-day window
    - **Mitigation:** Longer window (14 days), reminder emails, grace period
-   
+
 5. **Username Generation:** Auto-generated usernames may look ugly
    - **Mitigation:** Generate from email, allow customization during onboarding
-   
+
 6. **Spam Potential:** Bad actors could abuse invitation system
    - **Mitigation:** Multi-layer rate limiting, CAPTCHA, pattern detection
-   
+
 7. **Mobile UX:** Email-to-browser flow is clunky on mobile
    - **Mitigation:** Deep links, PWA support, SMS alternative
-   
+
 8. **Duplicate Confusion:** Same user invited multiple times
    - **Mitigation:** Duplicate detection, auto-resend logic
-   
+
 9. **Privacy Leaks:** Invitation system could reveal user existence
    - **Mitigation:** Don't expose user_exists in API responses
-   
+
 10. **Registration Abandonment:** Users start but don't finish flow
     - **Mitigation:** Save progress, send reminders, simplified registration
 

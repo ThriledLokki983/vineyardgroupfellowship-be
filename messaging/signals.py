@@ -7,6 +7,7 @@ Handles automatic FeedItem creation, count updates, and cache invalidation.
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.core.cache import cache
+from django.db.models import F
 from .models import (
     Discussion,
     Comment,
@@ -90,40 +91,98 @@ def decrement_comment_count_on_delete(sender, instance, **kwargs):
 
 
 # =============================================================================
-# REACTION COUNT UPDATES
+# REACTION COUNT UPDATES (ALL CONTENT TYPES)
 # =============================================================================
 
 @receiver(post_save, sender=Reaction)
 def increment_reaction_count_on_create(sender, instance, created, **kwargs):
-    """Increment reaction count when reaction is created."""
-    if created:
-        if instance.discussion:
-            instance.discussion.increment_reaction_count()
+    """
+    Increment reaction count when reaction is created.
 
-            # Update FeedItem
-            FeedItem.objects.filter(
-                content_type='discussion',
-                content_id=instance.discussion.id
-            ).update(reaction_count=instance.discussion.reaction_count)
+    Handles all content types via GenericForeignKey:
+    - Discussion
+    - Comment
+    - PrayerRequest
+    - Testimony
+    - Scripture
+    """
+    if not created:
+        return
 
-        elif instance.comment:
-            instance.comment.increment_reaction_count()
+    content = instance.content_object
 
-
-@receiver(post_delete, sender=Reaction)
-def decrement_reaction_count_on_delete(sender, instance, **kwargs):
-    """Decrement reaction count when reaction is deleted."""
-    if instance.discussion:
-        instance.discussion.decrement_reaction_count()
+    if isinstance(content, Discussion):
+        content.increment_reaction_count()
 
         # Update FeedItem
         FeedItem.objects.filter(
             content_type='discussion',
-            content_id=instance.discussion.id
-        ).update(reaction_count=instance.discussion.reaction_count)
+            content_id=content.id
+        ).update(reaction_count=content.reaction_count)
 
-    elif instance.comment:
-        instance.comment.decrement_reaction_count()
+    elif isinstance(content, Comment):
+        content.increment_reaction_count()
+
+    elif isinstance(content, (PrayerRequest, Testimony, Scripture)):
+        # Phase 2 content types
+        content.__class__.objects.filter(pk=content.pk).update(
+            reaction_count=F('reaction_count') + 1
+        )
+        content.refresh_from_db(fields=['reaction_count'])
+
+        # Update FeedItem
+        content_type_str = content.__class__.__name__.lower()
+        if content_type_str == 'prayerrequest':
+            content_type_str = 'prayer_request'
+
+        FeedItem.objects.filter(
+            content_type=content_type_str,
+            content_id=content.id
+        ).update(reaction_count=content.reaction_count)
+
+
+@receiver(post_delete, sender=Reaction)
+def decrement_reaction_count_on_delete(sender, instance, **kwargs):
+    """
+    Decrement reaction count when reaction is deleted.
+
+    Handles all content types via GenericForeignKey:
+    - Discussion
+    - Comment
+    - PrayerRequest
+    - Testimony
+    - Scripture
+    """
+    content = instance.content_object
+
+    if isinstance(content, Discussion):
+        content.decrement_reaction_count()
+
+        # Update FeedItem
+        FeedItem.objects.filter(
+            content_type='discussion',
+            content_id=content.id
+        ).update(reaction_count=content.reaction_count)
+
+    elif isinstance(content, Comment):
+        content.decrement_reaction_count()
+
+    elif isinstance(content, (PrayerRequest, Testimony, Scripture)):
+        # Phase 2 content types
+        content.__class__.objects.filter(pk=content.pk).update(
+            reaction_count=F('reaction_count') - 1
+        )
+        content.refresh_from_db(fields=['reaction_count'])
+
+        # Update FeedItem
+        content_type_str = content.__class__.__name__.lower()
+        if content_type_str == 'prayerrequest':
+            content_type_str = 'prayer_request'
+
+        FeedItem.objects.filter(
+            content_type=content_type_str,
+            content_id=content.id
+        ).update(reaction_count=content.reaction_count)
 
 
 # =============================================================================
@@ -182,10 +241,24 @@ def invalidate_feed_cache_on_comment_change(sender, instance, **kwargs):
 @receiver(post_save, sender=Reaction)
 def invalidate_feed_cache_on_reaction_change(sender, instance, **kwargs):
     """Invalidate feed cache when reaction is created (counts changed)."""
-    if instance.discussion:
-        cache_key = f"group:{instance.discussion.group.id}:feed:*"
+    from .models import Discussion, Comment
+
+    content_object = instance.content_object
+
+    # Get the group based on content type
+    if isinstance(content_object, Discussion):
+        group_id = content_object.group.id
+    elif isinstance(content_object, Comment):
+        group_id = content_object.discussion.group.id
     else:
-        cache_key = f"group:{instance.comment.discussion.group.id}:feed:*"
+        # Phase 2 content types (PrayerRequest, Testimony, Scripture) have group directly
+        if hasattr(content_object, 'group'):
+            group_id = content_object.group.id
+        else:
+            # Unknown content type, skip cache invalidation
+            return
+
+    cache_key = f"group:{group_id}:feed:*"
     if hasattr(cache, 'delete_pattern'):
         cache.delete_pattern(cache_key)
 
@@ -430,80 +503,68 @@ def delete_feed_item_for_scripture(sender, instance, **kwargs):
 # =============================================================================
 # PHASE 2: COMMENT COUNT UPDATES FOR NEW CONTENT TYPES
 # =============================================================================
-# NOTE: Phase 2 content types (PrayerRequest, Testimony, Scripture) do not support
-# direct comments. Comments are only on Discussions. Phase 2 content is wrapped
-# in FeedItems which create associated Discussions for commenting.
-# Comment counts for Phase 2 content should be tracked via their associated FeedItem's
-# discussion, not directly on the Phase 2 models.
-# These signals are disabled as they were incorrectly attempting to handle a use case
-# that doesn't exist in the current architecture.
 
-# @receiver(post_save, sender=Comment)
-# def update_phase2_comment_counts(sender, instance, created, **kwargs):
-#     ...implementation commented out...
+@receiver(post_save, sender=Comment)
+def update_phase2_comment_counts(sender, instance, created, **kwargs):
+    """Update comment counts for Phase 2 content types when comments are added."""
+    if not created or instance.is_deleted:
+        return
 
-# @receiver(post_delete, sender=Comment)
-# def decrement_phase2_comment_counts(sender, instance, **kwargs):
-#     ...implementation commented out...
+    # Get the content object via GenericForeignKey
+    content = instance.content_object
+
+    if isinstance(content, (PrayerRequest, Testimony, Scripture)):
+        # Atomically increment comment count
+        content.__class__.objects.filter(pk=content.pk).update(
+            comment_count=F('comment_count') + 1
+        )
+        content.refresh_from_db(fields=['comment_count'])
+
+        # Update FeedItem for this content
+        content_type_str = content.__class__.__name__.lower()
+        if content_type_str == 'prayerrequest':
+            content_type_str = 'prayer_request'
+
+        FeedItem.objects.filter(
+            content_type=content_type_str,
+            content_id=content.id
+        ).update(comment_count=content.comment_count)
+
+
+@receiver(post_delete, sender=Comment)
+def decrement_phase2_comment_counts(sender, instance, **kwargs):
+    """Decrement comment counts for Phase 2 content types when comments are deleted."""
+    if instance.is_deleted:  # Already soft-deleted, don't decrement again
+        return
+
+    # Get the content object via GenericForeignKey
+    content = instance.content_object
+
+    if isinstance(content, (PrayerRequest, Testimony, Scripture)):
+        # Atomically decrement comment count
+        content.__class__.objects.filter(pk=content.pk).update(
+            comment_count=F('comment_count') - 1
+        )
+        content.refresh_from_db(fields=['comment_count'])
+
+        # Update FeedItem for this content
+        content_type_str = content.__class__.__name__.lower()
+        if content_type_str == 'prayerrequest':
+            content_type_str = 'prayer_request'
+
+        FeedItem.objects.filter(
+            content_type=content_type_str,
+            content_id=content.id
+        ).update(comment_count=content.comment_count)
 
 
 # =============================================================================
 # PHASE 2: REACTION COUNT UPDATES FOR NEW CONTENT TYPES
 # =============================================================================
-
-@receiver(post_save, sender=Reaction)
-def update_phase2_reaction_counts(sender, instance, created, **kwargs):
-    """Update reaction counts for Phase 2 content types."""
-    if created:
-        content = instance.content_object
-
-        if isinstance(content, Testimony):
-            content.reaction_count = Reaction.objects.filter(
-                content_type__model='testimony',
-                object_id=content.id
-            ).count()
-            content.save(update_fields=['reaction_count'])
-
-            # Update FeedItem
-            FeedItem.objects.filter(
-                content_type='testimony',
-                content_id=content.id
-            ).update(reaction_count=content.reaction_count)
-
-        elif isinstance(content, Scripture):
-            content.reaction_count = Reaction.objects.filter(
-                content_type__model='scripture',
-                object_id=content.id
-            ).count()
-            content.save(update_fields=['reaction_count'])
-
-            # Update FeedItem
-            FeedItem.objects.filter(
-                content_type='scripture',
-                content_id=content.id
-            ).update(reaction_count=content.reaction_count)
-
-
-@receiver(post_delete, sender=Reaction)
-def decrement_phase2_reaction_counts(sender, instance, **kwargs):
-    """Decrement reaction counts for Phase 2 content types."""
-    content = instance.content_object
-
-    if isinstance(content, (Testimony, Scripture)):
-        model_name = content.__class__.__name__.lower()
-        content.reaction_count = Reaction.objects.filter(
-            content_type__model=model_name,
-            object_id=content.id
-        ).count()
-        content.save(update_fields=['reaction_count'])
-
-        # Update FeedItem
-        FeedItem.objects.filter(
-            content_type=model_name,
-            content_id=content.id
-        ).update(reaction_count=content.reaction_count)
-
-
+# NOTE: Phase 2 reaction count updates are now handled in the main
+# increment_reaction_count_on_create() and decrement_reaction_count_on_delete()
+# signals above, which use GenericForeignKey to support all content types.
+# =============================================================================
 # =============================================================================
 # PHASE 2: NOTIFICATION SIGNALS
 # =============================================================================
@@ -612,3 +673,94 @@ def send_scripture_shared_notification(sender, instance, created, **kwargs):
             logger = logging.getLogger(__name__)
             logger.error(
                 f"Failed to send scripture shared notification: {str(e)}")
+
+
+# =============================================================================
+# CACHE INVALIDATION
+# =============================================================================
+
+@receiver(post_save, sender=FeedItem)
+def invalidate_feed_cache_on_new_item(sender, instance, created, **kwargs):
+    """
+    Invalidate feed cache when new content is created.
+
+    This ensures users see new content immediately without waiting
+    for the 5-minute cache TTL to expire.
+    """
+    from .services import FeedService
+
+    if created:
+        FeedService.invalidate_group_feed(instance.group_id)
+
+
+@receiver(post_save, sender=FeedItem)
+def invalidate_feed_cache_on_update(sender, instance, created, **kwargs):
+    """
+    Invalidate feed cache when content is updated.
+
+    Handles updates to:
+    - Title/preview changes
+    - Pin/unpin actions
+    - Comment/reaction count changes
+    - Soft delete status
+    """
+    from .services import FeedService
+
+    if not created:
+        FeedService.invalidate_group_feed(instance.group_id)
+
+
+@receiver(post_delete, sender=FeedItem)
+def invalidate_feed_cache_on_delete(sender, instance, **kwargs):
+    """Invalidate feed cache when content is hard deleted."""
+    from .services import FeedService
+
+    FeedService.invalidate_group_feed(instance.group_id)
+
+
+@receiver(post_save, sender=Comment)
+def invalidate_feed_cache_on_comment(sender, instance, created, **kwargs):
+    """
+    Invalidate feed cache when comments are added/updated.
+
+    Since comment counts are displayed in the feed, we need to
+    invalidate the cache to show updated counts.
+    """
+    from .services import FeedService
+
+    # Get the group from the discussion
+    if instance.discussion and instance.discussion.group:
+        FeedService.invalidate_group_feed(instance.discussion.group.id)
+
+
+@receiver(post_delete, sender=Comment)
+def invalidate_feed_cache_on_comment_delete(sender, instance, **kwargs):
+    """Invalidate feed cache when comments are deleted."""
+    from .services import FeedService
+
+    if instance.discussion and instance.discussion.group:
+        FeedService.invalidate_group_feed(instance.discussion.group.id)
+
+
+@receiver(post_save, sender=Reaction)
+def invalidate_feed_cache_on_reaction(sender, instance, created, **kwargs):
+    """
+    Invalidate feed cache when reactions are added.
+
+    Since reaction counts are displayed in the feed, we need to
+    invalidate the cache to show updated counts.
+    """
+    from .services import FeedService
+
+    # Get the group from the discussion
+    if instance.discussion and instance.discussion.group:
+        FeedService.invalidate_group_feed(instance.discussion.group.id)
+
+
+@receiver(post_delete, sender=Reaction)
+def invalidate_feed_cache_on_reaction_delete(sender, instance, **kwargs):
+    """Invalidate feed cache when reactions are removed."""
+    from .services import FeedService
+
+    if instance.discussion and instance.discussion.group:
+        FeedService.invalidate_group_feed(instance.discussion.group.id)

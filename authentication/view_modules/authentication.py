@@ -114,10 +114,18 @@ def register_view(request):
             # Create user
             user = serializer.save()
 
-            # Send verification email using the utility function
-            from ..utils.auth import send_verification_email
+            # Store password for async breach check (using request data)
+            # We pass the plain password to async task for breach checking
+            password = request.data.get('password', '')
 
+            # Send verification email using the utility function (async via Celery)
+            from ..utils.auth import send_verification_email
             send_verification_email(user, request)
+
+            # Check password breach asynchronously (doesn't block registration)
+            from ..tasks import check_password_breach_async
+            if password:
+                check_password_breach_async.delay(str(user.id), password)
 
             logger.info(
                 "User registration successful",

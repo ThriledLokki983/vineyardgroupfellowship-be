@@ -216,11 +216,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         except ValidationError as e:
             raise serializers.ValidationError({'password': e.messages})
 
-        # Check for password breaches
-        if check_password_breach(attrs['password']):
-            raise serializers.ValidationError({
-                'password': _("This password has been found in data breaches. Please choose a different password.")
-            })
+        # Password breach check moved to async task (post-registration)
+        # This speeds up registration from 4+ seconds to < 500ms
+        # Users will receive email notification if password is breached
 
         # Validate privacy policy and terms acceptance
         if not attrs.get('privacy_policy_accepted', False):

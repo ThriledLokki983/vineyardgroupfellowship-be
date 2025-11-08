@@ -360,7 +360,14 @@ class CommentHistory(models.Model):
 
 class Reaction(models.Model):
     """
-    Emoji reactions to discussions and comments.
+    Emoji reactions to discussions, comments, and Phase 2 content.
+
+    Supports reactions on:
+    - Discussion
+    - Comment
+    - PrayerRequest (Phase 2)
+    - Testimony (Phase 2)
+    - Scripture (Phase 2)
 
     Each user can only react once per content item (enforced by unique constraint).
     Reactions are NOT soft-deleted - they are hard deleted.
@@ -384,22 +391,38 @@ class Reaction(models.Model):
         help_text=_('User who reacted')
     )
 
-    # Polymorphic relationship (either discussion OR comment)
+    # GenericForeignKey for polymorphic reactions
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,  # Temporarily nullable for migration
+        blank=True,
+        help_text=_('Type of content being reacted to')
+    )
+    object_id = models.UUIDField(
+        null=True,  # Temporarily nullable for migration
+        blank=True,
+        help_text=_('ID of the content being reacted to')
+    )
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    # DEPRECATED: Legacy fields for backward compatibility (will be removed in future migration)
+    # These are kept to maintain existing reactions during migration period
     discussion = models.ForeignKey(
         Discussion,
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='reactions',
-        help_text=_('Discussion being reacted to (if applicable)')
+        related_name='reactions_legacy',
+        help_text=_('[DEPRECATED] Use content_type/object_id instead')
     )
     comment = models.ForeignKey(
         Comment,
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='reactions',
-        help_text=_('Comment being reacted to (if applicable)')
+        related_name='reactions_legacy',
+        help_text=_('[DEPRECATED] Use content_type/object_id instead')
     )
 
     # Reaction type
@@ -418,42 +441,41 @@ class Reaction(models.Model):
         constraints = [
             # Ensure one reaction per user per content item
             models.UniqueConstraint(
-                fields=['user', 'discussion'],
-                name='unique_user_discussion_reaction',
-                condition=models.Q(discussion__isnull=False)
-            ),
-            models.UniqueConstraint(
-                fields=['user', 'comment'],
-                name='unique_user_comment_reaction',
-                condition=models.Q(comment__isnull=False)
-            ),
-            # Ensure reaction is for EITHER discussion OR comment, not both
-            models.CheckConstraint(
-                check=(
-                    models.Q(discussion__isnull=False, comment__isnull=True) |
-                    models.Q(discussion__isnull=True, comment__isnull=False)
-                ),
-                name='reaction_for_discussion_or_comment'
+                fields=['user', 'content_type', 'object_id'],
+                name='unique_user_content_reaction'
             ),
         ]
         indexes = [
-            models.Index(fields=['discussion', 'reaction_type']),
-            models.Index(fields=['comment', 'reaction_type']),
+            models.Index(
+                fields=['content_type', 'object_id', 'reaction_type']),
             models.Index(fields=['user', '-created_at']),
         ]
 
     def __str__(self):
-        target = self.discussion or self.comment
-        return f"{self.user.username} reacted {self.reaction_type} to {target}"
+        return f"{self.user.username} reacted {self.reaction_type} to {self.content_object}"
 
     def clean(self):
-        """Validate that reaction is for either discussion or comment, not both."""
-        if self.discussion and self.comment:
+        """Validate that reaction is for a valid content type."""
+        from django.apps import apps
+
+        if not self.content_type or not self.object_id:
+            raise ValidationError('Content type and object ID are required.')
+
+        # Validate content type is one of the allowed models
+        allowed_models = ['discussion', 'comment',
+                          'prayerrequest', 'testimony', 'scripture']
+        if self.content_type.model not in allowed_models:
             raise ValidationError(
-                'Reaction must be for either discussion or comment, not both.')
-        if not self.discussion and not self.comment:
-            raise ValidationError(
-                'Reaction must be for either discussion or comment.')
+                f'Invalid content type. Must be one of: {", ".join(allowed_models)}'
+            )
+
+        # Validate that the object exists
+        try:
+            model_class = self.content_type.model_class()
+            if not model_class.objects.filter(pk=self.object_id).exists():
+                raise ValidationError('Content object does not exist.')
+        except Exception as e:
+            raise ValidationError(f'Invalid content object: {str(e)}')
 
 
 class FeedItem(models.Model):

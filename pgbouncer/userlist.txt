@@ -1,0 +1,20 @@
+; PgBouncer user authentication file
+; Format: "username" "password"
+;
+; IMPORTANT: This file should match your PostgreSQL credentials
+; The password should be in MD5 format: md5 + md5(password + username)
+;
+; To generate MD5 password hash:
+; echo -n "passwordusername" | md5sum
+; Then prepend "md5" to the result
+;
+; For development with default credentials:
+; Username: vineyard_group_fellowship
+; Password: vineyard_group_fellowship
+;
+; MD5 generation:
+; echo -n "vineyard_group_fellowshipvineyard_group_fellowship" | md5
+; Result: ff8e8261d94f9580814f439fd8ccb482
+; Full hash: md5ff8e8261d94f9580814f439fd8ccb482
+
+"vineyard_group_fellowship" "md5ff8e8261d94f9580814f439fd8ccb482"

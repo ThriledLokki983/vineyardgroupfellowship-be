@@ -651,16 +651,20 @@ class PasswordSecurityService:
     """
 
     @staticmethod
-    def check_password_breach(password: str, timeout: int = 5) -> bool:
+    def check_password_breach(password: str, timeout: int = 2) -> bool:
         """
         Check if password has been found in data breaches using HaveIBeenPwned API.
 
+        Uses Redis caching to avoid repeated API calls for the same password hash prefix.
+        Optimized with shorter timeout (2s) to not block registration.
+        Fails open on any error to prevent blocking registration.
+
         Args:
             password: Password to check
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (reduced to 2s for performance)
 
         Returns:
-            True if password found in breaches, False otherwise
+            True if password found in breaches, False otherwise (or on error)
         """
         try:
             import requests
@@ -670,25 +674,60 @@ class PasswordSecurityService:
             prefix = sha1_hash[:5]
             suffix = sha1_hash[5:]
 
-            # Query HaveIBeenPwned API with k-anonymity
+            # Try cache first, but don't fail if Redis is down
+            try:
+                from django.core.cache import cache
+                cache_key = f"pwned_prefix:{prefix}"
+                cached_result = cache.get(
+                    cache_key, default=None, version=None)
+
+                if cached_result is not None:
+                    # Check if our suffix is in the cached breached suffixes
+                    return suffix in cached_result
+            except Exception:
+                # Redis/cache error - continue without caching
+                pass
+
+            # Query HaveIBeenPwned API with k-anonymity (reduced timeout to 2s)
             response = requests.get(
                 f"https://api.pwnedpasswords.com/range/{prefix}",
                 timeout=timeout,
                 headers={
-                    'User-Agent': 'Vineyard Group Fellowship-PasswordChecker/1.0'}
+                    'User-Agent': 'Vineyard Group Fellowship-PasswordChecker/1.0',
+                    'Add-Padding': 'true'  # Enable padding for better privacy
+                }
             )
 
             if response.status_code == 200:
-                # Check if our suffix appears in the response
+                # Parse breached password suffixes
+                breached_suffixes = set()
                 for line in response.text.splitlines():
-                    hash_suffix, count = line.split(':')
-                    if hash_suffix == suffix:
-                        return True
+                    if ':' in line:
+                        hash_suffix, count = line.split(':')
+                        breached_suffixes.add(hash_suffix.strip())
+
+                # Try to cache the results, but don't fail if Redis is down
+                try:
+                    from django.core.cache import cache
+                    cache.set(cache_key, breached_suffixes, timeout=86400)
+                except Exception:
+                    # Cache error - results not cached, but continue
+                    pass
+
+                # Check if our suffix appears in the breaches
+                return suffix in breached_suffixes
 
             return False
 
-        except Exception:
-            # Fail open on network errors - don't block user
+        except requests.Timeout:
+            # Timeout after 2 seconds - fail open to not block registration
+            logger.warning(
+                "Password breach check timed out - allowing registration")
+            return False
+        except Exception as e:
+            # Fail open on ANY error - don't block user registration
+            logger.warning(
+                f"Password breach check failed: {str(e)} - allowing registration")
             return False
 
     @staticmethod

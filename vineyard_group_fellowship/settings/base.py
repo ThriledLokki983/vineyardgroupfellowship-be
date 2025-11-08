@@ -50,6 +50,8 @@ THIRD_PARTY_APPS = [
     'drf_spectacular',
     'csp',
     'anymail',
+    'django_celery_beat',  # Celery Beat for periodic tasks
+    'django_celery_results',  # Celery result backend
 ]
 
 LOCAL_APPS = [
@@ -79,6 +81,10 @@ INSTALLED_APPS = [
     'django_otp',
     'csp',
     # 'anymail',  # Email backend for SendGrid/Mailgun/etc (using custom backend instead)
+
+    # Celery for background tasks
+    'django_celery_beat',
+    'django_celery_results',
 
     # Local Apps
     'core',
@@ -145,7 +151,11 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default=5432, cast=int),
-        'CONN_MAX_AGE': 600,  # Persistent connections
+        # CONN_MAX_AGE: When using PgBouncer in transaction mode, set to 0
+        # to return connections immediately after each transaction.
+        # PgBouncer handles the actual connection pooling to PostgreSQL.
+        # If not using PgBouncer, set this to 60-600 seconds.
+        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=0, cast=int),
         'OPTIONS': {
             'connect_timeout': 60,
         },
@@ -384,12 +394,16 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PARSER_CLASS': 'redis.connection.HiredisParser',
+            'CONNECTION_POOL_KWARGS': {'max_connections': 50},
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
         },
-        'KEY_PREFIX': 'vineyard_group_fellowship',
+        'KEY_PREFIX': 'vineyard',
         'TIMEOUT': 300,  # 5 minutes default
     }
 }
@@ -533,5 +547,47 @@ LOGGING = {
             'level': 'WARNING',
             'propagate': False,
         },
+        'celery': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
+
+# ============================================================================
+# CELERY CONFIGURATION
+# ============================================================================
+
+# Celery broker and result backend
+CELERY_BROKER_URL = config(
+    'CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config(
+    'CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+
+# Celery task settings
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_ENABLE_UTC = True
+
+# Task execution settings
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
+
+# Result backend settings
+CELERY_RESULT_EXPIRES = 3600  # Results expire after 1 hour
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {'visibility_timeout': 3600}
+
+# Worker settings
+CELERY_WORKER_PREFETCH_MULTIPLIER = 4
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+
+# Retry settings
+CELERY_TASK_ACKS_LATE = True  # Acknowledge tasks after completion
+CELERY_TASK_REJECT_ON_WORKER_LOST = True  # Reject lost tasks
+
+# Celery Beat settings (periodic tasks schedule is in celery.py)
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'

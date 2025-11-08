@@ -74,7 +74,7 @@ urlpatterns = [
 if settings.DEBUG or os.environ.get('RAILWAY_ENVIRONMENT'):
     urlpatterns += static(settings.MEDIA_URL,
                           document_root=settings.MEDIA_ROOT)
-    
+
 # Serve static files in development
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL,

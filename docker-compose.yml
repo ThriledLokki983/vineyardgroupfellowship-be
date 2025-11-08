@@ -36,6 +36,34 @@ services:
       POSTGRES_DB: ${DB_NAME:-vineyard_group_fellowship}
       POSTGRES_USER: ${DB_USER:-vineyard_group_fellowship}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-vineyard_group_fellowship}
+      # Increase max_connections to support PgBouncer
+      POSTGRES_INITDB_ARGS: "-c max_connections=200"
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=2621kB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
     ports:
       - "5433:5432"
     volumes:
@@ -48,6 +76,32 @@ services:
       retries: 5
     networks:
       - vineyard_network
+
+  # PgBouncer - Connection Pooler for PostgreSQL
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: vineyard-group-fellowship-pgbouncer
+    environment:
+      DATABASE_URL: "postgres://${DB_USER:-vineyard_group_fellowship}:${DB_PASSWORD:-vineyard_group_fellowship}@postgres:5432/${DB_NAME:-vineyard_group_fellowship}"
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 20
+      RESERVE_POOL_SIZE: 5
+      MAX_DB_CONNECTIONS: 50
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep pgbouncer || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - vineyard_network
+    restart: unless-stopped
 
   # Redis Cache
   redis:
@@ -96,8 +150,13 @@ services:
       - PYTHONUNBUFFERED=1  # Ensures Python output is sent straight to terminal
       - WATCHFILES_FORCE_POLLING=true  # Force polling for file changes
       - PORT=${SERVER_PORT:-8001}  # Map SERVER_PORT to PORT for start.sh script
+      # Connect to PgBouncer instead of PostgreSQL directly
+      - DB_HOST=pgbouncer
+      - DB_PORT=5432
     depends_on:
       postgres:
+        condition: service_healthy
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -107,6 +166,67 @@ services:
     stdin_open: true
     tty: true
     # Restart policy for development
+    restart: unless-stopped
+
+  # Celery Worker for background tasks
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: vineyard-group-fellowship-celery
+    command: bash -c "source /app/venv/bin/activate && celery -A vineyard_group_fellowship worker --loglevel=info"
+    env_file:
+      - .env.docker
+    volumes:
+      - .:/app
+      - /app/.venv
+      - media_volume:/app/media
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Connect to PgBouncer instead of PostgreSQL directly
+      - DB_HOST=pgbouncer
+      - DB_PORT=5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - vineyard_network
+    restart: unless-stopped
+
+  # Celery Beat for scheduled tasks
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: vineyard-group-fellowship-celery-beat
+    command: bash -c "source /app/venv/bin/activate && celery -A vineyard_group_fellowship beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    env_file:
+      - .env.docker
+    volumes:
+      - .:/app
+      - /app/.venv
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Connect to PgBouncer instead of PostgreSQL directly
+      - DB_HOST=pgbouncer
+      - DB_PORT=5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    networks:
+      - vineyard_network
     restart: unless-stopped
 
 volumes:

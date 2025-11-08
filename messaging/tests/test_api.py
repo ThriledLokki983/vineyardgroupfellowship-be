@@ -310,11 +310,15 @@ class ReactionAPITest(TestCase):
 
     def test_create_reaction_success(self):
         """Test creating a reaction."""
+        from django.contrib.contenttypes.models import ContentType
+
         self.client.force_authenticate(user=self.user)
         url = reverse('messaging:reaction-list')
 
+        discussion_ct = ContentType.objects.get_for_model(Discussion)
         data = {
-            'discussion': str(self.discussion.id),
+            'content_type': discussion_ct.id,
+            'object_id': str(self.discussion.id),
             'reaction_type': '👍',
         }
 
@@ -324,9 +328,13 @@ class ReactionAPITest(TestCase):
 
     def test_toggle_reaction_off(self):
         """Test toggling reaction off (delete)."""
+        from django.contrib.contenttypes.models import ContentType
+
         # Create initial reaction
+        discussion_ct = ContentType.objects.get_for_model(Discussion)
         Reaction.objects.create(
-            discussion=self.discussion,
+            content_type=discussion_ct,
+            object_id=self.discussion.id,
             user=self.user,
             reaction_type='👍'
         )
@@ -336,7 +344,8 @@ class ReactionAPITest(TestCase):
 
         # Post same reaction again (should delete)
         data = {
-            'discussion': str(self.discussion.id),
+            'content_type': discussion_ct.id,
+            'object_id': str(self.discussion.id),
             'reaction_type': '👍',
         }
 
@@ -346,9 +355,13 @@ class ReactionAPITest(TestCase):
 
     def test_change_reaction_type(self):
         """Test changing reaction type."""
+        from django.contrib.contenttypes.models import ContentType
+
         # Create initial reaction
+        discussion_ct = ContentType.objects.get_for_model(Discussion)
         Reaction.objects.create(
-            discussion=self.discussion,
+            content_type=discussion_ct,
+            object_id=self.discussion.id,
             user=self.user,
             reaction_type='👍'
         )
@@ -358,7 +371,8 @@ class ReactionAPITest(TestCase):
 
         # Post different reaction (should update)
         data = {
-            'discussion': str(self.discussion.id),
+            'content_type': discussion_ct.id,
+            'object_id': str(self.discussion.id),
             'reaction_type': '❤️',
         }
 

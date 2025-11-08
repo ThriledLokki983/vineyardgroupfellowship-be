@@ -478,7 +478,9 @@ class GroupViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=['post'])
     def upload_photo(self, request, pk=None):
-        """Upload a photo for the group."""
+        """Upload a photo for the group (stores as Base64)."""
+        import base64
+        
         group = self.get_object()
         user = request.user
 
@@ -497,8 +499,30 @@ class GroupViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Validate file size (max 5MB)
+        if photo.size > 5 * 1024 * 1024:
+            return Response(
+                {"error": "Photo size must be less than 5MB."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+        if photo.content_type not in allowed_types:
+            return Response(
+                {"error": f"Invalid file type. Allowed: {', '.join(allowed_types)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Convert to Base64
+        photo_data = photo.read()
+        encoded = base64.b64encode(photo_data).decode('utf-8')
+        
+        # Store as data URL for easy rendering in browsers
+        data_url = f"data:{photo.content_type};base64,{encoded}"
+        
         # Update group photo
-        group.photo = photo
+        group.photo = data_url
         group.save()
 
         serializer = self.get_serializer(group)

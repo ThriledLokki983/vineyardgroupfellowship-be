@@ -70,7 +70,7 @@ class PrayerRequestAPITest(TestCase):
 
     def test_create_prayer_request(self):
         """Test creating a prayer request via API."""
-        url = '/api/messaging/prayer-requests/'
+        url = '/api/v1/messaging/prayer-requests/'
         data = {
             'group': self.group.id,
             'title': 'Prayer for healing',
@@ -90,7 +90,7 @@ class PrayerRequestAPITest(TestCase):
 
     def test_create_urgent_prayer_request(self):
         """Test creating urgent prayer request."""
-        url = '/api/messaging/prayer-requests/'
+        url = '/api/v1/messaging/prayer-requests/'
         data = {
             'group': self.group.id,
             'title': 'URGENT: Critical surgery',
@@ -121,7 +121,7 @@ class PrayerRequestAPITest(TestCase):
             urgency='urgent',
         )
 
-        url = '/api/messaging/prayer-requests/'
+        url = '/api/v1/messaging/prayer-requests/'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -144,7 +144,7 @@ class PrayerRequestAPITest(TestCase):
             urgency='urgent',
         )
 
-        url = '/api/messaging/prayer-requests/?urgency=urgent'
+        url = '/api/v1/messaging/prayer-requests/?urgency=urgent'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -160,7 +160,7 @@ class PrayerRequestAPITest(TestCase):
             content='Need a job',
         )
 
-        url = f'/api/messaging/prayer-requests/{prayer.id}/mark-answered/'
+        url = f'/api/v1/messaging/prayer-requests/{prayer.id}/mark-answered/'
         data = {
             'answer_description': 'Got the job! Praise God!'
         }
@@ -182,7 +182,7 @@ class PrayerRequestAPITest(TestCase):
             content='Content',
         )
 
-        url = f'/api/messaging/prayer-requests/{prayer.id}/mark-answered/'
+        url = f'/api/v1/messaging/prayer-requests/{prayer.id}/mark-answered/'
         data = {'answer_description': 'Answered'}
 
         response = self.client.post(url, data, format='json')
@@ -200,7 +200,7 @@ class PrayerRequestAPITest(TestCase):
 
         initial_count = prayer.prayer_count
 
-        url = f'/api/messaging/prayer-requests/{prayer.id}/pray/'
+        url = f'/api/v1/messaging/prayer-requests/{prayer.id}/pray/'
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -212,7 +212,7 @@ class PrayerRequestAPITest(TestCase):
         """Test that unauthenticated users cannot create prayers."""
         self.client.force_authenticate(user=None)
 
-        url = '/api/messaging/prayer-requests/'
+        url = '/api/v1/messaging/prayer-requests/'
         data = {
             'group': self.group.id,
             'title': 'Prayer',
@@ -266,7 +266,7 @@ class TestimonyAPITest(TestCase):
 
     def test_create_testimony(self):
         """Test creating a testimony via API."""
-        url = '/api/messaging/testimonies/'
+        url = '/api/v1/messaging/testimonies/'
         data = {
             'group': self.group.id,
             'title': 'God healed me',
@@ -293,7 +293,7 @@ class TestimonyAPITest(TestCase):
             is_answered=True,
         )
 
-        url = '/api/messaging/testimonies/'
+        url = '/api/v1/messaging/testimonies/'
         data = {
             'group': self.group.id,
             'title': 'Healing testimony',
@@ -316,7 +316,7 @@ class TestimonyAPITest(TestCase):
             content='God is good!',
         )
 
-        url = f'/api/messaging/testimonies/{testimony.id}/share-public/'
+        url = f'/api/v1/messaging/testimonies/{testimony.id}/share-public/'
         data = {'confirm': True}
 
         response = self.client.post(url, data, format='json')
@@ -336,7 +336,7 @@ class TestimonyAPITest(TestCase):
             content='Content',
         )
 
-        url = f'/api/messaging/testimonies/{testimony.id}/share-public/'
+        url = f'/api/v1/messaging/testimonies/{testimony.id}/share-public/'
         data = {'confirm': True}
 
         response = self.client.post(url, data, format='json')
@@ -358,7 +358,7 @@ class TestimonyAPITest(TestCase):
             content='Content 2',
         )
 
-        url = '/api/messaging/testimonies/'
+        url = '/api/v1/messaging/testimonies/'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -396,7 +396,7 @@ class ScriptureAPITest(TestCase):
 
     def test_create_scripture(self):
         """Test creating a scripture share via API."""
-        url = '/api/messaging/scriptures/'
+        url = '/api/v1/messaging/scriptures/'
         data = {
             'group': self.group.id,
             'reference': 'John 3:16',
@@ -416,7 +416,7 @@ class ScriptureAPITest(TestCase):
 
     def test_create_scripture_with_reflection(self):
         """Test creating scripture with personal reflection."""
-        url = '/api/messaging/scriptures/'
+        url = '/api/v1/messaging/scriptures/'
         data = {
             'group': self.group.id,
             'reference': 'Psalm 23:1',
@@ -443,7 +443,7 @@ class ScriptureAPITest(TestCase):
             'source': 'bible-api.com',
         }
 
-        url = '/api/messaging/scriptures/verse-lookup/'
+        url = '/api/v1/messaging/scriptures/verse-lookup/'
         data = {
             'reference': 'John 3:16',
             'translation': 'NIV',
@@ -466,7 +466,7 @@ class ScriptureAPITest(TestCase):
         # Mock API failure
         mock_get_verse.side_effect = ValidationError('Verse not found')
 
-        url = '/api/messaging/scriptures/verse-lookup/'
+        url = '/api/v1/messaging/scriptures/verse-lookup/'
         data = {
             'reference': 'InvalidBook 999:999',
             'translation': 'KJV',
@@ -493,7 +493,7 @@ class ScriptureAPITest(TestCase):
             translation='NIV',
         )
 
-        url = '/api/messaging/scriptures/'
+        url = '/api/v1/messaging/scriptures/'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -516,7 +516,7 @@ class ScriptureAPITest(TestCase):
             translation='NIV',
         )
 
-        url = '/api/messaging/scriptures/?translation=NIV'
+        url = '/api/v1/messaging/scriptures/?translation=NIV'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

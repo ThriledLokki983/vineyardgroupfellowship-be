@@ -229,11 +229,10 @@ class GroupSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.URLField(allow_null=True))
     def get_photo_url(self, obj):
-        """Get the full URL for the group photo."""
+        """Get the Base64 data URL for the group photo."""
         if obj.photo:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.photo.url)
+            # Photo is already a Base64 data URL, return as-is
+            return obj.photo
         return None
 
     @extend_schema_field(serializers.DictField(allow_null=True))
@@ -357,11 +356,10 @@ class GroupListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.URLField(allow_null=True))
     def get_photo_url(self, obj):
-        """Get the full URL for the group photo."""
+        """Get the Base64 data URL for the group photo."""
         if obj.photo:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.photo.url)
+            # Photo is already a Base64 data URL, return as-is
+            return obj.photo
         return None
 
     @extend_schema_field(serializers.CharField(allow_null=True))

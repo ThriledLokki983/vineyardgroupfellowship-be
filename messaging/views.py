@@ -30,6 +30,7 @@ from .serializers import (
     ScriptureListSerializer, ScriptureDetailSerializer, ScriptureCreateSerializer,
     ScriptureVerseSearchSerializer,
 )
+from .services import FeedService
 from .filters import CommentFilter
 from .permissions import (
     IsGroupMember, IsAuthorOrGroupLeaderOrReadOnly,
@@ -190,7 +191,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     - PUT/PATCH /comments/{id}/ - Update comment (within 15 min)
     - DELETE /comments/{id}/ - Soft delete comment
     - GET /comments/{id}/history/ - Get edit history
-    
+
     Filtering:
     - ?discussion=<uuid> - Comments on a discussion
     - ?scripture=<uuid> - Comments on a scripture
@@ -221,55 +222,59 @@ class CommentViewSet(viewsets.ModelViewSet):
 
         # Get content types for all commentable models
         discussion_type = ContentType.objects.get_for_model(Discussion)
-        
+
         # Build Q objects for filtering by group
         # For discussions: filter by discussion__group_id
         # For scriptures/prayers/testimonies: filter by their respective group_id fields
-        
+
         # Start with base queryset
         queryset = Comment.objects.filter(is_deleted=False)
-        
+
         # Filter by user's groups based on content type
         # This uses a Q filter to check different FK paths depending on content_type
         group_filter = Q()
-        
+
         # Discussion comments (both old discussion FK and new polymorphic)
         group_filter |= Q(discussion__group_id__in=user_groups)
         group_filter |= Q(
             content_type=discussion_type,
-            content_id__in=Discussion.objects.filter(group_id__in=user_groups).values_list('id', flat=True)
+            content_id__in=Discussion.objects.filter(
+                group_id__in=user_groups).values_list('id', flat=True)
         )
-        
+
         # Scripture comments
         try:
             scripture_type = ContentType.objects.get_for_model(Scripture)
             group_filter |= Q(
                 content_type=scripture_type,
-                content_id__in=Scripture.objects.filter(group_id__in=user_groups).values_list('id', flat=True)
+                content_id__in=Scripture.objects.filter(
+                    group_id__in=user_groups).values_list('id', flat=True)
             )
         except:
             pass
-        
+
         # Prayer comments
         try:
             prayer_type = ContentType.objects.get_for_model(PrayerRequest)
             group_filter |= Q(
                 content_type=prayer_type,
-                content_id__in=PrayerRequest.objects.filter(group_id__in=user_groups).values_list('id', flat=True)
+                content_id__in=PrayerRequest.objects.filter(
+                    group_id__in=user_groups).values_list('id', flat=True)
             )
         except:
             pass
-        
+
         # Testimony comments
         try:
             testimony_type = ContentType.objects.get_for_model(Testimony)
             group_filter |= Q(
                 content_type=testimony_type,
-                content_id__in=Testimony.objects.filter(group_id__in=user_groups).values_list('id', flat=True)
+                content_id__in=Testimony.objects.filter(
+                    group_id__in=user_groups).values_list('id', flat=True)
             )
         except:
             pass
-        
+
         queryset = queryset.filter(group_filter).select_related(
             'content_type', 'author', 'parent', 'discussion'
         ).prefetch_related('replies')
@@ -491,6 +496,68 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
         ).order_by('-created_at')
 
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        """
+        Override list to use cached feed service for single-group queries.
+
+        When querying a single group's feed, uses Redis caching for
+        improved performance. Falls back to standard queryset for
+        multi-group or complex queries.
+        """
+        # Check if this is a single-group query (can use caching)
+        group_param = request.query_params.get('group')
+
+        if group_param:
+            # Single group query - use cached feed service
+            try:
+                # Parse pagination parameters
+                page = int(request.query_params.get('page', 1))
+                page_size = int(request.query_params.get('page_size', 25))
+                content_type = request.query_params.get('content_type')
+
+                # Get cached feed
+                result = FeedService.get_feed(
+                    group_id=group_param,
+                    page=page,
+                    page_size=page_size,
+                    content_type=content_type,
+                    user=request.user
+                )
+
+                # Return cached response with pagination
+                return Response({
+                    'results': result['items'],
+                    'count': result['pagination']['total_count'],
+                    'next': self._get_next_url(request, result['pagination']) if result['pagination']['has_next'] else None,
+                    'previous': self._get_previous_url(request, result['pagination']) if result['pagination']['has_previous'] else None,
+                    'cached': result['from_cache'],  # Debug info
+                })
+            except Exception as e:
+                # Fall back to standard queryset on any error
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Feed cache failed, falling back to queryset: {e}")
+
+        # Multi-group or complex query - use standard queryset
+        return super().list(request, *args, **kwargs)
+
+    def _get_next_url(self, request, pagination):
+        """Generate next page URL."""
+        if not pagination['has_next']:
+            return None
+        params = request.query_params.copy()
+        params['page'] = pagination['page'] + 1
+        return request.build_absolute_uri('?' + params.urlencode())
+
+    def _get_previous_url(self, request, pagination):
+        """Generate previous page URL."""
+        if not pagination['has_previous']:
+            return None
+        params = request.query_params.copy()
+        params['page'] = pagination['page'] - 1
+        return request.build_absolute_uri('?' + params.urlencode())
 
     @action(detail=True, methods=['post'], url_path='mark-viewed')
     def mark_viewed(self, request, pk=None):
@@ -802,7 +869,7 @@ class PrayerRequestViewSet(viewsets.ModelViewSet):
             'prayer': response_serializer.data
         })
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsGroupMember])
     def pray(self, request, pk=None):
         """
         Increment prayer count (user is committing to pray).
@@ -1028,21 +1095,26 @@ class ScriptureViewSet(viewsets.ModelViewSet):
         """Set author to current user."""
         serializer.save(author=self.request.user)
 
-    @action(detail=False, methods=['get'], url_path='verse-lookup')
+    @action(detail=False, methods=['get', 'post'], url_path='verse-lookup')
     def verse_lookup(self, request):
         """
         Look up Bible verse using Bible API.
 
         Returns verse text and reference for easy scripture sharing.
 
-        Query parameters:
+        Query parameters (GET):
         - reference: Bible verse reference (e.g., "John 3:16" or "Romans 8:28-30")
         - translation: Bible translation (default: KJV)
+
+        Body parameters (POST):
+        - reference: Bible verse reference
+        - translation: Bible translation (optional, default: KJV)
         """
         from .services.bible_api import bible_service
 
-        # Validate request - use query_params for GET requests
-        serializer = self.get_serializer(data=request.query_params)
+        # Validate request - use query_params for GET, data for POST
+        data_source = request.query_params if request.method == 'GET' else request.data
+        serializer = self.get_serializer(data=data_source)
         serializer.is_valid(raise_exception=True)
 
         reference = serializer.validated_data['reference']

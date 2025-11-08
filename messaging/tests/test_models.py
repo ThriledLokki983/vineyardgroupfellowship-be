@@ -334,9 +334,13 @@ class ReactionModelTest(TestCase):
 
     def test_reaction_uniqueness_per_discussion(self):
         """Test user can only react once per discussion."""
+        from django.contrib.contenttypes.models import ContentType
+
+        discussion_ct = ContentType.objects.get_for_model(Discussion)
         Reaction.objects.create(
             user=self.user1,
-            discussion=self.discussion,
+            content_type=discussion_ct,
+            object_id=self.discussion.id,
             reaction_type='👍',
         )
 
@@ -344,15 +348,20 @@ class ReactionModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             Reaction.objects.create(
                 user=self.user1,
-                discussion=self.discussion,
+                content_type=discussion_ct,
+                object_id=self.discussion.id,
                 reaction_type='❤️',
             )
 
     def test_reaction_uniqueness_per_comment(self):
         """Test user can only react once per comment."""
+        from django.contrib.contenttypes.models import ContentType
+
+        comment_ct = ContentType.objects.get_for_model(Comment)
         Reaction.objects.create(
             user=self.user1,
-            comment=self.comment,
+            content_type=comment_ct,
+            object_id=self.comment.id,
             reaction_type='👍',
         )
 
@@ -360,7 +369,8 @@ class ReactionModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             Reaction.objects.create(
                 user=self.user1,
-                comment=self.comment,
+                content_type=comment_ct,
+                object_id=self.comment.id,
                 reaction_type='❤️',
             )
 

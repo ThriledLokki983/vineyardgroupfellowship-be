@@ -191,6 +191,11 @@ if 'debug_toolbar' in INSTALLED_APPS:
     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
     INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
+# Performance Monitoring Middleware (Development)
+MIDDLEWARE.append(
+    'core.middleware.performance.PerformanceMonitoringMiddleware')
+MIDDLEWARE.append('core.middleware.performance.QueryCountWarningMiddleware')
+
 # ============================================================================
 # API THROTTLING - Development (Relaxed)
 # ============================================================================
