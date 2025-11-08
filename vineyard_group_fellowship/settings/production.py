@@ -392,6 +392,9 @@ if 'security' in LOGGING['loggers']:
 if 'performance' in LOGGING['loggers']:
     LOGGING['loggers']['performance']['handlers'] = ['console']
 
+if 'celery' in LOGGING['loggers']:
+    LOGGING['loggers']['celery']['handlers'] = ['console']
+
 # ============================================================================
 # MONITORING - Sentry
 # ============================================================================
@@ -414,7 +417,7 @@ if SENTRY_DSN:
         RedisIntegration(),
         sentry_logging,
     ]
-    
+
     # Add Celery integration if available
     if CELERY_INTEGRATION_AVAILABLE:
         integrations.append(
@@ -423,7 +426,7 @@ if SENTRY_DSN:
                 exclude_beat_tasks=None,
             )
         )
-    
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=integrations,
