@@ -99,13 +99,11 @@ class GroupMemberSerializer(serializers.ModelSerializer):
             return ''
 
     def get_photo_url(self, obj):
-        """Get member's photo URL."""
+        """Get member's photo URL (Base64 data URL)."""
         try:
             profile_photo = obj.user.profile_photo
-            if profile_photo and profile_photo.photo:
-                request = self.context.get('request')
-                if request:
-                    return request.build_absolute_uri(profile_photo.photo.url)
+            if profile_photo and profile_photo.has_photo:
+                return profile_photo.photo  # Returns Base64 data URL
         except:
             pass
         return None
