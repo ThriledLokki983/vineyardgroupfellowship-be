@@ -1016,10 +1016,12 @@ class PrayerRequest(models.Model):
     # Urgency levels
     NORMAL = 'normal'
     URGENT = 'urgent'
+    CRITICAL = 'critical'
 
     URGENCY_CHOICES = [
         (NORMAL, _('Normal')),
         (URGENT, _('Urgent')),
+        (CRITICAL, _('Critical')),
     ]
 
     # Prayer categories
