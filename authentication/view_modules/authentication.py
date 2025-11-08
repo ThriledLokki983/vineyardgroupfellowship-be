@@ -123,9 +123,19 @@ def register_view(request):
             send_verification_email(user, request)
 
             # Check password breach asynchronously (doesn't block registration)
-            from ..tasks import check_password_breach_async
+            # Gracefully handle Celery unavailability
             if password:
-                check_password_breach_async.delay(str(user.id), password)
+                try:
+                    from ..tasks import check_password_breach_async
+                    check_password_breach_async.delay(str(user.id), password)
+                    logger.info("Password breach check queued", user_id=str(user.id))
+                except Exception as e:
+                    # Log but don't fail registration if Celery is unavailable
+                    logger.warning(
+                        "Failed to queue password breach check (Celery unavailable)",
+                        user_id=str(user.id),
+                        error=str(e)
+                    )
 
             logger.info(
                 "User registration successful",
