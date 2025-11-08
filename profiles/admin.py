@@ -278,7 +278,7 @@ class ProfilePhotoAdmin(admin.ModelAdmin):
         if obj.photo:
             return format_html(
                 '<img src="{}" style="max-width: 300px; max-height: 300px;" />',
-                obj.photo.url
+                obj.photo  # Base64 data URL
             )
         return "No photo"
     photo_preview.short_description = 'Photo Preview'
@@ -288,7 +288,7 @@ class ProfilePhotoAdmin(admin.ModelAdmin):
         if obj.thumbnail:
             return format_html(
                 '<img src="{}" style="width: 150px; height: 150px; object-fit: cover;" />',
-                obj.thumbnail.url
+                obj.thumbnail  # Base64 data URL
             )
         return "No thumbnail"
     thumbnail_preview.short_description = 'Thumbnail Preview'
