@@ -83,6 +83,12 @@ done
 
 echo -e "${GREEN}✅ Database connection established${NC}"
 
+# Create media directories with proper permissions
+echo -e "${BLUE}📁 Setting up media directories...${NC}"
+mkdir -p media/group_photos media/profile_photos media/message_attachments
+chmod -R 755 media/
+echo -e "${GREEN}✅ Media directories created${NC}"
+
 # Run database migrations
 echo -e "${BLUE}🔄 Running database migrations...${NC}"
 if python manage.py migrate --noinput; then
