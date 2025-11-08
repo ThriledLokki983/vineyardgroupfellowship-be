@@ -66,28 +66,50 @@ def delete_feed_item_for_discussion(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Comment)
 def increment_comment_count_on_create(sender, instance, created, **kwargs):
-    """Increment discussion's comment count when comment is created."""
-    if created and not instance.is_deleted:
-        instance.discussion.increment_comment_count()
+    """Increment comment count when comment is created on any content type."""
+    if not created or instance.is_deleted:
+        return
 
-        # Also update FeedItem
+    content = instance.content_object
+    
+    # Handle all content types that have comment_count
+    if hasattr(content, 'increment_comment_count'):
+        content.increment_comment_count()
+    elif hasattr(content, 'comment_count'):
+        content.comment_count += 1
+        content.save(update_fields=['comment_count'])
+
+    # Update FeedItem if applicable
+    if content:
+        content_type_name = content.__class__.__name__.lower()
         FeedItem.objects.filter(
-            content_type='discussion',
-            content_id=instance.discussion.id
-        ).update(comment_count=instance.discussion.comment_count)
+            content_type=content_type_name,
+            content_id=content.id
+        ).update(comment_count=content.comment_count)
 
 
 @receiver(post_delete, sender=Comment)
 def decrement_comment_count_on_delete(sender, instance, **kwargs):
-    """Decrement discussion's comment count when comment is deleted."""
-    if not instance.is_deleted:  # Only if not already soft-deleted
-        instance.discussion.decrement_comment_count()
+    """Decrement comment count when comment is deleted from any content type."""
+    if instance.is_deleted:  # Already soft-deleted, count already decremented
+        return
 
-        # Also update FeedItem
+    content = instance.content_object
+    
+    # Handle all content types that have comment_count
+    if hasattr(content, 'decrement_comment_count'):
+        content.decrement_comment_count()
+    elif hasattr(content, 'comment_count'):
+        content.comment_count = max(0, content.comment_count - 1)
+        content.save(update_fields=['comment_count'])
+
+    # Update FeedItem if applicable
+    if content:
+        content_type_name = content.__class__.__name__.lower()
         FeedItem.objects.filter(
-            content_type='discussion',
-            content_id=instance.discussion.id
-        ).update(comment_count=instance.discussion.comment_count)
+            content_type=content_type_name,
+            content_id=content.id
+        ).update(comment_count=content.comment_count)
 
 
 # =============================================================================

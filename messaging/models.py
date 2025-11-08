@@ -1143,6 +1143,18 @@ class PrayerRequest(models.Model):
             prayer_count=F('prayer_count') + 1)
         self.refresh_from_db(fields=['prayer_count'])
 
+    def increment_comment_count(self):
+        """Atomically increment comment count."""
+        PrayerRequest.objects.filter(pk=self.pk).update(
+            comment_count=F('comment_count') + 1)
+        self.refresh_from_db(fields=['comment_count'])
+
+    def decrement_comment_count(self):
+        """Atomically decrement comment count."""
+        PrayerRequest.objects.filter(pk=self.pk).update(
+            comment_count=F('comment_count') - 1)
+        self.refresh_from_db(fields=['comment_count'])
+
 
 class Testimony(models.Model):
     """
@@ -1260,6 +1272,18 @@ class Testimony(models.Model):
         self.save(update_fields=[
                   'is_public', 'public_shared_at', 'is_public_approved', 'approved_by'])
 
+    def increment_comment_count(self):
+        """Atomically increment comment count."""
+        Testimony.objects.filter(pk=self.pk).update(
+            comment_count=F('comment_count') + 1)
+        self.refresh_from_db(fields=['comment_count'])
+
+    def decrement_comment_count(self):
+        """Atomically decrement comment count."""
+        Testimony.objects.filter(pk=self.pk).update(
+            comment_count=F('comment_count') - 1)
+        self.refresh_from_db(fields=['comment_count'])
+
 
 class Scripture(models.Model):
     """
@@ -1356,3 +1380,15 @@ class Scripture(models.Model):
 
     def __str__(self):
         return f"📖 {self.reference} shared by {self.author.username}"
+
+    def increment_comment_count(self):
+        """Atomically increment comment count."""
+        Scripture.objects.filter(pk=self.pk).update(
+            comment_count=F('comment_count') + 1)
+        self.refresh_from_db(fields=['comment_count'])
+
+    def decrement_comment_count(self):
+        """Atomically decrement comment count."""
+        Scripture.objects.filter(pk=self.pk).update(
+            comment_count=F('comment_count') - 1)
+        self.refresh_from_db(fields=['comment_count'])
