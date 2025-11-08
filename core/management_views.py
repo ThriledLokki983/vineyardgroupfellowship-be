@@ -56,3 +56,76 @@ def create_admin_user(request):
         return JsonResponse({
             'error': f'Failed to create admin user: {str(e)}'
         }, status=500)
+
+
+@csrf_exempt
+@require_POST
+def recalculate_comment_counts(request):
+    """Recalculate comment counts for all content types."""
+    try:
+        from messaging.models import Discussion, Scripture, PrayerRequest, Testimony, Comment
+        from django.contrib.contenttypes.models import ContentType
+        
+        results = {
+            'scripture': 0,
+            'prayer_request': 0,
+            'testimony': 0,
+            'discussion': 0
+        }
+        
+        # Scripture
+        scripture_ct = ContentType.objects.get_for_model(Scripture)
+        for scripture in Scripture.objects.all():
+            count = Comment.objects.filter(
+                content_type=scripture_ct,
+                content_id=scripture.id,
+                is_deleted=False
+            ).count()
+            if scripture.comment_count != count:
+                scripture.comment_count = count
+                scripture.save(update_fields=['comment_count'])
+                results['scripture'] += 1
+
+        # PrayerRequest
+        prayer_ct = ContentType.objects.get_for_model(PrayerRequest)
+        for prayer in PrayerRequest.objects.all():
+            count = Comment.objects.filter(
+                content_type=prayer_ct,
+                content_id=prayer.id,
+                is_deleted=False
+            ).count()
+            if prayer.comment_count != count:
+                prayer.comment_count = count
+                prayer.save(update_fields=['comment_count'])
+                results['prayer_request'] += 1
+
+        # Testimony
+        testimony_ct = ContentType.objects.get_for_model(Testimony)
+        for testimony in Testimony.objects.all():
+            count = Comment.objects.filter(
+                content_type=testimony_ct,
+                content_id=testimony.id,
+                is_deleted=False
+            ).count()
+            if testimony.comment_count != count:
+                testimony.comment_count = count
+                testimony.save(update_fields=['comment_count'])
+                results['testimony'] += 1
+
+        # Discussion
+        for discussion in Discussion.objects.all():
+            count = discussion.comments.filter(is_deleted=False).count()
+            if discussion.comment_count != count:
+                discussion.comment_count = count
+                discussion.save(update_fields=['comment_count'])
+                results['discussion'] += 1
+
+        return JsonResponse({
+            'message': 'Comment counts recalculated successfully',
+            'updated': results
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Failed to recalculate comment counts: {str(e)}'
+        }, status=500)
