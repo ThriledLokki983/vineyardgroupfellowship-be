@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -67,9 +68,14 @@ urlpatterns = [
     path('api/v1/health/', include('authentication.url_modules.health')),
 ]
 
-# Serve media files in development
-if settings.DEBUG:
+# Serve media files in development and production (Railway)
+# In production, we use Railway volumes for persistent storage
+# For large-scale deployments, migrate to S3/CloudFlare CDN
+if settings.DEBUG or os.environ.get('RAILWAY_ENVIRONMENT'):
     urlpatterns += static(settings.MEDIA_URL,
                           document_root=settings.MEDIA_ROOT)
+    
+# Serve static files in development
+if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL,
                           document_root=settings.STATIC_ROOT)
