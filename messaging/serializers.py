@@ -19,6 +19,8 @@ from .models import (
     PrayerRequest,
     Testimony,
     Scripture,
+    Conversation,
+    PrivateMessage,
 )
 from group.models import Group
 
@@ -32,10 +34,24 @@ User = get_user_model()
 class UserMinimalSerializer(serializers.ModelSerializer):
     """Minimal user info for nested serialization."""
 
+    photo_url = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        fields = ['id', 'username', 'email',
+                  'first_name', 'last_name', 'photo_url']
         read_only_fields = fields
+
+    def get_photo_url(self, obj):
+        """Get the user's profile photo URL (Base64 data URL)."""
+        try:
+            if hasattr(obj, 'profile_photo') and obj.profile_photo:
+                profile_photo = obj.profile_photo
+                if profile_photo.has_photo:
+                    return profile_photo.photo  # Returns Base64 data URL
+        except Exception:
+            pass
+        return None
 
 
 # =============================================================================
@@ -1350,3 +1366,246 @@ class ScriptureVerseSearchSerializer(serializers.Serializer):
                 "Bible reference must be at least 3 characters long."
             )
         return value.strip()
+
+
+# =============================================================================
+# PRIVATE MESSAGING SERIALIZERS
+# =============================================================================
+
+class PrivateMessageSerializer(serializers.ModelSerializer):
+    """
+    Serializer for individual private messages.
+    """
+    sender = UserMinimalSerializer(read_only=True)
+
+    class Meta:
+        model = PrivateMessage
+        fields = [
+            'id',
+            'conversation',
+            'sender',
+            'content',
+            'is_read',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'sender', 'is_read', 'created_at']
+
+
+class ConversationContextSerializer(serializers.Serializer):
+    """
+    Serializer for conversation context (group inquiry info).
+    """
+    type = serializers.CharField(source='context_type')
+    group = serializers.SerializerMethodField()
+
+    def get_group(self, obj):
+        """Get group details if this is a group inquiry."""
+        if obj.group:
+            return {
+                'id': str(obj.group.id),
+                'name': obj.group.name,
+            }
+        return None
+
+
+class ConversationListSerializer(serializers.ModelSerializer):
+    """
+    List serializer for conversations (lightweight for inbox view).
+    """
+    other_participant = serializers.SerializerMethodField()
+    context = ConversationContextSerializer(source='*', read_only=True)
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+    message_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Conversation
+        fields = [
+            'id',
+            'other_participant',
+            'context_type',
+            'context',
+            'status',
+            'last_message',
+            'unread_count',
+            'message_count',
+            'updated_at',
+            'closed_at',
+        ]
+        read_only_fields = fields
+
+    def get_other_participant(self, obj):
+        """Get the other participant (not the current user)."""
+        request = self.context.get('request')
+        if request and request.user:
+            other = obj.get_other_participant(request.user)
+            if other:
+                return UserMinimalSerializer(other).data
+        return None
+
+    def get_last_message(self, obj):
+        """Get preview of the last message."""
+        request = self.context.get('request')
+        last_msg = obj.private_messages.order_by('-created_at').first()
+        if last_msg:
+            return {
+                'content': last_msg.content[:100],  # Preview only
+                'sender_id': str(last_msg.sender.id),
+                'is_mine': last_msg.sender == request.user if request else False,
+                'created_at': last_msg.created_at,
+            }
+        return None
+
+    def get_unread_count(self, obj):
+        """Get count of unread messages for current user."""
+        request = self.context.get('request')
+        if request and request.user:
+            return obj.get_unread_count(request.user)
+        return 0
+
+    def get_message_count(self, obj):
+        """Get total message count."""
+        return obj.private_messages.count()
+
+
+class ConversationDetailSerializer(serializers.ModelSerializer):
+    """
+    Detail serializer for conversations with full message history.
+    """
+    participants = UserMinimalSerializer(many=True, read_only=True)
+    context = ConversationContextSerializer(source='*', read_only=True)
+    messages = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+    message_count = serializers.SerializerMethodField()
+    closed_by_user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Conversation
+        fields = [
+            'id',
+            'participants',
+            'context_type',
+            'group',
+            'context',
+            'status',
+            'message_count',
+            'created_at',
+            'updated_at',
+            'last_message_at',
+            'closed_at',
+            'closed_by_user',
+            'close_reason',
+            'unread_count',
+            'messages',
+        ]
+        read_only_fields = fields
+
+    def get_messages(self, obj):
+        """Get all messages in the conversation."""
+        messages = obj.private_messages.select_related('sender').all()
+        return PrivateMessageSerializer(messages, many=True).data
+
+    def get_unread_count(self, obj):
+        """Get count of unread messages for current user."""
+        request = self.context.get('request')
+        if request and request.user:
+            return obj.get_unread_count(request.user)
+        return 0
+
+    def get_message_count(self, obj):
+        """Get total message count."""
+        return obj.private_messages.count()
+
+    def get_closed_by_user(self, obj):
+        """Get user who closed the conversation."""
+        if obj.closed_by:
+            return UserMinimalSerializer(obj.closed_by).data
+        return None
+
+
+class CreateConversationSerializer(serializers.Serializer):
+    """
+    Serializer for creating a new conversation via group inquiry.
+    """
+    group_id = serializers.UUIDField(required=True)
+    message = serializers.CharField(
+        required=True,
+        min_length=1,
+        max_length=2000,
+        help_text="Initial message to send to the group leader"
+    )
+
+    def validate_group_id(self, value):
+        """Validate that the group exists."""
+        from group.models import Group
+        try:
+            group = Group.objects.get(id=value)
+        except Group.DoesNotExist:
+            raise serializers.ValidationError("Group not found.")
+        return value
+
+
+class SendMessageSerializer(serializers.Serializer):
+    """
+    Serializer for sending a message in an existing conversation.
+    """
+    content = serializers.CharField(
+        required=True,
+        min_length=1,
+        max_length=2000,
+        help_text="Message content"
+    )
+
+
+class CloseConversationSerializer(serializers.Serializer):
+    """
+    Serializer for closing a conversation.
+    """
+    reason = serializers.ChoiceField(
+        choices=[
+            ('joined_group', 'Joined Group'),
+            ('not_interested', 'Not Interested'),
+            ('resolved', 'Resolved'),
+            ('other', 'Other'),
+        ],
+        required=False,
+        allow_null=True,
+    )
+
+
+class StartConversationSerializer(serializers.Serializer):
+    """
+    Serializer for starting a peer-to-peer conversation with another user.
+    """
+    recipient_id = serializers.UUIDField(
+        required=True,
+        help_text="ID of the user to start a conversation with"
+    )
+    message = serializers.CharField(
+        required=True,
+        min_length=1,
+        max_length=2000,
+        help_text="Initial message to send"
+    )
+    group_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text="Optional group context for the conversation"
+    )
+
+    def validate_recipient_id(self, value):
+        """Validate that the recipient exists."""
+        try:
+            User.objects.get(id=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Recipient user not found.")
+        return value
+
+    def validate_group_id(self, value):
+        """Validate that the group exists if provided."""
+        if value:
+            try:
+                Group.objects.get(id=value)
+            except Group.DoesNotExist:
+                raise serializers.ValidationError("Group not found.")
+        return value

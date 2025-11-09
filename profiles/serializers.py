@@ -471,7 +471,7 @@ class ProfilePhotoSerializer(serializers.ModelSerializer):
         """Validate Base64 photo data."""
         import base64
         import re
-        
+
         if not value:
             return value
 
@@ -521,7 +521,7 @@ class ProfilePhotoSerializer(serializers.ModelSerializer):
         """Handle Base64 photo upload and thumbnail generation."""
         import base64
         import re
-        
+
         photo = validated_data.get('photo')
 
         if photo:
@@ -529,24 +529,26 @@ class ProfilePhotoSerializer(serializers.ModelSerializer):
             instance.thumbnail = None
 
             # Extract metadata from Base64 string
-            match = re.match(r'data:image/(jpeg|jpg|png|webp);base64,(.+)', photo)
+            match = re.match(
+                r'data:image/(jpeg|jpg|png|webp);base64,(.+)', photo)
             if match:
                 image_format, base64_data = match.groups()
                 instance.photo_content_type = f'image/{image_format}'
                 instance.photo_size_bytes = len(base64_data)
-                
+
                 # Generate thumbnail
                 try:
                     image_data = base64.b64decode(base64_data)
                     img = Image.open(BytesIO(image_data))
-                    
+
                     # Create thumbnail (150x150)
                     img.thumbnail((150, 150), Image.Resampling.LANCZOS)
-                    
+
                     # Save thumbnail as Base64
                     thumbnail_io = BytesIO()
                     img.save(thumbnail_io, format='JPEG', quality=85)
-                    thumbnail_data = base64.b64encode(thumbnail_io.getvalue()).decode('utf-8')
+                    thumbnail_data = base64.b64encode(
+                        thumbnail_io.getvalue()).decode('utf-8')
                     instance.thumbnail = f'data:image/jpeg;base64,{thumbnail_data}'
                 except Exception:
                     # If thumbnail generation fails, continue without it

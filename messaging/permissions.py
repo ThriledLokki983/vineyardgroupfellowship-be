@@ -128,3 +128,25 @@ class CanModerateGroup(permissions.BasePermission):
             return False
 
         return group.leader == request.user or request.user in group.co_leaders.all()
+
+
+class IsConversationParticipant(permissions.BasePermission):
+    """
+    Permission to check if user is a participant in a private conversation.
+
+    Users can only:
+    - View conversations they are part of
+    - Send messages in conversations they are part of
+    - Close conversations they are part of
+    """
+
+    message = "You must be a participant in this conversation to perform this action."
+
+    def has_permission(self, request, view):
+        """Check if user is authenticated."""
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        """Check if user is a participant in the conversation."""
+        # Check if user is one of the participants
+        return obj.participants.filter(id=request.user.id).exists()

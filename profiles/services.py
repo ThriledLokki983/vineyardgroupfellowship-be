@@ -148,7 +148,7 @@ class PhotoService:
         import base64
         from PIL import Image
         from io import BytesIO
-        
+
         logger.info(
             "PhotoService.upload_photo called",
             user_id=str(user.id),
@@ -177,14 +177,14 @@ class PhotoService:
 
         # Convert uploaded file to Base64
         logger.info("Converting photo to Base64")
-        
+
         # Read file data
         photo_file.seek(0)
         file_data = photo_file.read()
-        
+
         # Encode to Base64
         base64_data = base64.b64encode(file_data).decode('utf-8')
-        
+
         # Determine image format from content type
         content_type_map = {
             'image/jpeg': 'jpeg',
@@ -193,28 +193,29 @@ class PhotoService:
             'image/webp': 'webp'
         }
         image_format = content_type_map.get(photo_file.content_type, 'jpeg')
-        
+
         # Create data URL
         photo_data_url = f'data:{photo_file.content_type};base64,{base64_data}'
-        
+
         # Generate thumbnail
         try:
             image = Image.open(BytesIO(file_data))
             image.thumbnail((150, 150), Image.Resampling.LANCZOS)
-            
+
             # Convert to RGB if necessary
             if image.mode in ('RGBA', 'P'):
                 image = image.convert('RGB')
-            
+
             # Save thumbnail as Base64
             thumbnail_io = BytesIO()
             image.save(thumbnail_io, format='JPEG', quality=85)
-            thumbnail_data = base64.b64encode(thumbnail_io.getvalue()).decode('utf-8')
+            thumbnail_data = base64.b64encode(
+                thumbnail_io.getvalue()).decode('utf-8')
             thumbnail_url = f'data:image/jpeg;base64,{thumbnail_data}'
         except Exception as e:
             logger.warning(f"Failed to generate thumbnail: {e}")
             thumbnail_url = None
-        
+
         # Save new photo as Base64
         logger.info("Saving Base64 photo to photo_profile")
         photo_profile.photo = photo_data_url
@@ -239,7 +240,8 @@ class PhotoService:
         logger.info(
             "Photo profile saved and refreshed",
             has_photo_after_save=photo_profile.has_photo,
-            photo_data_length=len(photo_profile.photo) if photo_profile.photo else 0
+            photo_data_length=len(
+                photo_profile.photo) if photo_profile.photo else 0
         )
 
         logger.info(

@@ -25,7 +25,8 @@ class Command(BaseCommand):
             if scripture.comment_count != count:
                 scripture.comment_count = count
                 scripture.save(update_fields=['comment_count'])
-                self.stdout.write(f'  Updated {scripture.reference}: {count} comments')
+                self.stdout.write(
+                    f'  Updated {scripture.reference}: {count} comments')
 
         # PrayerRequest
         self.stdout.write('\nProcessing PrayerRequest...')
@@ -39,7 +40,8 @@ class Command(BaseCommand):
             if prayer.comment_count != count:
                 prayer.comment_count = count
                 prayer.save(update_fields=['comment_count'])
-                self.stdout.write(f'  Updated {prayer.title}: {count} comments')
+                self.stdout.write(
+                    f'  Updated {prayer.title}: {count} comments')
 
         # Testimony
         self.stdout.write('\nProcessing Testimony...')
@@ -53,7 +55,8 @@ class Command(BaseCommand):
             if testimony.comment_count != count:
                 testimony.comment_count = count
                 testimony.save(update_fields=['comment_count'])
-                self.stdout.write(f'  Updated {testimony.title}: {count} comments')
+                self.stdout.write(
+                    f'  Updated {testimony.title}: {count} comments')
 
         # Discussion (for completeness)
         self.stdout.write('\nProcessing Discussion...')
@@ -62,6 +65,8 @@ class Command(BaseCommand):
             if discussion.comment_count != count:
                 discussion.comment_count = count
                 discussion.save(update_fields=['comment_count'])
-                self.stdout.write(f'  Updated {discussion.title}: {count} comments')
+                self.stdout.write(
+                    f'  Updated {discussion.title}: {count} comments')
 
-        self.stdout.write(self.style.SUCCESS('\n✅ Comment counts recalculated successfully!'))
+        self.stdout.write(self.style.SUCCESS(
+            '\n✅ Comment counts recalculated successfully!'))

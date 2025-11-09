@@ -71,7 +71,7 @@ def increment_comment_count_on_create(sender, instance, created, **kwargs):
         return
 
     content = instance.content_object
-    
+
     # Handle all content types that have comment_count
     if hasattr(content, 'increment_comment_count'):
         content.increment_comment_count()
@@ -95,7 +95,7 @@ def decrement_comment_count_on_delete(sender, instance, **kwargs):
         return
 
     content = instance.content_object
-    
+
     # Handle all content types that have comment_count
     if hasattr(content, 'decrement_comment_count'):
         content.decrement_comment_count()

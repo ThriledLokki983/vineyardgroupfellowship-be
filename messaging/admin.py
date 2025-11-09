@@ -16,6 +16,8 @@ from .models import (
     PrayerRequest,
     Testimony,
     Scripture,
+    Conversation,
+    PrivateMessage,
 )
 
 
@@ -794,3 +796,89 @@ class ScriptureAdmin(admin.ModelAdmin):
         return bool(obj.personal_reflection)
     has_reflection.boolean = True
     has_reflection.short_description = 'Has Reflection'
+
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'participants_list',
+        'context_type',
+        'group',
+        'status',
+        'message_count',
+        'last_message_at',
+        'created_at',
+    ]
+    list_filter = [
+        'status',
+        'context_type',
+        'created_at',
+        'last_message_at',
+    ]
+    search_fields = [
+        'participants__username',
+        'participants__email',
+        'group__name',
+    ]
+    readonly_fields = [
+        'id',
+        'created_at',
+        'updated_at',
+        'last_message_at',
+        'participants_list',
+        'message_count',
+    ]
+    filter_horizontal = ['participants']
+    date_hierarchy = 'created_at'
+
+    def participants_list(self, obj):
+        """Display list of participants."""
+        participants = obj.participants.all()
+        return ', '.join([p.username for p in participants])
+    participants_list.short_description = 'Participants'
+
+    def message_count(self, obj):
+        """Display message count."""
+        return obj.private_messages.count()
+    message_count.short_description = 'Messages'
+
+
+@admin.register(PrivateMessage)
+class PrivateMessageAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'sender',
+        'conversation_id',
+        'content_preview',
+        'is_read',
+        'created_at',
+    ]
+    list_filter = [
+        'is_read',
+        'created_at',
+    ]
+    search_fields = [
+        'sender__username',
+        'sender__email',
+        'content',
+    ]
+    readonly_fields = [
+        'id',
+        'conversation',
+        'sender',
+        'created_at',
+    ]
+    date_hierarchy = 'created_at'
+
+    def content_preview(self, obj):
+        """Display preview of message content."""
+        if len(obj.content) > 50:
+            return f"{obj.content[:50]}..."
+        return obj.content
+    content_preview.short_description = 'Content'
+
+    def conversation_id(self, obj):
+        """Display conversation ID."""
+        return str(obj.conversation.id)[:8]
+    conversation_id.short_description = 'Conversation'

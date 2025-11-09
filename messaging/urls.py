@@ -17,6 +17,7 @@ from .views import (
     PrayerRequestViewSet,
     TestimonyViewSet,
     ScriptureViewSet,
+    ConversationViewSet,
 )
 
 app_name = 'messaging'
@@ -36,6 +37,9 @@ router.register(r'prayer-requests', PrayerRequestViewSet,
                 basename='prayer-request')
 router.register(r'testimonies', TestimonyViewSet, basename='testimony')
 router.register(r'scriptures', ScriptureViewSet, basename='scripture')
+
+# Private Messaging
+router.register(r'conversations', ConversationViewSet, basename='conversation')
 
 urlpatterns = [
     path('', include(router.urls)),

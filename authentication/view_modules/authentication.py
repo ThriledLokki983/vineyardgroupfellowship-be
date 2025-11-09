@@ -128,7 +128,8 @@ def register_view(request):
                 try:
                     from ..tasks import check_password_breach_async
                     check_password_breach_async.delay(str(user.id), password)
-                    logger.info("Password breach check queued", user_id=str(user.id))
+                    logger.info("Password breach check queued",
+                                user_id=str(user.id))
                 except Exception as e:
                     # Log but don't fail registration if Celery is unavailable
                     logger.warning(

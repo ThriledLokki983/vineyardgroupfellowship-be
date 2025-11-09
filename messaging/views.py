@@ -16,7 +16,8 @@ import django_filters
 from .models import (
     Discussion, Comment, CommentHistory, Reaction,
     FeedItem, NotificationPreference, ContentReport,
-    PrayerRequest, Testimony, Scripture
+    PrayerRequest, Testimony, Scripture,
+    Conversation, PrivateMessage
 )
 from .serializers import (
     DiscussionListSerializer, DiscussionDetailSerializer, DiscussionCreateSerializer,
@@ -29,12 +30,19 @@ from .serializers import (
     TestimonyPublicShareSerializer,
     ScriptureListSerializer, ScriptureDetailSerializer, ScriptureCreateSerializer,
     ScriptureVerseSearchSerializer,
+    ConversationListSerializer, ConversationDetailSerializer,
+    PrivateMessageSerializer, CreateConversationSerializer,
+    SendMessageSerializer, CloseConversationSerializer, StartConversationSerializer,
+)
+from .utils import (
+    validate_can_message_user,
+    get_or_create_direct_conversation,
 )
 from .services import FeedService
 from .filters import CommentFilter
 from .permissions import (
     IsGroupMember, IsAuthorOrGroupLeaderOrReadOnly,
-    IsAuthorOrReadOnly, CanModerateGroup
+    IsAuthorOrReadOnly, CanModerateGroup, IsConversationParticipant
 )
 from .throttling import (
     DiscussionCreateThrottle, CommentCreateThrottle,
@@ -1139,3 +1147,386 @@ class ScriptureViewSet(viewsets.ModelViewSet):
                 {'detail': f'Error fetching verse: {str(e)}'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+
+
+# =============================================================================
+# PRIVATE MESSAGING VIEWSETS
+# =============================================================================
+
+class ConversationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for private conversation management.
+
+    Endpoints:
+    - GET /conversations/ - List all user's conversations
+    - GET /conversations/{id}/ - Get conversation detail with messages
+    - POST /conversations/group-inquiry/ - Create conversation with group leader
+    - POST /conversations/start/ - Start peer-to-peer conversation with another user
+    - POST /conversations/{id}/messages/ - Send message in conversation
+    - PATCH /conversations/{id}/close/ - Close conversation
+    - PATCH /conversations/{id}/reopen/ - Reopen conversation
+    """
+
+    permission_classes = [IsAuthenticated, IsConversationParticipant]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['last_message_at', 'created_at']
+    ordering = ['-last_message_at']
+
+    def get_queryset(self):
+        """Return only conversations user is part of."""
+        user = self.request.user
+        return Conversation.objects.filter(
+            participants=user
+        ).prefetch_related('participants').select_related('group', 'closed_by')
+
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action == 'list':
+            return ConversationListSerializer
+        elif self.action == 'group_inquiry':
+            return CreateConversationSerializer
+        elif self.action == 'start':
+            return StartConversationSerializer
+        elif self.action == 'send_message':
+            return SendMessageSerializer
+        elif self.action == 'close':
+            return CloseConversationSerializer
+        return ConversationDetailSerializer
+
+    def get_permissions(self):
+        """Customize permissions per action."""
+        if self.action in ['group_inquiry', 'start']:
+            # Anyone authenticated can initiate a group inquiry or P2P conversation
+            return [IsAuthenticated()]
+        return super().get_permissions()
+
+    def list(self, request, *args, **kwargs):
+        """
+        List all conversations for the current user.
+
+        Query params:
+        - status: Filter by status (active, closed, archived)
+        """
+        queryset = self.get_queryset()
+
+        # Filter by status if provided
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # Apply ordering
+        queryset = self.filter_queryset(queryset)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Get conversation detail with full message history.
+
+        Also marks all messages as read for the current user.
+        """
+        conversation = self.get_object()
+
+        # Mark messages as read
+        conversation.mark_messages_as_read(request.user)
+
+        serializer = self.get_serializer(conversation)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='group-inquiry')
+    def group_inquiry(self, request):
+        """
+        Create or retrieve a conversation with a group leader.
+
+        Request body:
+        - group_id: UUID of the group
+        - message: Initial message content
+
+        Returns:
+        - conversation: Conversation object with full message history
+        - message: The newly created message
+        - redirect_url: URL to redirect to the conversation
+        - is_existing_conversation: Boolean indicating if conversation existed
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        group_id = serializer.validated_data['group_id']
+        message_content = serializer.validated_data['message']
+
+        # Get the group
+        try:
+            group = Group.objects.select_related('leader').get(id=group_id)
+        except Group.DoesNotExist:
+            return Response(
+                {'error': 'group_not_found',
+                    'message': 'The specified group does not exist.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get group leader
+        leader = group.leader
+
+        if not leader:
+            return Response(
+                {'error': 'no_leader',
+                    'message': 'This group does not have a leader assigned.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if user is trying to message themselves
+        if leader == request.user:
+            return Response(
+                {'error': 'cannot_message_self',
+                    'message': 'You cannot message yourself.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if conversation already exists between user and leader for this group
+        existing_conversation = Conversation.objects.filter(
+            participants=request.user,
+            group=group,
+            context_type='group_inquiry'
+        ).filter(
+            participants=leader
+        ).first()
+
+        is_existing = existing_conversation is not None
+
+        if existing_conversation:
+            conversation = existing_conversation
+        else:
+            # Create new conversation
+            conversation = Conversation.objects.create(
+                context_type='group_inquiry',
+                group=group,
+                status='active'
+            )
+            conversation.participants.add(request.user, leader)
+
+        # Create the message
+        message = PrivateMessage.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=message_content
+        )
+
+        # Serialize response
+        conversation_serializer = ConversationDetailSerializer(
+            conversation,
+            context={'request': request}
+        )
+        message_serializer = PrivateMessageSerializer(message)
+
+        response_data = {
+            'conversation': conversation_serializer.data,
+            'message': message_serializer.data,
+            'redirect_url': f'/messages/{conversation.id}',
+            'is_existing_conversation': is_existing
+        }
+
+        response_status = status.HTTP_200_OK if is_existing else status.HTTP_201_CREATED
+        return Response(response_data, status=response_status)
+
+    @action(detail=False, methods=['post'], url_path='start')
+    def start(self, request):
+        """
+        Start a peer-to-peer conversation with another user.
+
+        Request body:
+        - recipient_id: UUID of the user to message
+        - message: Initial message content
+        - group_id: Optional group context
+
+        Returns:
+        - conversation: Conversation object with full message history
+        - message: The newly created message
+        - is_existing_conversation: Boolean indicating if conversation existed
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        recipient_id = serializer.validated_data['recipient_id']
+        message_content = serializer.validated_data['message']
+        group_id = serializer.validated_data.get('group_id')
+
+        # Get the recipient user
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            recipient = User.objects.get(id=recipient_id)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'user_not_found',
+                    'message': 'The specified user does not exist.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Validate if sender can message recipient
+        can_message, error_code = validate_can_message_user(
+            request.user, recipient)
+
+        if not can_message:
+            error_messages = {
+                'cannot_message_self': 'You cannot message yourself.',
+                'no_shared_group': 'You and the recipient are not in any shared groups.',
+            }
+            return Response(
+                {'error': error_code, 'message': error_messages.get(
+                    error_code, 'Cannot message this user.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get optional group context
+        group = None
+        if group_id:
+            try:
+                group = Group.objects.get(id=group_id)
+            except Group.DoesNotExist:
+                return Response(
+                    {'error': 'group_not_found',
+                        'message': 'The specified group does not exist.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+        # Get or create conversation
+        conversation, created = get_or_create_direct_conversation(
+            request.user,
+            recipient,
+            group=group
+        )
+
+        # Create the message (save() method will auto-update conversation.last_message_at)
+        message = PrivateMessage.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=message_content
+        )
+
+        # Serialize response
+        conversation_serializer = ConversationDetailSerializer(
+            conversation,
+            context={'request': request}
+        )
+        message_serializer = PrivateMessageSerializer(message)
+
+        response_data = {
+            'conversation': conversation_serializer.data,
+            'message': message_serializer.data,
+            'is_existing_conversation': not created
+        }
+
+        response_status = status.HTTP_200_OK if not created else status.HTTP_201_CREATED
+        return Response(response_data, status=response_status)
+
+    @action(detail=True, methods=['post'], url_path='messages')
+    def send_message(self, request, pk=None):
+        """
+        Send a message in an existing conversation.
+
+        Request body:
+        - content: Message content
+        """
+        conversation = self.get_object()
+
+        # Check if conversation is closed
+        if conversation.status == 'closed':
+            return Response(
+                {'error': 'conversation_closed',
+                    'message': 'Cannot send messages to a closed conversation. Reopen it first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if conversation.status == 'archived':
+            return Response(
+                {'error': 'conversation_archived',
+                    'message': 'Cannot send messages to an archived conversation.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Create message
+        message = PrivateMessage.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=serializer.validated_data['content']
+        )
+
+        message_serializer = PrivateMessageSerializer(message)
+        return Response(
+            {'message': message_serializer.data},
+            status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=True, methods=['patch'])
+    def close(self, request, pk=None):
+        """
+        Close a conversation.
+
+        Request body (optional):
+        - reason: Reason for closing (joined_group, not_interested, resolved, other)
+        """
+        conversation = self.get_object()
+
+        if conversation.status == 'closed':
+            return Response(
+                {'error': 'already_closed',
+                    'message': 'Conversation is already closed.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        reason = serializer.validated_data.get('reason')
+        conversation.close(user=request.user, reason=reason)
+
+        return Response({
+            'conversation': {
+                'id': str(conversation.id),
+                'status': conversation.status,
+                'closed_at': conversation.closed_at,
+                'closed_by': {
+                    'id': str(conversation.closed_by.id),
+                    'username': conversation.closed_by.username,
+                    'first_name': conversation.closed_by.first_name,
+                    'last_name': conversation.closed_by.last_name,
+                },
+                'close_reason': conversation.close_reason,
+            },
+            'message': 'Conversation closed successfully.'
+        })
+
+    @action(detail=True, methods=['patch'])
+    def reopen(self, request, pk=None):
+        """
+        Reopen a closed conversation.
+        """
+        conversation = self.get_object()
+
+        if conversation.status != 'closed':
+            return Response(
+                {'error': 'not_closed',
+                    'message': 'Only closed conversations can be reopened.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        conversation.reopen()
+
+        return Response({
+            'conversation': {
+                'id': str(conversation.id),
+                'status': conversation.status,
+                'closed_at': None,
+                'reopened_at': conversation.updated_at,
+            },
+            'message': 'Conversation reopened successfully.'
+        })

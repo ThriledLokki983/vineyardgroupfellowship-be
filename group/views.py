@@ -480,7 +480,7 @@ class GroupViewSet(viewsets.ModelViewSet):
     def upload_photo(self, request, pk=None):
         """Upload a photo for the group (stores as Base64)."""
         import base64
-        
+
         group = self.get_object()
         user = request.user
 
@@ -507,7 +507,8 @@ class GroupViewSet(viewsets.ModelViewSet):
             )
 
         # Validate file type
-        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+        allowed_types = ['image/jpeg', 'image/jpg',
+                         'image/png', 'image/gif', 'image/webp']
         if photo.content_type not in allowed_types:
             return Response(
                 {"error": f"Invalid file type. Allowed: {', '.join(allowed_types)}"},
@@ -517,10 +518,10 @@ class GroupViewSet(viewsets.ModelViewSet):
         # Convert to Base64
         photo_data = photo.read()
         encoded = base64.b64encode(photo_data).decode('utf-8')
-        
+
         # Store as data URL for easy rendering in browsers
         data_url = f"data:{photo.content_type};base64,{encoded}"
-        
+
         # Update group photo
         group.photo = data_url
         group.save()

@@ -1,6 +1,6 @@
 # Vineyard Group Fellowship - Comprehensive App Analysis
-**Analysis Date:** December 2024  
-**Analyzed By:** AI Assistant  
+**Analysis Date:** December 2024
+**Analyzed By:** AI Assistant
 **Purpose:** Complete audit of application state with all shortcomings and remediation plans
 
 ---
@@ -200,7 +200,7 @@ BurstProtectionThrottle   # 20/min
 
 ### 1. **CELERY NOT IMPLEMENTED** 🔴 **CRITICAL**
 
-**Problem:**  
+**Problem:**
 Celery tasks are extensively documented in `MESSAGING_APP_IMPLEMENTATION_PLAN.md` but **NO TASK FILES EXIST**.
 
 **Missing Files:**
@@ -259,7 +259,7 @@ authentication/tasks.py     # ❌ Does not exist
 
 ### 2. **REDIS CACHING NOT USED** 🔴 **CRITICAL**
 
-**Problem:**  
+**Problem:**
 Redis is **configured** but **NOT ACTIVELY USED** in the codebase.
 
 **Evidence:**
@@ -304,21 +304,21 @@ from django.core.cache import cache
 
 class FeedService:
     CACHE_TIMEOUT = 300  # 5 minutes
-    
+
     @classmethod
     def get_feed(cls, group_id, page=1):
         cache_key = f"feed:group:{group_id}:page:{page}"
         cached = cache.get(cache_key)
         if cached:
             return cached
-        
+
         # Query database
         feed_items = FeedItem.objects.filter(group_id=group_id)[start:end]
-        
+
         # Cache result
         cache.set(cache_key, feed_items, cls.CACHE_TIMEOUT)
         return feed_items
-    
+
     @classmethod
     def invalidate_cache(cls, group_id):
         # Invalidate on new post
@@ -330,7 +330,7 @@ class FeedService:
 
 ### 3. **BIBLE API SERVICE NOT IMPLEMENTED** 🟡 **HIGH PRIORITY**
 
-**Problem:**  
+**Problem:**
 Bible API integration is **documented** in `MESSAGING_APP_IMPLEMENTATION_PLAN.md` but **NO CODE EXISTS**.
 
 **Missing File:**
@@ -379,14 +379,14 @@ class BibleAPIService:
         {'name': 'bible-api', 'url': 'https://bible-api.com/{}'},
         {'name': 'esv-api', 'url': 'https://api.esv.org/v3/passage/text/'},
     ]
-    
+
     @classmethod
     def get_verse(cls, reference, translation='NIV'):
         cache_key = f"bible:{translation}:{reference}"
         cached = cache.get(cache_key)
         if cached:
             return cached
-        
+
         # Try primary provider
         try:
             response = requests.get(
@@ -405,7 +405,7 @@ class BibleAPIService:
 
 ### 4. **API TESTS FAILING** 🔴 **CRITICAL**
 
-**Problem:**  
+**Problem:**
 Phase 2 completion summary reports **~15 API endpoint tests returning 404**.
 
 **Evidence:**
@@ -461,7 +461,7 @@ router.register(r'prayers', PrayerRequestViewSet, basename='prayer')
 
 ### 5. **NO MONITORING/ALERTING** 🟡 **HIGH PRIORITY**
 
-**Problem:**  
+**Problem:**
 Production monitoring is **minimal** with no error tracking or alerting.
 
 **Current State:**
@@ -523,7 +523,7 @@ INSTALLED_APPS += ['health_check', 'health_check.db', 'health_check.cache']
 
 ### 6. **MISSING NOTIFICATION EMAILS** 🟡 **HIGH PRIORITY**
 
-**Problem:**  
+**Problem:**
 Email templates exist but **no email sending implementation**.
 
 **Evidence:**
@@ -577,7 +577,7 @@ class NotificationService:
     @classmethod
     def send_urgent_prayer(cls, prayer_request):
         members = prayer_request.group.members.filter(status='active')
-        
+
         for member in members:
             if cls._should_send(member, 'urgent_prayers'):
                 cls._send_email(
@@ -586,7 +586,7 @@ class NotificationService:
                     template='messaging/emails/urgent_prayer_email',
                     context={'prayer': prayer_request}
                 )
-    
+
     @classmethod
     def _should_send(cls, user, notification_type):
         # Check preferences, quiet hours, rate limit
@@ -604,7 +604,7 @@ def notify_urgent_prayer(sender, instance, created, **kwargs):
 
 ### 7. **INCOMPLETE FEED OPTIMIZATION** 🟡 **MEDIUM PRIORITY**
 
-**Problem:**  
+**Problem:**
 `FeedItem` model exists for performance but **no caching or optimization implemented**.
 
 **Current State:**
@@ -650,13 +650,13 @@ def get_queryset(self):
 class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         group_id = self.kwargs['group_id']
-        
+
         # Try cache first
         cache_key = f"feed:{group_id}:{page}"
         cached = cache.get(cache_key)
         if cached:
             return cached
-        
+
         # Optimized query
         queryset = FeedItem.objects.filter(
             group_id=group_id
@@ -666,7 +666,7 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
         ).prefetch_related(
             'reactions'
         )[start:end]
-        
+
         # Cache for 5 minutes
         cache.set(cache_key, queryset, 300)
         return queryset
@@ -683,7 +683,7 @@ def invalidate_feed_cache(sender, instance, created, **kwargs):
 
 ### 8. **NO DATA BACKUP STRATEGY** 🟡 **MEDIUM PRIORITY**
 
-**Problem:**  
+**Problem:**
 No documented or automated database backup strategy.
 
 **Missing:**
@@ -737,7 +737,7 @@ find . -name "backup_*.sql.gz" -mtime +7 -delete
 
 ### 9. **THROTTLING NOT TESTED** 🟡 **MEDIUM PRIORITY**
 
-**Problem:**  
+**Problem:**
 Throttle classes exist but **no tests verify rate limiting works**.
 
 **Current State:**
@@ -793,11 +793,11 @@ class ThrottlingTestCase(TestCase):
         )
         self.client.force_authenticate(user=self.user)
         self.group = Group.objects.create(name='Test Group')
-    
+
     def test_discussion_creation_throttle(self):
         """Verify 10 discussions/hour limit"""
         url = f'/api/v1/messaging/discussions/'
-        
+
         # Create 10 discussions (should succeed)
         for i in range(10):
             response = self.client.post(url, {
@@ -806,7 +806,7 @@ class ThrottlingTestCase(TestCase):
                 'group': self.group.id
             })
             self.assertEqual(response.status_code, 201)
-        
+
         # 11th discussion should be throttled
         response = self.client.post(url, {
             'title': 'Discussion 11',
@@ -820,7 +820,7 @@ class ThrottlingTestCase(TestCase):
 
 ### 10. **LOCATION FILTERING NOT OPTIMIZED** 🟢 **LOW PRIORITY**
 
-**Problem:**  
+**Problem:**
 Group location filtering works but uses **suboptimal distance calculation**.
 
 **Current Implementation:**
@@ -870,7 +870,7 @@ class Command(BaseCommand):
                 WHERE indexname LIKE '%location%'
             """)
             indexes = cursor.fetchall()
-            
+
             if not indexes:
                 self.stdout.write(self.style.ERROR(
                     'No spatial indexes found! Run migrations.'
@@ -898,7 +898,7 @@ class Command(BaseCommand):
 | **onboarding** | ✅ 6+ tests | ✅ 4+ tests | N/A | 🟢 ~70% |
 | **core** | ⚠️ Partial | ⚠️ Partial | ⚠️ Partial | 🟡 ~50% |
 
-**Total Tests:** 100+ tests  
+**Total Tests:** 100+ tests
 **Overall Coverage:** 🟡 **~70%** (Good but needs improvement)
 
 ### Critical Test Gaps
@@ -1176,9 +1176,9 @@ The Vineyard Group Fellowship backend is a **solid foundation** with **excellent
 
 This plan tackles all identified issues in **3 phases** over **3 weeks** with **1 developer**. Each phase is **5 working days** with built-in buffer time.
 
-**Start Date:** Week of November 11, 2025  
-**Target Completion:** Week of December 2, 2025  
-**Developer Allocation:** 1 full-time developer  
+**Start Date:** Week of November 11, 2025
+**Target Completion:** Week of December 2, 2025
+**Developer Allocation:** 1 full-time developer
 **Daily Commitment:** 6-8 hours coding + testing
 
 ---
@@ -1273,29 +1273,29 @@ def cleanup_soft_deleted_content(self):
     """
     try:
         from .models import Discussion, Comment
-        
+
         cutoff_date = timezone.now() - timedelta(days=30)
-        
+
         # Delete old discussions
         deleted_discussions = Discussion.objects.filter(
             is_deleted=True,
             deleted_at__lt=cutoff_date
         ).delete()
-        
+
         # Delete old comments
         deleted_comments = Comment.objects.filter(
             is_deleted=True,
             updated_at__lt=cutoff_date
         ).delete()
-        
+
         logger.info(f"Cleaned up {deleted_discussions[0]} discussions, {deleted_comments[0]} comments")
-        
+
         return {
             'discussions': deleted_discussions[0],
             'comments': deleted_comments[0],
             'status': 'success'
         }
-    
+
     except Exception as exc:
         logger.error(f"Cleanup task failed: {exc}")
         raise self.retry(exc=exc, countdown=300)  # Retry in 5 minutes
@@ -1305,15 +1305,15 @@ def cleanup_old_notification_logs(self):
     """Delete notification logs older than 90 days."""
     try:
         from .models import NotificationLog
-        
+
         cutoff_date = timezone.now() - timedelta(days=90)
         deleted_count = NotificationLog.objects.filter(
             created_at__lt=cutoff_date
         ).delete()[0]
-        
+
         logger.info(f"Cleaned up {deleted_count} notification logs")
         return {'deleted': deleted_count, 'status': 'success'}
-    
+
     except Exception as exc:
         logger.error(f"Notification log cleanup failed: {exc}")
         raise self.retry(exc=exc, countdown=300)
@@ -1326,31 +1326,31 @@ def recount_denormalized_counts(self):
     """
     try:
         from .models import Discussion, Reaction, Comment
-        
+
         fixed_discussion_counts = 0
-        
+
         # Fix discussion comment counts
         for discussion in Discussion.objects.all():
             actual_count = Comment.objects.filter(
                 discussion=discussion,
                 is_deleted=False
             ).count()
-            
+
             if discussion.comment_count != actual_count:
                 discussion.comment_count = actual_count
                 discussion.save(update_fields=['comment_count'])
                 fixed_discussion_counts += 1
-        
+
         # Fix reaction counts (similar logic)
         # ... (implement for reactions)
-        
+
         logger.info(f"Fixed {fixed_discussion_counts} discussion counts")
-        
+
         return {
             'discussions_fixed': fixed_discussion_counts,
             'status': 'success'
         }
-    
+
     except Exception as exc:
         logger.error(f"Recount task failed: {exc}")
         raise self.retry(exc=exc, countdown=600)
@@ -1370,33 +1370,33 @@ def cleanup_expired_tokens(self):
     """Delete expired tokens and sessions."""
     try:
         from .models import TokenBlacklist, PasswordResetToken, EmailVerificationToken
-        
+
         cutoff_date = timezone.now()
-        
+
         # Delete expired blacklisted tokens
         deleted_tokens = TokenBlacklist.objects.filter(
             expires_at__lt=cutoff_date
         ).delete()[0]
-        
+
         # Delete expired reset tokens
         deleted_reset = PasswordResetToken.objects.filter(
             expires_at__lt=cutoff_date
         ).delete()[0]
-        
+
         # Delete expired verification tokens
         deleted_verify = EmailVerificationToken.objects.filter(
             expires_at__lt=cutoff_date
         ).delete()[0]
-        
+
         logger.info(f"Cleaned up {deleted_tokens} blacklist, {deleted_reset} reset, {deleted_verify} verify tokens")
-        
+
         return {
             'blacklist': deleted_tokens,
             'reset': deleted_reset,
             'verify': deleted_verify,
             'status': 'success'
         }
-    
+
     except Exception as exc:
         logger.error(f"Token cleanup failed: {exc}")
         raise self.retry(exc=exc, countdown=300)
@@ -1465,13 +1465,13 @@ logger = logging.getLogger(__name__)
 
 class CacheService:
     """Centralized caching service with key management."""
-    
+
     # Cache timeouts
     FEED_TIMEOUT = 300         # 5 minutes
     VERSE_TIMEOUT = 604800     # 7 days
     PROFILE_TIMEOUT = 900      # 15 minutes
     MEMBERSHIP_TIMEOUT = 300   # 5 minutes
-    
+
     @classmethod
     def get_feed_key(cls, group_id, page=1, page_size=25, filters=None):
         """Generate cache key for feed queries."""
@@ -1479,22 +1479,22 @@ class CacheService:
         if filters:
             filter_hash = hashlib.md5(json.dumps(filters, sort_keys=True).encode()).hexdigest()[:8]
         return f"feed:g{group_id}:p{page}:s{page_size}:{filter_hash}"
-    
+
     @classmethod
     def get_verse_key(cls, reference, translation='NIV'):
         """Generate cache key for Bible verses."""
         return f"verse:{translation}:{reference.lower().replace(' ', '_')}"
-    
+
     @classmethod
     def get_profile_key(cls, user_id):
         """Generate cache key for user profiles."""
         return f"profile:u{user_id}"
-    
+
     @classmethod
     def get_membership_key(cls, user_id, group_id):
         """Generate cache key for membership checks."""
         return f"membership:u{user_id}:g{group_id}"
-    
+
     @classmethod
     def invalidate_feed(cls, group_id):
         """Invalidate all feed pages for a group."""
@@ -1502,7 +1502,7 @@ class CacheService:
         try:
             from django_redis import get_redis_connection
             redis_conn = get_redis_connection("default")
-            
+
             pattern = f"feed:g{group_id}:*"
             keys = redis_conn.keys(pattern)
             if keys:
@@ -1510,7 +1510,7 @@ class CacheService:
                 logger.info(f"Invalidated {len(keys)} feed cache keys for group {group_id}")
         except Exception as e:
             logger.warning(f"Cache invalidation failed (non-critical): {e}")
-    
+
     @classmethod
     def invalidate_profile(cls, user_id):
         """Invalidate user profile cache."""
@@ -1529,49 +1529,49 @@ logger = logging.getLogger(__name__)
 
 class FeedService:
     """Optimized feed service with caching."""
-    
+
     PAGE_SIZE = 25
-    
+
     @classmethod
     def get_feed(cls, group_id, page=1, page_size=None, content_type=None):
         """
         Get paginated feed with caching.
-        
+
         Args:
             group_id: UUID of the group
             page: Page number (1-indexed)
             page_size: Items per page (default: 25)
             content_type: Optional filter by type
-        
+
         Returns:
             dict: Paginated feed data with cache status
         """
         if page_size is None:
             page_size = cls.PAGE_SIZE
-        
+
         # Generate cache key
         filters = {'content_type': content_type} if content_type else None
         cache_key = CacheService.get_feed_key(group_id, page, page_size, filters)
-        
+
         # Try cache first
         cached_feed = cache.get(cache_key)
         if cached_feed:
             logger.debug(f"Cache HIT: {cache_key}")
             cached_feed['from_cache'] = True
             return cached_feed
-        
+
         logger.debug(f"Cache MISS: {cache_key} - Querying database")
-        
+
         # Calculate pagination
         start = (page - 1) * page_size
         end = start + page_size
-        
+
         # Build query
         queryset = FeedItem.objects.filter(group_id=group_id)
-        
+
         if content_type:
             queryset = queryset.filter(content_type=content_type)
-        
+
         # Optimized query with prefetch
         feed_items = queryset.select_related(
             'author',
@@ -1582,10 +1582,10 @@ class FeedService:
                 queryset=Reaction.objects.select_related('user')
             )
         )[start:end]
-        
+
         # Get total count for pagination
         total_count = queryset.count()
-        
+
         # Serialize for caching
         result = {
             'items': [cls._serialize_feed_item(item) for item in feed_items],
@@ -1599,13 +1599,13 @@ class FeedService:
             },
             'from_cache': False,
         }
-        
+
         # Cache for 5 minutes
         cache.set(cache_key, result, CacheService.FEED_TIMEOUT)
         logger.info(f"Cached feed for group {group_id}, page {page}")
-        
+
         return result
-    
+
     @classmethod
     def _serialize_feed_item(cls, item):
         """Serialize FeedItem for JSON caching."""
@@ -1624,7 +1624,7 @@ class FeedService:
             'comment_count': item.comment_count,
             'reaction_count': item.reaction_count,
         }
-    
+
     @classmethod
     def invalidate_group_feed(cls, group_id):
         """Invalidate all cached feed pages for a group."""
@@ -1643,14 +1643,14 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
     """
     permission_classes = [IsAuthenticated, IsGroupMember]
     serializer_class = FeedItemSerializer
-    
+
     def list(self, request, *args, **kwargs):
         """Override list to use cached feed service."""
         group_id = self.kwargs.get('group_id')
         page = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 25))
         content_type = request.query_params.get('content_type')
-        
+
         # Use feed service with caching
         result = FeedService.get_feed(
             group_id=group_id,
@@ -1658,7 +1658,7 @@ class FeedViewSet(viewsets.ReadOnlyModelViewSet):
             page_size=page_size,
             content_type=content_type
         )
-        
+
         return Response({
             'results': result['items'],
             'pagination': result['pagination'],
@@ -1749,14 +1749,14 @@ if SENTRY_DSN:
         profiles_sample_rate=0.1,  # 10% profiling
         environment=config('ENVIRONMENT', default='production'),
         release=config('RELEASE_VERSION', default='1.0.0'),
-        
+
         # Error filtering
         before_send=lambda event, hint: event if event.get('level') != 'info' else None,
-        
+
         # PII scrubbing
         send_default_pii=False,
     )
-    
+
     print(f"✅ Sentry initialized for environment: {config('ENVIRONMENT', default='production')}")
 else:
     print("⚠️ Sentry DSN not configured - error tracking disabled")
@@ -1777,7 +1777,7 @@ def health_check(request):
         'status': 'healthy',
         'checks': {}
     }
-    
+
     # Database check
     try:
         with connection.cursor() as cursor:
@@ -1786,7 +1786,7 @@ def health_check(request):
     except Exception as e:
         health_status['checks']['database'] = f'unhealthy: {str(e)}'
         health_status['status'] = 'unhealthy'
-    
+
     # Redis cache check
     try:
         cache.set('health_check', 'ok', 10)
@@ -1798,7 +1798,7 @@ def health_check(request):
     except Exception as e:
         health_status['checks']['cache'] = f'unhealthy: {str(e)}'
         health_status['status'] = 'degraded'
-    
+
     # Celery check (optional - check if worker is responding)
     try:
         from vineyard_group_fellowship.celery import app
@@ -1812,7 +1812,7 @@ def health_check(request):
     except Exception as e:
         health_status['checks']['celery'] = f'unhealthy: {str(e)}'
         health_status['status'] = 'degraded'
-    
+
     status_code = 200 if health_status['status'] == 'healthy' else 503
     return JsonResponse(health_status, status=status_code)
 ```
@@ -1876,7 +1876,7 @@ class PrayerRequestAPITestCase(TestCase):
         # Use reverse() with correct viewset basename
         self.list_url = reverse('prayer-list')
         self.detail_url = lambda pk: reverse('prayer-detail', kwargs={'pk': pk})
-    
+
     def test_create_prayer_request(self):
         """Test creating a prayer request via API."""
         response = self.client.post(self.list_url, {
@@ -1920,9 +1920,9 @@ logger = logging.getLogger(__name__)
 
 class NotificationService:
     """Email notification service with rate limiting and preferences."""
-    
+
     MAX_EMAILS_PER_DAY = 10
-    
+
     @classmethod
     @shared_task(bind=True, max_retries=3)
     def send_urgent_prayer_async(cls, prayer_request_id):
@@ -1934,31 +1934,31 @@ class NotificationService:
         except Exception as exc:
             logger.error(f"Failed to send urgent prayer notification: {exc}")
             raise cls.retry(exc=exc, countdown=60)
-    
+
     @classmethod
     def _send_urgent_prayer(cls, prayer_request):
         """Send urgent prayer notification to group members."""
         from group.models import GroupMembership
         from .models import NotificationPreference, NotificationLog
-        
+
         members = GroupMembership.objects.filter(
             group=prayer_request.group,
             status='active'
         ).select_related('user')
-        
+
         sent_count = 0
-        
+
         for membership in members:
             user = membership.user
-            
+
             # Check if we should send
             if not cls._should_send_notification(user, 'urgent_prayers'):
                 continue
-            
+
             # Send email
             try:
                 subject = f"🙏 Urgent Prayer Request - {prayer_request.group.name}"
-                
+
                 html_content = render_to_string(
                     'messaging/emails/urgent_prayer_email.html',
                     {
@@ -1968,7 +1968,7 @@ class NotificationService:
                         'unsubscribe_url': f"{settings.FRONTEND_URL}/settings/notifications",
                     }
                 )
-                
+
                 text_content = render_to_string(
                     'messaging/emails/urgent_prayer_email.txt',
                     {
@@ -1978,7 +1978,7 @@ class NotificationService:
                         'unsubscribe_url': f"{settings.FRONTEND_URL}/settings/notifications",
                     }
                 )
-                
+
                 msg = EmailMultiAlternatives(
                     subject=subject,
                     body=text_content,
@@ -1987,7 +1987,7 @@ class NotificationService:
                 )
                 msg.attach_alternative(html_content, "text/html")
                 msg.send()
-                
+
                 # Log success
                 NotificationLog.objects.create(
                     user=user,
@@ -1995,10 +1995,10 @@ class NotificationService:
                     channel='email',
                     was_sent=True,
                 )
-                
+
                 sent_count += 1
                 logger.info(f"Sent urgent prayer notification to {user.email}")
-                
+
             except Exception as e:
                 logger.error(f"Failed to send email to {user.email}: {e}")
                 NotificationLog.objects.create(
@@ -2008,61 +2008,61 @@ class NotificationService:
                     was_sent=False,
                     failure_reason=str(e)[:200],
                 )
-        
+
         logger.info(f"Sent {sent_count} urgent prayer notifications for prayer {prayer_request.id}")
         return sent_count
-    
+
     @classmethod
     def _should_send_notification(cls, user, notification_type):
         """Check if notification should be sent to user."""
         from .models import NotificationPreference, NotificationLog
-        
+
         try:
             prefs = NotificationPreference.objects.get(user=user)
-            
+
             # Check unsubscribed
             if prefs.unsubscribed_at:
                 return False
-            
+
             # Check notification type enabled
             if not getattr(prefs, notification_type, True):
                 return False
-            
+
             # Check email enabled
             if not prefs.email_enabled:
                 return False
-            
+
             # Check quiet hours
             if cls._is_quiet_hours(prefs):
                 return False
-            
+
         except NotificationPreference.DoesNotExist:
             # No preferences = allow notifications
             pass
-        
+
         # Check rate limit (max 10 emails per day)
         recent_count = NotificationLog.objects.filter(
             user=user,
             was_sent=True,
             created_at__gte=timezone.now() - timedelta(days=1)
         ).count()
-        
+
         if recent_count >= cls.MAX_EMAILS_PER_DAY:
             logger.warning(f"User {user.id} hit daily email limit ({recent_count})")
             return False
-        
+
         return True
-    
+
     @classmethod
     def _is_quiet_hours(cls, prefs):
         """Check if user is in quiet hours."""
         if not prefs.quiet_hours_enabled:
             return False
-        
+
         current_time = timezone.localtime().time()
         start = prefs.quiet_hours_start
         end = prefs.quiet_hours_end
-        
+
         # Handle overnight quiet hours (e.g., 10pm - 7am)
         if start > end:
             return current_time >= start or current_time <= end
@@ -2107,7 +2107,7 @@ class BibleAPIService:
     """
     Bible API service with fallback providers and circuit breaker.
     """
-    
+
     PROVIDERS = [
         {
             'name': 'bible-api',
@@ -2123,72 +2123,72 @@ class BibleAPIService:
             'timeout': 5,
         },
     ]
-    
+
     CIRCUIT_BREAKER_TIMEOUT = 300  # 5 minutes
     VERSE_CACHE_TIMEOUT = 604800   # 7 days
-    
+
     @classmethod
     def get_verse(cls, reference, translation='NIV'):
         """
         Fetch Bible verse with caching and fallback.
-        
+
         Args:
             reference (str): e.g., "John 3:16"
             translation (str): Bible translation (NIV, ESV, KJV, etc.)
-        
+
         Returns:
             dict: {'reference': str, 'text': str, 'translation': str}
-        
+
         Raises:
             BibleAPIException: If all providers fail
         """
         # Check cache first
         cache_key = CacheService.get_verse_key(reference, translation)
         cached_verse = cache.get(cache_key)
-        
+
         if cached_verse:
             logger.debug(f"Cache hit for verse: {reference} ({translation})")
             return cached_verse
-        
+
         # Try each provider
         for provider in cls.PROVIDERS:
             if cls._is_circuit_open(provider['name']):
                 logger.warning(f"Circuit breaker open for {provider['name']}")
                 continue
-            
+
             try:
                 verse_data = cls._fetch_from_provider(provider, reference, translation)
-                
+
                 if verse_data and verse_data.get('text'):
                     # Cache successful result for 7 days
                     cache.set(cache_key, verse_data, cls.VERSE_CACHE_TIMEOUT)
                     logger.info(f"Fetched verse from {provider['name']}: {reference}")
                     return verse_data
-                    
+
             except Exception as e:
                 logger.error(f"Provider {provider['name']} failed: {e}")
                 cls._trip_circuit_breaker(provider['name'])
                 continue
-        
+
         # All providers failed
         raise BibleAPIException(
             "Unable to fetch verse from Bible API. Please enter verse text manually."
         )
-    
+
     @classmethod
     def _fetch_from_provider(cls, provider, reference, translation):
         """Fetch verse from a single provider."""
         url = provider['url'].format(reference=reference, translation=translation)
-        
+
         headers = {}
         if provider.get('requires_key') and provider.get('api_key'):
             headers['Authorization'] = f"Token {provider['api_key']}"
-        
+
         response = requests.get(url, headers=headers, timeout=provider['timeout'])
         response.raise_for_status()
-        
+
         data = response.json()
-        
+
         # Parse response based on provider
         if provider['name'] == 'bible-api':
             return {
@@ -2203,14 +2203,14 @@ class BibleAPIService:
                 'text': passages[0].strip() if passages else '',
                 'translation': 'ESV',
             }
-        
+
         return None
-    
+
     @classmethod
     def _is_circuit_open(cls, provider_name):
         """Check if circuit breaker is open."""
         return cache.get(f"circuit_breaker:{provider_name}") is not None
-    
+
     @classmethod
     def _trip_circuit_breaker(cls, provider_name):
         """Trip circuit breaker for failed provider."""
@@ -2234,29 +2234,29 @@ from .integrations import BibleAPIService, BibleAPIException
 
 class ScriptureViewSet(viewsets.ModelViewSet):
     # ... existing code ...
-    
+
     @action(detail=False, methods=['get'])
     def verse_lookup(self, request):
         """
         Lookup Bible verse from external API.
-        
+
         Query params:
             - reference: Bible reference (e.g., "John 3:16")
             - translation: Bible translation (default: NIV)
         """
         reference = request.query_params.get('reference')
         translation = request.query_params.get('translation', 'NIV')
-        
+
         if not reference:
             return Response(
                 {'error': 'reference parameter required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             verse_data = BibleAPIService.get_verse(reference, translation)
             return Response(verse_data)
-            
+
         except BibleAPIException as e:
             return Response(
                 {
@@ -2294,30 +2294,30 @@ class FeedCachingTestCase(TestCase):
         cache.clear()
         self.user = User.objects.create_user(username='testuser', email='test@example.com')
         self.group = Group.objects.create(name='Test Group', leader=self.user)
-    
+
     def test_feed_cache_hit(self):
         """Test feed caching works."""
         # First call - cache miss
         result1 = FeedService.get_feed(self.group.id, page=1)
         self.assertFalse(result1['from_cache'])
-        
+
         # Second call - cache hit
         result2 = FeedService.get_feed(self.group.id, page=1)
         self.assertTrue(result2['from_cache'])
-    
+
     def test_feed_cache_invalidation(self):
         """Test cache invalidates on new post."""
         # Prime cache
         result1 = FeedService.get_feed(self.group.id, page=1)
         self.assertFalse(result1['from_cache'])
-        
+
         # Cache hit
         result2 = FeedService.get_feed(self.group.id, page=1)
         self.assertTrue(result2['from_cache'])
-        
+
         # Invalidate
         FeedService.invalidate_group_feed(self.group.id)
-        
+
         # Cache miss again
         result3 = FeedService.get_feed(self.group.id, page=1)
         self.assertFalse(result3['from_cache'])
@@ -2339,27 +2339,27 @@ class NotificationTestCase(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-    
+
     def test_quiet_hours_blocks_notification(self):
         """Test quiet hours prevents notification."""
         # Set quiet hours to current time
         current_time = timezone.localtime().time()
-        
+
         prefs = NotificationPreference.objects.create(
             user=self.user,
             quiet_hours_enabled=True,
             quiet_hours_start=current_time,
             quiet_hours_end=current_time,
         )
-        
+
         # Should not send during quiet hours
         should_send = NotificationService._should_send_notification(
             self.user,
             'urgent_prayers'
         )
-        
+
         self.assertFalse(should_send)
-    
+
     def test_rate_limiting_blocks_spam(self):
         """Test rate limiting prevents spam."""
         # Create 10 notification logs (max per day)
@@ -2370,13 +2370,13 @@ class NotificationTestCase(TestCase):
                 channel='email',
                 was_sent=True,
             )
-        
+
         # Should block 11th notification
         should_send = NotificationService._should_send_notification(
             self.user,
             'urgent_prayers'
         )
-        
+
         self.assertFalse(should_send)
 ```
 
@@ -2398,20 +2398,20 @@ class BibleAPITestCase(TestCase):
         }
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
-        
+
         result = BibleAPIService.get_verse('John 3:16', 'NIV')
-        
+
         self.assertEqual(result['reference'], 'John 3:16')
         self.assertIn('God so loved', result['text'])
-    
+
     @patch('messaging.integrations.bible_api.requests.get')
     def test_circuit_breaker_trips(self, mock_get):
         """Test circuit breaker trips on failures."""
         mock_get.side_effect = Exception('API Down')
-        
+
         with self.assertRaises(BibleAPIException):
             BibleAPIService.get_verse('John 3:16', 'NIV')
-        
+
         # Verify circuit breaker is open
         self.assertTrue(BibleAPIService._is_circuit_open('bible-api'))
 ```
@@ -2796,8 +2796,8 @@ open htmlcov/index.html
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** November 8, 2025  
-**Author:** AI Assistant (Claude)  
-**Review Status:** Ready for implementation  
+**Document Version:** 1.0
+**Last Updated:** November 8, 2025
+**Author:** AI Assistant (Claude)
+**Review Status:** Ready for implementation
 **Estimated Completion:** December 2, 2025

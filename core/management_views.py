@@ -65,14 +65,14 @@ def recalculate_comment_counts(request):
     try:
         from messaging.models import Discussion, Scripture, PrayerRequest, Testimony, Comment
         from django.contrib.contenttypes.models import ContentType
-        
+
         results = {
             'scripture': 0,
             'prayer_request': 0,
             'testimony': 0,
             'discussion': 0
         }
-        
+
         # Scripture
         scripture_ct = ContentType.objects.get_for_model(Scripture)
         for scripture in Scripture.objects.all():

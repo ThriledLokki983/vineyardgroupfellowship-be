@@ -213,8 +213,8 @@ docs/build/
 docs/site/
 
 # Exclude detailed project planning and audit files (too verbose for repo)
-PROJECT_AUDIT*.md
-IMPLEMENTATION_PLAN*.md
+!README.md
+*.md
 
 # Exclude auto-generated or temporary markdown files
 **/temp*.md

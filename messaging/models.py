@@ -1392,3 +1392,199 @@ class Scripture(models.Model):
         Scripture.objects.filter(pk=self.pk).update(
             comment_count=F('comment_count') - 1)
         self.refresh_from_db(fields=['comment_count'])
+
+
+# =============================================================================
+# PRIVATE MESSAGING MODELS
+# =============================================================================
+
+class Conversation(models.Model):
+    """
+    Private 1-on-1 conversation between users.
+
+    Used primarily for group inquiry conversations where prospective members
+    can message group leaders privately before joining.
+    """
+
+    STATUS_CHOICES = [
+        ('active', _('Active')),
+        ('closed', _('Closed')),
+        ('archived', _('Archived')),
+    ]
+
+    CONTEXT_CHOICES = [
+        ('group_inquiry', _('Group Inquiry')),
+        ('direct_message', _('Direct Message')),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    participants = models.ManyToManyField(
+        User,
+        related_name='private_conversations',
+        help_text=_('Users participating in this conversation')
+    )
+
+    # Context (for group inquiries)
+    context_type = models.CharField(
+        max_length=50,
+        choices=CONTEXT_CHOICES,
+        default='group_inquiry',
+        help_text=_('Type of conversation context')
+    )
+    group = models.ForeignKey(
+        Group,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='inquiry_conversations',
+        help_text=_('Group related to this conversation (for group inquiries)')
+    )
+
+    # Status tracking
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        help_text=_('Current status of the conversation')
+    )
+    closed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('When the conversation was closed')
+    )
+    closed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='closed_conversations',
+        help_text=_('User who closed the conversation')
+    )
+    close_reason = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        choices=[
+            ('joined_group', _('Joined Group')),
+            ('not_interested', _('Not Interested')),
+            ('resolved', _('Resolved')),
+            ('other', _('Other')),
+        ],
+        help_text=_('Reason for closing the conversation')
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_('When the conversation was created')
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text=_('When the conversation was last updated')
+    )
+    last_message_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('When the last message was sent')
+    )
+
+    class Meta:
+        ordering = ['-last_message_at', '-created_at']
+        indexes = [
+            models.Index(fields=['-last_message_at']),
+            models.Index(fields=['status']),
+            models.Index(fields=['context_type']),
+        ]
+
+    def __str__(self):
+        participant_names = ', '.join(
+            [p.username for p in self.participants.all()[:2]]
+        )
+        return f"Conversation: {participant_names}"
+
+    def get_other_participant(self, user):
+        """Get the other participant in the conversation (not the current user)."""
+        return self.participants.exclude(id=user.id).first()
+
+    def get_unread_count(self, user):
+        """Get count of unread messages for a specific user."""
+        return self.private_messages.filter(is_read=False).exclude(sender=user).count()
+
+    def mark_messages_as_read(self, user):
+        """Mark all messages in this conversation as read for the given user."""
+        self.private_messages.filter(is_read=False).exclude(
+            sender=user).update(is_read=True)
+
+    def close(self, user, reason=None):
+        """Close the conversation."""
+        self.status = 'closed'
+        self.closed_at = timezone.now()
+        self.closed_by = user
+        self.close_reason = reason
+        self.save()
+
+    def reopen(self):
+        """Reopen a closed conversation."""
+        self.status = 'active'
+        self.closed_at = None
+        self.closed_by = None
+        self.close_reason = None
+        self.save()
+
+    def archive(self):
+        """Archive the conversation."""
+        self.status = 'archived'
+        self.save()
+
+
+class PrivateMessage(models.Model):
+    """
+    Individual message within a private conversation.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name='private_messages',
+        help_text=_('Conversation this message belongs to')
+    )
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='sent_private_messages',
+        help_text=_('User who sent this message')
+    )
+    content = models.TextField(
+        validators=[MinLengthValidator(1)],
+        help_text=_('Message content')
+    )
+    is_read = models.BooleanField(
+        default=False,
+        help_text=_('Whether the message has been read by recipient')
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_('When the message was sent')
+    )
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['conversation', 'created_at']),
+            models.Index(fields=['is_read']),
+        ]
+
+    def __str__(self):
+        return f"Message from {self.sender.username} at {self.created_at}"
+
+    def save(self, *args, **kwargs):
+        """Update conversation's last_message_at when a new message is created."""
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+
+        if is_new:
+            # Update conversation's last_message_at
+            self.conversation.last_message_at = self.created_at
+            self.conversation.save(
+                update_fields=['last_message_at', 'updated_at'])
