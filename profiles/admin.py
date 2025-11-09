@@ -266,9 +266,10 @@ class ProfilePhotoAdmin(admin.ModelAdmin):
     def photo_thumbnail(self, obj):
         """Display small thumbnail in list view."""
         if obj.thumbnail:
+            # Base64 storage: thumbnail is already a data URL string
             return format_html(
                 '<img src="{}" style="width: 50px; height: 50px; object-fit: cover;" />',
-                obj.thumbnail.url
+                obj.thumbnail
             )
         return "No photo"
     photo_thumbnail.short_description = 'Thumbnail'
@@ -276,6 +277,7 @@ class ProfilePhotoAdmin(admin.ModelAdmin):
     def photo_preview(self, obj):
         """Display photo preview in detail view."""
         if obj.photo:
+            # Base64 storage: photo is already a data URL string
             return format_html(
                 '<img src="{}" style="max-width: 300px; max-height: 300px;" />',
                 obj.photo  # Base64 data URL
