@@ -150,14 +150,14 @@ def clear_refresh_token_cookie(response: HttpResponse) -> HttpResponse:
 
 def get_refresh_token_from_request(request) -> Optional[str]:
     """
-    Get refresh token from request (cookie or body).
+    Get refresh token from request (header, cookie, or body).
 
-    Supports backward compatibility by checking both cookie and request body.
-    This allows for gradual migration from body-based to cookie-based tokens.
-
+    Supports multiple token delivery methods for web and mobile clients.
+    
     Priority:
-        1. Cookie (new method, more secure)
-        2. Request body (legacy method, for backward compatibility)
+        1. X-Refresh-Token header (mobile apps - most secure for native apps)
+        2. Cookie (web browsers - secure with httpOnly)
+        3. Request body (legacy method, for backward compatibility)
 
     Args:
         request: Django HttpRequest object
@@ -170,11 +170,16 @@ def get_refresh_token_from_request(request) -> Optional[str]:
         >>> if not token:
         >>>     raise ValidationError("No refresh token provided")
     """
-    # First try cookie (new method - more secure)
-    token = get_refresh_token_from_cookie(request)
-
+    # First try X-Refresh-Token header (mobile apps)
+    token = request.headers.get('X-Refresh-Token')
     if token:
-        logger.debug("Using refresh token from cookie (secure method)")
+        logger.debug("Using refresh token from X-Refresh-Token header (mobile client)")
+        return token
+    
+    # Then try cookie (web browsers - more secure)
+    token = get_refresh_token_from_cookie(request)
+    if token:
+        logger.debug("Using refresh token from cookie (web client)")
         return token
 
     # Fallback to body (old method) for backward compatibility
@@ -183,11 +188,11 @@ def get_refresh_token_from_request(request) -> Optional[str]:
         logger.debug("Using refresh token from request body (legacy method)")
         logger.warning(
             "Refresh token sent in request body. "
-            "Please migrate to cookie-based authentication for better security."
+            "Please migrate to cookie-based or header-based authentication for better security."
         )
         return token
 
-    logger.warning("No refresh token found in cookie or body")
+    logger.warning("No refresh token found in header, cookie, or body")
     return None
 
 

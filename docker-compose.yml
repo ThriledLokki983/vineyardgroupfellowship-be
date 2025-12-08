@@ -30,7 +30,7 @@ name: vineyard-group-fellowship
 services:
   # PostgreSQL Database with PostGIS
   postgres:
-    image: postgis/postgis:16-3.4
+    image: imresamu/postgis:16-3.4.4-alpine3.22
     container_name: vineyard-group-fellowship-postgres
     environment:
       POSTGRES_DB: ${DB_NAME:-vineyard_group_fellowship}
@@ -129,6 +129,7 @@ services:
       - "8025:8025"  # Web interface
     networks:
       - vineyard_network
+    profiles: ["development"]
 
   # Django Application (for full containerized development)
   web:
@@ -144,12 +145,12 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     ports:
-      - "${SERVER_PORT:-8001}:${SERVER_PORT:-8001}"
+      - "${SERVER_PORT:-8002}:${SERVER_PORT:-8002}"
     environment:
       # Override specific settings for Docker environment
       - PYTHONUNBUFFERED=1  # Ensures Python output is sent straight to terminal
       - WATCHFILES_FORCE_POLLING=true  # Force polling for file changes
-      - PORT=${SERVER_PORT:-8001}  # Map SERVER_PORT to PORT for start.sh script
+      - PORT=${SERVER_PORT:-8002}  # Map SERVER_PORT to PORT for start.sh script
       # Connect to PgBouncer instead of PostgreSQL directly
       - DB_HOST=pgbouncer
       - DB_PORT=5432

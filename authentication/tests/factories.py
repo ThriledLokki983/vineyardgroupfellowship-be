@@ -293,3 +293,28 @@ def create_complete_user_scenario():
         'login_log': login_log,
         'password_change_log': password_change_log
     }
+
+
+def create_user_with_profile(**user_kwargs):
+    """
+    Create a user with an associated profile.
+    
+    This is a convenience factory for tests that need both a user
+    and their profile created together.
+    
+    Args:
+        **user_kwargs: Keyword arguments to pass to UserFactory
+    
+    Returns:
+        tuple: (user, profile)
+    """
+    from profiles.models import UserProfileBasic
+    
+    # Create user with any provided kwargs
+    user = UserFactory(**user_kwargs)
+    
+    # Get or create profile (might already exist due to signals)
+    profile, created = UserProfileBasic.objects.get_or_create(user=user)
+    
+    return user, profile
+

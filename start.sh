@@ -18,7 +18,7 @@ echo -e "${BLUE}🚀 Starting Vineyard Group Fellowship Backend...${NC}"
 echo "================================================"
 
 # Set default port if not provided by Railway
-export PORT=${PORT:-8001}
+export PORT=${PORT:-8002}
 
 # Validate required environment variables
 echo -e "${BLUE}🔧 Validating environment configuration...${NC}"

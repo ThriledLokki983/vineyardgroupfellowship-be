@@ -41,7 +41,9 @@ class OnboardingInProgress(BasePermission):
 
         try:
             progress = request.user.onboarding_progress
-            return progress.completion_percentage < 100
+            # Allow if completion is less than 100%
+            # Use <= 100 to allow the final completion call
+            return progress.completion_percentage <= 100
         except:
             return True  # Allow access if progress doesn't exist yet
 

@@ -139,6 +139,14 @@ class EnhancedCSRFMiddleware(CsrfViewMiddleware):
         if getattr(request, '_dont_enforce_csrf_checks', False):
             return True
 
+        # Skip CSRF for mobile clients (not vulnerable to CSRF attacks)
+        # Mobile apps don't have browser cookie jar and explicitly set tokens in headers
+        if self._is_mobile_client(request):
+            logger.debug(
+                f"CSRF check skipped for mobile client: {request.method} {request.path}"
+            )
+            return True
+
         skip_paths = [
             '/admin/',  # Django admin interface
             '/api/v1/csrf/token/',
@@ -149,6 +157,35 @@ class EnhancedCSRFMiddleware(CsrfViewMiddleware):
         ]
 
         return any(request.path.startswith(path) for path in skip_paths)
+    
+    def _is_mobile_client(self, request: HttpRequest) -> bool:
+        """
+        Detect if request is from a mobile app client.
+        
+        Mobile clients are not vulnerable to CSRF attacks because:
+        1. They don't have browser cookie jar (no automatic cookie sending)
+        2. Tokens are explicitly set in headers by app code
+        3. No same-origin policy issues in native apps
+        
+        Returns:
+            bool: True if mobile client, False otherwise
+        """
+        # Primary detection: X-Client-Type header
+        client_type = request.headers.get('X-Client-Type', '').lower()
+        if client_type == 'mobile':
+            return True
+        
+        # Fallback: User-Agent pattern detection
+        user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
+        mobile_indicators = [
+            'vineyardgf',
+            'vineyard-mobile',
+            'react-native',
+            'expo',
+            'mobile-app',
+        ]
+        
+        return any(indicator in user_agent for indicator in mobile_indicators)
 
     def _validate_csrf_token(self, request: HttpRequest) -> dict:
         """Custom CSRF token validation."""

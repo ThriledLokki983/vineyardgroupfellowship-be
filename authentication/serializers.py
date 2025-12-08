@@ -40,6 +40,38 @@ from .utils.auth import (
 User = get_user_model()
 
 
+class UserBasicSerializer(serializers.ModelSerializer):
+    """
+    Basic user serializer for minimal user information.
+    
+    Used in contexts where only essential user data is needed,
+    such as in nested serializers or list views.
+    """
+    display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'email',
+            'display_name',
+            'email_verified',
+            'is_active',
+            'date_joined'
+        ]
+        read_only_fields = fields
+    
+    def get_display_name(self, obj):
+        """Get display name from user profile if available."""
+        try:
+            if hasattr(obj, 'profile') and obj.profile:
+                return obj.profile.display_name or obj.username
+        except Exception:
+            pass
+        return obj.username
+
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """
     Enhanced user registration with user purpose system.

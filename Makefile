@@ -93,9 +93,9 @@ help: ## Show this help message
 
 dev: dev-down dev-build dev-up ## Start complete development environment with file watching
 	@echo "$(GREEN)🚀 Development environment started!$(NC)"
-	@echo "$(BLUE)Application: http://localhost:8001$(NC)"
-	@echo "$(BLUE)Admin: http://localhost:8001/admin/$(NC)"
-	@echo "$(BLUE)Health: http://localhost:8001/health/$(NC)"
+	@echo "$(BLUE)Application: http://localhost:8002$(NC)"
+	@echo "$(BLUE)Admin: http://localhost:8002/admin/$(NC)"
+	@echo "$(BLUE)Health: http://localhost:8002/health/$(NC)"
 	@echo "$(BLUE)MailHog UI: http://localhost:8025$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Use 'make dev-logs' to view logs$(NC)"

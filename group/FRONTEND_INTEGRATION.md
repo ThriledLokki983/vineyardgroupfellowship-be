@@ -26,7 +26,7 @@ Get tokens from the authentication endpoints:
 ## Base URL
 
 ```
-Development: http://localhost:8001
+Development: http://localhost:8002
 Production: https://api.yourdomain.com
 
 All group endpoints: /api/v1/groups/

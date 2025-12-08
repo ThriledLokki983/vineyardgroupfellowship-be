@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import UserSession, AuditLog
+from .models import UserSession, AuditLog, EmailVerificationToken
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -559,3 +559,146 @@ class SessionService:
         except Exception as e:
             logger.error(f"Failed to create session for user {user.id}: {e}")
             return None
+
+
+class EmailVerificationService:
+    """
+    Service for handling email verification operations.
+    
+    Provides functionality for sending verification emails,
+    validating tokens, and managing email verification state.
+    """
+
+    @staticmethod
+    def send_verification_email(user):
+        """
+        Send verification email to user.
+        
+        Args:
+            user: User instance to send verification email to
+            
+        Returns:
+            bool: Success status
+        """
+        try:
+            from .utils.auth import send_verification_email
+            
+            # Generate verification token
+            token = EmailVerificationToken.objects.create(user=user)
+            
+            # Send email
+            send_verification_email(user, str(token.token))
+            
+            # Log the action
+            AuditLog.objects.create(
+                user=user,
+                event_type='email_verification_sent',
+                description='Email verification sent',
+                success=True,
+                risk_level='low'
+            )
+            
+            logger.info(f"Verification email sent to user {user.id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send verification email for user {user.id}: {e}")
+            
+            # Log the failure
+            AuditLog.objects.create(
+                user=user,
+                event_type='email_verification_failed',
+                description=f'Failed to send verification email: {str(e)}',
+                success=False,
+                risk_level='medium',
+                metadata={'error': str(e)}
+            )
+            
+            return False
+
+    @staticmethod
+    def verify_email_token(token_string):
+        """
+        Verify email verification token and mark email as verified.
+        
+        Args:
+            token_string: Verification token string
+            
+        Returns:
+            dict: Verification result with user and status
+        """
+        try:
+            from .utils.auth import verify_email_token
+            
+            # Verify token using existing utility
+            result = verify_email_token(token_string)
+            
+            if result.get('valid'):
+                user = result.get('user')
+                
+                # Mark email as verified
+                user.email_verified = True
+                user.email_verified_at = timezone.now()
+                user.save()
+                
+                # Log successful verification
+                AuditLog.objects.create(
+                    user=user,
+                    event_type='email_verified',
+                    description='Email verified successfully',
+                    success=True,
+                    risk_level='low'
+                )
+                
+                logger.info(f"Email verified for user {user.id}")
+                
+                return {
+                    'valid': True,
+                    'user': user,
+                    'message': 'Email verified successfully'
+                }
+            else:
+                return {
+                    'valid': False,
+                    'error': result.get('error', 'Invalid or expired token')
+                }
+                
+        except Exception as e:
+            logger.error(f"Email verification failed: {e}")
+            return {
+                'valid': False,
+                'error': 'Verification failed'
+            }
+
+    @staticmethod
+    def resend_verification_email(user):
+        """
+        Resend verification email to user.
+        
+        Args:
+            user: User instance
+            
+        Returns:
+            bool: Success status
+        """
+        # Check if email is already verified
+        if user.email_verified:
+            logger.warning(f"Attempted to resend verification to already verified user {user.id}")
+            return False
+        
+        # Invalidate any existing tokens
+        EmailVerificationToken.objects.filter(user=user, used=False).update(used=True)
+        
+        # Send new verification email
+        return EmailVerificationService.send_verification_email(user)
+
+
+class TokenService:
+    """
+    Service for token management operations.
+    
+    Placeholder for future token-related functionality beyond
+    what's already provided by ExchangeTokenService.
+    """
+    
+    pass

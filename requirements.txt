@@ -48,7 +48,7 @@ ua-parser==1.0.1
 requests==2.32.3
 
 # === MONITORING & LOGGING ===
-sentry-sdk[django]==1.45.0
+sentry-sdk[django]==2.19.2
 structlog==23.2.0
 
 # === WEBSOCKETS (for future real-time features) ===

@@ -22,7 +22,7 @@ from profiles.serializers import (
     ProfileCompletenessSerializer,
     ProfilePrivacySettingsSerializer,
     UserProfilePublicSerializer,
-    PhotoUploadSerializer,
+    # PhotoUploadSerializer,  # Does not exist yet
 )
 from profiles.models import (
     UserProfileBasic,

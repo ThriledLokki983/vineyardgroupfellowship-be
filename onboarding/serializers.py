@@ -5,6 +5,7 @@ This module contains serializers for onboarding flow, leadership profiles,
 and onboarding progress tracking.
 """
 
+import logging
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
@@ -13,6 +14,7 @@ from django.utils import timezone
 from .models import OnboardingProgress, OnboardingFeedback, LeadershipProfile
 from authentication.models import AuditLog
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -97,15 +99,17 @@ class OnboardingCompletionSerializer(serializers.Serializer):
             progress.completion_percentage = 100.0
             progress.save()
 
-        # Save feedback if provided
+        # Save feedback if provided (use update_or_create to handle re-completion)
         validated_data = self.validated_data
         if validated_data.get('feedback_rating') or validated_data.get('feedback_text'):
-            OnboardingFeedback.objects.create(
+            OnboardingFeedback.objects.update_or_create(
                 user=user,
                 step_name='overall_experience',
-                rating=validated_data.get('feedback_rating', 5),
-                feedback_text=validated_data.get('feedback_text', ''),
-                was_helpful=True
+                defaults={
+                    'rating': validated_data.get('feedback_rating', 5),
+                    'feedback_text': validated_data.get('feedback_text', ''),
+                    'was_helpful': True
+                }
             )
 
         # Log completion

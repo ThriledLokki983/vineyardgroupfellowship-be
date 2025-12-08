@@ -30,6 +30,7 @@ from ..utils.cookies import (
     get_refresh_token_from_cookie,
     get_refresh_token_from_request
 )
+from ..utils.mobile import is_mobile_client, get_client_type
 from ..utils.api_docs import authentication_schema
 from ..models import AuditLog, UserSession
 
@@ -276,24 +277,39 @@ def login_view(request):
             }
         }
 
-        response = Response(response_data, status=status.HTTP_200_OK)
-
-        # Set refresh token as httpOnly cookie
+        # Determine client type for conditional response
+        client_type = get_client_type(request)
         remember_me = serializer.validated_data.get('remember_me', False)
-        max_age = 14 * 24 * 60 * 60 if remember_me else 7 * \
-            24 * 60 * 60  # 14 days or 7 days
-        response = set_refresh_token_cookie(
-            response,
-            auth_data['refresh_token'],
-            max_age=max_age
-        )
+        max_age = 14 * 24 * 60 * 60 if remember_me else 7 * 24 * 60 * 60  # 14 days or 7 days
 
-        logger.info(
-            "User login successful",
-            user_id=str(auth_data['user'].id),
-            email=auth_data['user'].email,
-            session_id=str(auth_data['session'].id)
-        )
+        if is_mobile_client(request):
+            # Mobile client: Return refresh token in response body
+            response_data['refresh_token'] = auth_data['refresh_token']
+            response = Response(response_data, status=status.HTTP_200_OK)
+            
+            logger.info(
+                "Mobile client login successful",
+                user_id=str(auth_data['user'].id),
+                email=auth_data['user'].email,
+                session_id=str(auth_data['session'].id),
+                client_type=client_type
+            )
+        else:
+            # Web client: Set refresh token as httpOnly cookie
+            response = Response(response_data, status=status.HTTP_200_OK)
+            response = set_refresh_token_cookie(
+                response,
+                auth_data['refresh_token'],
+                max_age=max_age
+            )
+            
+            logger.info(
+                "Web client login successful",
+                user_id=str(auth_data['user'].id),
+                email=auth_data['user'].email,
+                session_id=str(auth_data['session'].id),
+                client_type=client_type
+            )
 
         return response
 
@@ -425,6 +441,7 @@ def logout_view(request):
             # Continue with logout even if blacklisting fails
 
         # Log logout if we have a user
+        client_type = get_client_type(request)
         if user:
             AuditLog.objects.create(
                 user=user,
@@ -434,22 +451,29 @@ def logout_view(request):
                 user_agent=request.META.get('HTTP_USER_AGENT', 'Unknown'),
                 success=True,
                 risk_level='low',
-                metadata={'logout_method': 'manual'}
+                metadata={
+                    'logout_method': 'manual',
+                    'client_type': client_type
+                }
             )
             logger.info(
                 "User logged out successfully",
                 user_id=str(user.id),
-                email=user.email
+                email=user.email,
+                client_type=client_type
             )
         else:
-            logger.info("Logout completed without valid user context")
+            logger.info(
+                "Logout completed without valid user context",
+                client_type=client_type
+            )
 
         # Create response
         response = Response({
             'message': _('Successfully logged out.')
         }, status=status.HTTP_200_OK)
 
-        # Clear refresh token cookie
+        # Clear refresh token cookie (safe for both mobile and web)
         response = clear_refresh_token_cookie(response)
 
         return response

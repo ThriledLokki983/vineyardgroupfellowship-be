@@ -17,10 +17,13 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 import uuid
 
 from ..serializers import (
-    UserRegistrationSerializer, UserLoginSerializer, UserBasicSerializer,
+    UserRegistrationSerializer, 
+    # UserLoginSerializer,  # Use LoginSerializer instead
+    UserBasicSerializer,
     PasswordChangeSerializer, PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer, EmailVerificationSerializer,
-    EmailChangeRequestSerializer, EmailChangeConfirmSerializer,
+    # EmailChangeRequestSerializer,  # Not yet implemented
+    # EmailChangeConfirmSerializer,  # Not yet implemented
     UserSessionSerializer, SessionTerminateSerializer,
     AuthResponseSerializer, SuccessMessageSerializer,
     HealthCheckSerializer

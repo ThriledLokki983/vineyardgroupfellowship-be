@@ -33,6 +33,7 @@ from authentication.utils.cookies import (
     get_refresh_token_from_request,
     get_refresh_token_from_cookie,
 )
+from authentication.utils.mobile import is_mobile_client, get_client_type
 
 from ..models import UserSession, AuditLog
 
@@ -152,6 +153,10 @@ class RefreshTokenView(APIView):
                 new_refresh = refresh_token
                 new_access = refresh_token.access_token
 
+            # Determine client type and refresh method
+            client_type = get_client_type(request)
+            came_from_header = request.headers.get('X-Refresh-Token') is not None
+            
             # Log token refresh
             AuditLog.objects.create(
                 user=user,
@@ -162,21 +167,32 @@ class RefreshTokenView(APIView):
                 success=True,
                 risk_level='low',
                 metadata={
-                    'refresh_method': 'cookie' if refresh_token_str == get_refresh_token_from_cookie(request) else 'body',
+                    'client_type': client_type,
+                    'refresh_method': 'header' if came_from_header else 'cookie',
                     'token_rotated': getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', False)
                 }
             )
 
-            logger.info(f"Token refreshed for user: {user.email}")
+            logger.info(
+                f"Token refreshed successfully for {user.email} (client: {client_type}, rotated: {getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', False)})"
+            )
 
-            # Response with new access token only
-            response = Response({
-                'access': str(new_access)
-            }, status=status.HTTP_200_OK)
-
-            # Set new refresh token cookie (rotation)
-            if getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', False):
-                response = set_refresh_token_cookie(response, str(new_refresh))
+            # Conditional response based on client type
+            if came_from_header:
+                # Mobile client: Return both access and refresh tokens in body
+                response = Response({
+                    'access': str(new_access),
+                    'refresh': str(new_refresh)
+                }, status=status.HTTP_200_OK)
+            else:
+                # Web client: Return access token in body, refresh token in cookie
+                response = Response({
+                    'access': str(new_access)
+                }, status=status.HTTP_200_OK)
+                
+                # Set new refresh token cookie if rotation is enabled
+                if getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', False):
+                    response = set_refresh_token_cookie(response, str(new_refresh))
 
             return response
 
