@@ -67,10 +67,9 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer:latest
     container_name: vineyard-group-fellowship-pgbouncer
-    env_file:
-      - .env.docker
     environment:
-      DATABASE_URL: "postgres://${DB_USER:-vineyard_group_fellowship}:${DB_PASSWORD:-vineyard_group_fellowship_dev_password}@postgres:5432/${DB_NAME:-vineyard_group_fellowship_dev}"
+      # Use explicit variable substitution from .env.docker
+      DATABASE_URL: "postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}"
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 1000
       DEFAULT_POOL_SIZE: 20
@@ -90,6 +89,8 @@ services:
     networks:
       - vineyard_network
     restart: unless-stopped
+    # IMPORTANT: Must explicitly source env vars from shell/file
+    # Docker Compose reads .env file automatically from project root
 
   # Redis Cache
   redis:
@@ -135,12 +136,12 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: "${DEBUG:-False}"
       
-      # Database Configuration
-      DB_HOST: pgbouncer
-      DB_NAME: ${DB_NAME:-vineyard_group_fellowship_dev}
-      DB_PASSWORD: ${DB_PASSWORD:-vineyard_group_fellowship_dev_password}
+      # Database Configuration (temporarily bypassing PgBouncer)
+      DB_HOST: postgres
+      DB_NAME: ${DB_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
       DB_PORT: "5432"
-      DB_USER: ${DB_USER:-vineyard_group_fellowship}
+      DB_USER: ${DB_USER}
       
       # Redis Configuration
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}
