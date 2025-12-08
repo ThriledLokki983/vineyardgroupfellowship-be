@@ -7,6 +7,16 @@
 
 set -e  # Exit on any error
 
+# Use the virtualenv Python explicitly
+PYTHON=/app/venv/bin/python
+
+if [ ! -x "$PYTHON" ]; then
+    echo -e "${RED}❌ Virtualenv Python not found at $PYTHON${NC}"
+    echo "which python -> $(which python || echo 'not found')"
+    ls -R /app/venv || echo "no /app/venv directory"
+    exit 1
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -104,7 +114,7 @@ echo -e "${BLUE}🗄️  Waiting for database connection...${NC}"
 timeout=20
 counter=0
 
-while ! python manage.py check --database default --fail-level ERROR >/dev/null 2>&1; do
+while ! $PYTHON manage.py check --database default --fail-level ERROR >/dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
         echo -e "${YELLOW}⚠️  Database check timeout after ${timeout}s - continuing anyway${NC}"
         break
@@ -123,7 +133,7 @@ fi
 # Run database migrations
 # -------------------------------------------------------------------
 echo -e "${BLUE}🔄 Running database migrations...${NC}"
-if python manage.py migrate --noinput; then
+if $PYTHON manage.py migrate --noinput; then
     echo -e "${GREEN}✅ Database migrations completed${NC}"
 else
     echo -e "${RED}❌ Database migration failed${NC}"
@@ -140,7 +150,7 @@ fi
 
 # Collect static files
 echo -e "${BLUE}📦 Collecting static files...${NC}"
-if python manage.py collectstatic --noinput --clear; then
+if $PYTHON manage.py collectstatic --noinput --clear; then
     echo -e "${GREEN}✅ Static files collected${NC}"
 else
     echo -e "${YELLOW}⚠️  Static file collection failed (continuing anyway)${NC}"
@@ -148,11 +158,11 @@ fi
 
 # Cache table (if using DB cache)
 echo -e "${BLUE}🗃️  Setting up cache tables...${NC}"
-python manage.py createcachetable 2>/dev/null || echo -e "${YELLOW}⚠️  Cache table setup skipped (may already exist)${NC}"
+$PYTHON manage.py createcachetable 2>/dev/null || echo -e "${YELLOW}⚠️  Cache table setup skipped (may already exist)${NC}"
 
 # Health checks
 echo -e "${BLUE}🔍 Running system health checks...${NC}"
-if python manage.py check --deploy --fail-level WARNING; then
+if $PYTHON manage.py check --deploy --fail-level WARNING; then
     echo -e "${GREEN}✅ System health check passed${NC}"
 else
     echo -e "${YELLOW}⚠️  Health check warnings detected (continuing anyway)${NC}"
@@ -160,8 +170,8 @@ fi
 
 # Log startup information
 echo -e "${BLUE}📝 Startup information:${NC}"
-echo "   Django version: $(python -c 'import django; print(django.get_version())')"
-echo "   Python version: $(python --version)"
+echo "   Django version: $($PYTHON -c 'import django; print(django.get_version())')"
+echo "   Python version: $($PYTHON --version)"
 echo "   Working directory: $(pwd)"
 echo "   User: $(whoami)"
 
@@ -228,7 +238,7 @@ if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
     fi
 else
     echo -e "${BLUE}🔧 Starting Django development server...${NC}"
-    exec python manage.py runserver 0.0.0.0:$PORT &
+    exec $PYTHON manage.py runserver 0.0.0.0:$PORT &
 fi
 
 server_pid=$!

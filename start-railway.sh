@@ -35,7 +35,7 @@ if [ -z "$DATABASE_URL" ] && [ -z "$PGHOST" ]; then
     required_vars+=(
         "DB_NAME"
         "DB_USER"
-        "DB_PASSWORD"
+        "DB_PASSWORD"  # nosec - env var name
         "DB_HOST"
     )
 fi
