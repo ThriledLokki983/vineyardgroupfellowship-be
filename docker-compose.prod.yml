@@ -5,6 +5,9 @@ services:
       dockerfile: Dockerfile
     command: ["./start.sh"]
     container_name: vineyard-group-fellowship-web
+    
+    # 🚫 Override env_file to prevent inheriting .env.docker from base
+    env_file: []
 
     depends_on:
       pgbouncer:
@@ -55,11 +58,15 @@ services:
     stdin_open: true
     tty: true
 
-    # ⬇️ IMPORTANT: only mount data/external dirs, NOT /app itself
+    # 🔧 PRODUCTION: Do NOT mount source code - use built image
+    # Only mount persistent data directories
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - logs_volume:/app/logs
+    
+    # 🚫 Explicitly override to prevent inheriting .:/app from base docker-compose.yml
+    # This ensures /app/venv from the Docker image is NOT hidden by local source mount
 
 volumes:
   static_volume:
