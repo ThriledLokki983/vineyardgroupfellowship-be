@@ -92,26 +92,28 @@ services:
       context: .
       dockerfile: Dockerfile
     command: ["./start.sh"]
-
-    volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
-      - logs_volume:/app/logs   # <-- this is why we need logs_volume defined
+    container_name: vineyard-group-fellowship-web
 
     environment:
       DJANGO_ENVIRONMENT: production
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
+      # plus your DB_* / Redis / etc.
 
     depends_on:
+      pgbouncer:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      pgbouncer:
-        condition: service_healthy
 
-# 👇 Add this if it isn't there already
+    # ✅ only these volumes – no /home/...:/app
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+
 volumes:
   static_volume:
   media_volume:
