@@ -7,29 +7,27 @@
 
 set -e  # Exit on any error
 
-# Use the virtualenv Python explicitly
-PYTHON=/app/venv/bin/python
-
-if [ ! -x "$PYTHON" ]; then
-    echo -e "${RED}❌ Virtualenv Python not found at $PYTHON${NC}"
-    echo "which python -> $(which python || echo 'not found')"
-    ls -R /app/venv || echo "no /app/venv directory"
-    exit 1
-fi
-
-# Colors for output
+# Colors for output (define these BEFORE using them)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Prefer virtualenv Python if available, otherwise fall back to system python
+if [ -x "/app/venv/bin/python" ]; then
+    PYTHON=/app/venv/bin/python
+    echo -e "${GREEN}✅ Using virtualenv Python at /app/venv/bin/python${NC}"
+else
+    PYTHON=python
+    echo -e "${YELLOW}⚠️  /app/venv/bin/python not found, using 'python' from PATH${NC}"
+    echo "which python -> $(which python || echo 'not found')"
+fi
+
 echo -e "${BLUE}🚀 Starting Vineyard Group Fellowship Backend...${NC}"
 echo "================================================"
 
-# -------------------------------------------------------------------
-# Ensure we use the virtualenv if present (important on the Pi)
-# -------------------------------------------------------------------
+# If the venv directory exists, still export VIRTUAL_ENV / PATH
 if [ -d "/app/venv" ]; then
     export VIRTUAL_ENV=/app/venv
     export PATH="/app/venv/bin:$PATH"
