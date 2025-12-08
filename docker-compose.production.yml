@@ -16,6 +16,8 @@ services:
   postgres:
     image: imresamu/postgis:16-3.4.4-alpine3.22
     container_name: vineyard-group-fellowship-postgres
+    env_file:
+      - .env.docker
     environment:
       POSTGRES_DB: ${DB_NAME:-vineyard_group_fellowship_dev}
       POSTGRES_USER: ${DB_USER:-vineyard_group_fellowship}
@@ -65,6 +67,8 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer:latest
     container_name: vineyard-group-fellowship-pgbouncer
+    env_file:
+      - .env.docker
     environment:
       DATABASE_URL: "postgres://${DB_USER:-vineyard_group_fellowship}:${DB_PASSWORD:-vineyard_group_fellowship_dev_password}@postgres:5432/${DB_NAME:-vineyard_group_fellowship_dev}"
       POOL_MODE: transaction
