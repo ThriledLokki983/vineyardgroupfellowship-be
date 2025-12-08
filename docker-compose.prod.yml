@@ -1,84 +1,123 @@
-# Docker Compose override for development
-# This file extends docker-compose.yml for development-specific settings
-# Use: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+# # Docker Compose override for development
+# # This file extends docker-compose.yml for development-specific settings
+# # Use: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# services:
+#   web:
+#     # Override build context to use development Dockerfile if needed
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+
+#     # Development-optimized command with hot reloading using virtual environment
+#     command: >
+#       sh -c ". /app/venv/bin/activate &&
+#              python manage.py migrate &&
+#              python manage.py collectstatic --noinput &&
+#              python manage.py runserver 0.0.0.0:8002"
+
+#     # Enhanced volume mounts for development
+#     volumes:
+#       - .:/app
+#       - /app/.venv                    # Exclude virtual environment
+#       - /app/__pycache__              # Exclude Python cache
+#       - /app/*/__pycache__            # Exclude app cache directories
+#       - /app/.git                     # Exclude git directory
+#       - static_volume:/app/staticfiles
+#       - media_volume:/app/media
+#       - logs_volume:/app/logs
+
+#     # Development environment variables
+#     environment:
+#       - DEBUG=True
+#       - PYTHONUNBUFFERED=1
+#       - PYTHONDONTWRITEBYTECODE=1
+#       - WATCHFILES_FORCE_POLLING=true
+#       - DJANGO_SETTINGS_MODULE=vineyard_group_fellowship.settings
+#       - DB_NAME=vineyard_group_fellowship
+#       - DB_USER=vineyard_group_fellowship
+#       - DB_PASSWORD=vineyard_group_fellowship
+#       - DB_HOST=postgres
+#       - DB_PORT=5432
+#       - REDIS_URL=redis://redis:6379/0
+#       - EMAIL_HOST=mailhog
+#       - EMAIL_PORT=1025
+#       - EMAIL_USE_TLS=False
+#       - EMAIL_USE_SSL=False
+#       - VIRTUAL_ENV=/app/venv
+#       - PATH=/app/venv/bin:$PATH
+
+#     # Development-specific settings
+#     stdin_open: true
+#     tty: true
+#     restart: unless-stopped
+
+#     # Override user to run as root for development convenience
+#     user: "0:0"
+
+#     # Override healthcheck for development
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8002/api/v1/auth/health/"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 40s
+
+#   # Development database with exposed logs
+#   postgres:
+#     environment:
+#       - POSTGRES_DB=vineyard_group_fellowship
+#       - POSTGRES_USER=vineyard_group_fellowship
+#       - POSTGRES_PASSWORD=vineyard_group_fellowship
+#       - POSTGRES_HOST_AUTH_METHOD=trust  # For development only
+
+#     # Enable query logging for development
+#     command: >
+#       postgres
+#       -c log_statement=all
+#       -c log_destination=stderr
+#       -c log_min_duration_statement=0
+#       -c log_connections=on
+#       -c log_disconnections=on
+
+# volumes:
+#   logs_volume:
+
+# docker-compose.prod.yml
+# Production override for Raspberry Pi deployment
 
 services:
   web:
-    # Override build context to use development Dockerfile if needed
+    # Build the multi-stage Dockerfile image
     build:
       context: .
       dockerfile: Dockerfile
 
-    # Development-optimized command with hot reloading using virtual environment
-    command: >
-      sh -c ". /app/venv/bin/activate &&
-             python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8002"
+    # IMPORTANT: use the image CMD (./start.sh) or explicitly state it
+    command: ["./start.sh"]
 
-    # Enhanced volume mounts for development
+    # DO NOT MOUNT THE PROJECT DIRECTORY IN PROD
+    # (this would hide /app/venv from the image)
     volumes:
-      - .:/app
-      - /app/.venv                    # Exclude virtual environment
-      - /app/__pycache__              # Exclude Python cache
-      - /app/*/__pycache__            # Exclude app cache directories
-      - /app/.git                     # Exclude git directory
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - logs_volume:/app/logs
 
-    # Development environment variables
+    # Prod env flags – your secrets still come from .env / env_file
     environment:
-      - DEBUG=True
-      - PYTHONUNBUFFERED=1
-      - PYTHONDONTWRITEBYTECODE=1
-      - WATCHFILES_FORCE_POLLING=true
-      - DJANGO_SETTINGS_MODULE=vineyard_group_fellowship.settings
-      - DB_NAME=vineyard_group_fellowship
-      - DB_USER=vineyard_group_fellowship
-      - DB_PASSWORD=vineyard_group_fellowship
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/0
-      - EMAIL_HOST=mailhog
-      - EMAIL_PORT=1025
-      - EMAIL_USE_TLS=False
-      - EMAIL_USE_SSL=False
-      - VIRTUAL_ENV=/app/venv
-      - PATH=/app/venv/bin:$PATH
+      DJANGO_ENVIRONMENT: production
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
 
-    # Development-specific settings
-    stdin_open: true
-    tty: true
-    restart: unless-stopped
-
-    # Override user to run as root for development convenience
-    user: "0:0"
-
-    # Override healthcheck for development
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/api/v1/auth/health/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Development database with exposed logs
-  postgres:
-    environment:
-      - POSTGRES_DB=vineyard_group_fellowship
-      - POSTGRES_USER=vineyard_group_fellowship
-      - POSTGRES_PASSWORD=vineyard_group_fellowship
-      - POSTGRES_HOST_AUTH_METHOD=trust  # For development only
-
-    # Enable query logging for development
-    command: >
-      postgres
-      -c log_statement=all
-      -c log_destination=stderr
-      -c log_min_duration_statement=0
-      -c log_connections=on
-      -c log_disconnections=on
+    # Let start.sh handle user switching; no need for user: "0:0" here
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
 
 volumes:
   logs_volume:
+    driver: local
