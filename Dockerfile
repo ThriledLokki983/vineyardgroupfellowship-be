@@ -37,10 +37,14 @@ RUN pip install --no-cache-dir --upgrade pip \
 FROM python:3.13-slim AS production
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    DJANGO_ENVIRONMENT=production \
-    PATH="/app/venv/bin:$PATH"
+# ENV PYTHONDONTWRITEBYTECODE=1 \
+#     PYTHONUNBUFFERED=1 \
+#     DJANGO_ENVIRONMENT=production \
+#     PATH="/app/venv/bin:$PATH"
+
+WORKDIR /app
+COPY --from=builder /app/venv /app/venv
+COPY . .
 
 # Create non-root user for security
 RUN groupadd -r django && useradd -r -g django django
@@ -91,7 +95,9 @@ ENV SECRET_KEY=build-time-secret-key-not-for-production \
     PGHOST=dummy \
     PGPORT=5432 \
     EMAIL_HOST_PASSWORD=dummy \
-    DEFAULT_FROM_EMAIL=build@vineyardgroupfellowship.org
+    DEFAULT_FROM_EMAIL=build@vineyardgroupfellowship.org \
+    VIRTUAL_ENV=/app/venv \
+    PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN python manage.py collectstatic --noinput
 
 # Health check - Railway will override this with its own health check

@@ -88,28 +88,21 @@
 
 services:
   web:
-    # Build the multi-stage Dockerfile image
     build:
-      context: .
-      dockerfile: Dockerfile
-
-    # IMPORTANT: use the image CMD (./start.sh) or explicitly state it
+      context: /home/gnimoh001/apps/vineyardgroupfellowship/backend
+      dockerfile: Dockerfile      # not Dockerfile.dev
     command: ["./start.sh"]
 
-    # DO NOT MOUNT THE PROJECT DIRECTORY IN PROD
-    # (this would hide /app/venv from the image)
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - logs_volume:/app/logs
 
-    # Prod env flags – your secrets still come from .env / env_file
     environment:
       DJANGO_ENVIRONMENT: production
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
 
-    # Let start.sh handle user switching; no need for user: "0:0" here
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,7 +110,3 @@ services:
         condition: service_healthy
       pgbouncer:
         condition: service_healthy
-
-volumes:
-  logs_volume:
-    driver: local
