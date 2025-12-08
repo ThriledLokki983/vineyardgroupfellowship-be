@@ -173,7 +173,9 @@ else:
             'PORT': db_port,
             'CONN_MAX_AGE': 60,
             'OPTIONS': {
-                'sslmode': 'require',
+                # Use 'prefer' to allow SSL if available but not require it
+                # This is important for local Docker deployments without SSL
+                'sslmode': config('DB_SSLMODE', default='prefer'),
             },
         }
     }
