@@ -1,11 +1,6 @@
 #!/bin/bash
 # Vineyard Group Fellowship Backend Startup Script
-# =================================================
-#
-# Startup script for Docker deployment (Pi + Railway)
-# Handles database migrations, static files, and graceful startup
-
-set -e  # Exit on any error
+set -e
 
 # Colors
 RED='\033[0;31m'
@@ -14,26 +9,31 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Prefer venv Python, fall back to system python
-if [ -x "/app/venv/bin/python" ]; then
-    PYTHON=/app/venv/bin/python
-    echo -e "${GREEN}✅ Using virtualenv Python at /app/venv/bin/python${NC}"
-    export VIRTUAL_ENV=/app/venv
-    export PATH="/app/venv/bin:$PATH"
-else
-    PYTHON=python
-    echo -e "${YELLOW}⚠️  /app/venv/bin/python not found, using 'python' from PATH${NC}"
+# 🔒 Require venv Python – no fallback in production
+PYTHON=/app/venv/bin/python
+
+if [ ! -x "$PYTHON" ]; then
+    echo -e "${RED}❌ Virtualenv Python not found at $PYTHON${NC}"
     echo "which python -> $(which python || echo 'not found')"
+    echo "ls -R /app:"
+    ls -R /app || true
+    echo "ls -R /app/venv (if it exists):"
+    ls -R /app/venv || echo "no /app/venv directory"
+    exit 1
 fi
+
+echo -e "${GREEN}✅ Using virtualenv Python at $PYTHON${NC}"
+export VIRTUAL_ENV=/app/venv
+export PATH="/app/venv/bin:$PATH"
 
 echo -e "${BLUE}🚀 Starting Vineyard Group Fellowship Backend...${NC}"
 echo "================================================"
 
-# If the venv directory exists, still export VIRTUAL_ENV / PATH
-if [ -d "/app/venv" ]; then
-    export VIRTUAL_ENV=/app/venv
-    export PATH="/app/venv/bin:$PATH"
-fi
+# # If the venv directory exists, still export VIRTUAL_ENV / PATH
+# if [ -d "/app/venv" ]; then
+#     export VIRTUAL_ENV=/app/venv
+#     export PATH="/app/venv/bin:$PATH"
+# fi
 
 # Default port (for Docker / Pi)
 export PORT=${PORT:-8002}
