@@ -1,3 +1,4 @@
+services:
   web:
     build:
       context: .
@@ -59,3 +60,8 @@
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - logs_volume:/app/logs
+
+volumes:
+  static_volume:
+  media_volume:
+  logs_volume:
