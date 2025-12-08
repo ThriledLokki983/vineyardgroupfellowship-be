@@ -85,8 +85,28 @@ docker compose -f docker-compose.production.yml down
 docker compose -f docker-compose.production.yml build --no-cache web
 docker compose -f docker-compose.production.yml up -d
 
+
+# 1. Check if .env.docker exists and what DB_NAME is set to
+cd ~/apps/vineyardgroupfellowship/backend
+cat .env.docker | grep -E "DB_NAME|DB_USER|DB_PASSWORD"
+
+# 2. Check what database actually exists in PostgreSQL
+docker compose -f docker-compose.production.yml exec postgres psql -U vineyard_group_fellowship -c "\l"
+
+# 3. Check the actual DATABASE_URL that pgbouncer sees
+docker compose -f docker-compose.production.yml exec pgbouncer env | grep DATABASE_URL
+
 # Check logs
 docker compose -f docker-compose.production.yml logs -f web
+
+# Check PostgreSQL logs to see if it initialized properly
+docker compose -f docker-compose.production.yml logs postgres | head -50
+
+# Check if postgres container can connect to itself
+docker compose -f docker-compose.production.yml exec postgres ls -la /var/lib/postgresql/data/
+
+# Try to see what users were created
+docker compose -f docker-compose.production.yml exec postgres cat /var/lib/postgresql/data/pg_hba.conf
 ```
 
 ---
