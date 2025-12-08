@@ -84,8 +84,21 @@ if ALLOWED_HOSTS_ENV:
     if ALLOWED_HOSTS_ENV == '*':
         ALLOWED_HOSTS = ['*']
     else:
-        # Split by comma and strip whitespace
-        ALLOWED_HOSTS = [host.strip()
+        # Split by comma and strip whitespace, then clean up each host
+        def clean_host(host):
+            """Remove protocol and port from host string"""
+            host = host.strip()
+            # Remove http:// or https://
+            if host.startswith('http://'):
+                host = host[7:]
+            elif host.startswith('https://'):
+                host = host[8:]
+            # Remove port if present (but keep the hostname/IP)
+            if ':' in host and not host.startswith('['):  # Not IPv6
+                host = host.split(':')[0]
+            return host
+        
+        ALLOWED_HOSTS = [clean_host(host)
                          for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
 else:
     # Fallback to hardcoded values
