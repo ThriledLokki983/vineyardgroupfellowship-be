@@ -28,7 +28,7 @@ PROJECT_NAME=vineyard-group-fellowship
 DOCKER_COMPOSE=docker compose --project-name $(PROJECT_NAME)
 DOCKER_COMPOSE_DEV=$(DOCKER_COMPOSE) -f docker-compose.yml
 DOCKER_COMPOSE_DEV=$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.override.yml
-DOCKER_COMPOSE_PROD=$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml
+DOCKER_COMPOSE_PROD=$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.production.yml
 
 # Service names
 WEB_SERVICE=web

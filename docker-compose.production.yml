@@ -1,0 +1,179 @@
+# Docker Compose Production Configuration
+# =======================================
+# 
+# This is a STANDALONE production configuration that does NOT inherit from docker-compose.yml
+# Use this file ALONE for production deployments (not with -f docker-compose.yml)
+#
+# Usage:
+#   docker compose -f docker-compose.production.yml up -d
+#   docker compose -f docker-compose.production.yml logs -f web
+#   docker compose -f docker-compose.production.yml down
+
+name: vineyard-group-fellowship
+
+services:
+  # PostgreSQL Database with PostGIS
+  postgres:
+    image: imresamu/postgis:16-3.4.4-alpine3.22
+    container_name: vineyard-group-fellowship-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-vineyard_group_fellowship_dev}
+      POSTGRES_USER: ${DB_USER:-vineyard_group_fellowship}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vineyard_group_fellowship_dev_password}
+      POSTGRES_INITDB_ARGS: "-c max_connections=200"
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=2621kB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-vineyard_group_fellowship} -d ${DB_NAME:-vineyard_group_fellowship_dev}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - vineyard_network
+    restart: unless-stopped
+
+  # PgBouncer - Connection Pooler
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: vineyard-group-fellowship-pgbouncer
+    environment:
+      DATABASE_URL: "postgres://${DB_USER:-vineyard_group_fellowship}:${DB_PASSWORD:-vineyard_group_fellowship_dev_password}@postgres:5432/${DB_NAME:-vineyard_group_fellowship_dev}"
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 20
+      RESERVE_POOL_SIZE: 5
+      MAX_DB_CONNECTIONS: 50
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep pgbouncer || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - vineyard_network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vineyard-group-fellowship-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_dev_password}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-redis_dev_password}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - vineyard_network
+    restart: unless-stopped
+
+  # Django Application - PRODUCTION (uses built image, NO source code mount)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["./start.sh"]
+    container_name: vineyard-group-fellowship-web
+
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    environment:
+      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,web
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/0
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:8002,http://127.0.0.1:8002
+      CSRF_TRUSTED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:8002,http://127.0.0.1:8002
+      DB_HOST: pgbouncer
+      DB_NAME: ${DB_NAME:-vineyard_group_fellowship_dev}
+      DB_PASSWORD: ${DB_PASSWORD:-vineyard_group_fellowship_dev_password}
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-vineyard_group_fellowship}
+      DEBUG: "${DEBUG:-False}"
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Vineyard Group Fellowship <noreply@vineyardgroupfellowship.org>}
+      DJANGO_ENVIRONMENT: production
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-core.email_backends.SendGridWebAPIBackend}
+      ENABLE_DEBUG_TOOLBAR: "${ENABLE_DEBUG_TOOLBAR:-false}"
+      ENABLE_PERFORMANCE_MONITORING: "${ENABLE_PERFORMANCE_MONITORING:-true}"
+      ENABLE_SILK_PROFILING: "${ENABLE_SILK_PROFILING:-false}"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      MONITORING_SAMPLE_RATE: "${MONITORING_SAMPLE_RATE:-0.1}"
+      PORT: "8002"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/1
+      SERVER_PORT: "8002"
+      STRUCTURED_LOGGING: "${STRUCTURED_LOGGING:-true}"
+      USE_MAILHOG: "${USE_MAILHOG:-false}"
+
+    networks:
+      - vineyard_network
+
+    ports:
+      - "8002:8002"
+
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+    # 🎯 PRODUCTION VOLUMES: Only persistent data, NO source code mount
+    # This ensures /app/venv from the Docker image is accessible
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
+  logs_volume:
+
+networks:
+  vineyard_network:
+    driver: bridge
