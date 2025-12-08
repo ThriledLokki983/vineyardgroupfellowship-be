@@ -10,7 +10,7 @@ services:
       DJANGO_ENVIRONMENT: production
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
-      # plus your DB_* / Redis / etc.
+      # plus DB_*/REDIS_* etc (as you already have)
 
     depends_on:
       pgbouncer:
@@ -20,7 +20,6 @@ services:
       redis:
         condition: service_healthy
 
-    # ✅ only these volumes – no /home/...:/app
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
