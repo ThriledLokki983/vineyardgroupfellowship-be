@@ -2,7 +2,7 @@
 # Vineyard Group Fellowship Backend Startup Script
 # =================================================
 #
-# Startup script for Docker deployment (Pi + Railway)
+# Production startup script for Railway deployment
 # Handles database migrations, static files, and graceful startup
 
 set -e  # Exit on any error
@@ -17,45 +17,25 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}🚀 Starting Vineyard Group Fellowship Backend...${NC}"
 echo "================================================"
 
-# -------------------------------------------------------------------
-# Ensure we use the virtualenv if present (important on the Pi)
-# -------------------------------------------------------------------
-if [ -d "/app/venv" ]; then
-    export VIRTUAL_ENV=/app/venv
-    export PATH="/app/venv/bin:$PATH"
-fi
-
-# Default port (for Docker / Pi)
+# Set default port if not provided by Railway
 export PORT=${PORT:-8002}
 
-# -------------------------------------------------------------------
-# Database environment normalisation
-# - Prefer DB_* variables (Docker / Pi)
-# - Only fall back to PG* (Railway style) if DB_* are not set
-# -------------------------------------------------------------------
-if [ -n "$DB_HOST" ]; then
-    # Map DB_* → PG* so Django / libs that read PG* also work
-    export PGHOST="$DB_HOST"
-    export PGPORT="${DB_PORT:-5432}"
-    export PGDATABASE="${DB_NAME:-}"
-    export PGUSER="${DB_USER:-}"
-    export PGPASSWORD="${DB_PASSWORD:-}"  # nosec - env var reference
-fi
-
+# Validate required environment variables
 echo -e "${BLUE}🔧 Validating environment configuration...${NC}"
 
-# Required variables
+# Check for required environment variables
 required_vars=(
     "SECRET_KEY"
     "DJANGO_ENVIRONMENT"
 )
 
-# For local/docker/Pi: require DB_* if DATABASE_URL is not used
-if [ -z "$DATABASE_URL" ] && [ -z "$DB_HOST" ]; then
+# Database variables (Railway supports DATABASE_URL or individual PGHOST/PGDATABASE vars)
+if [ -z "$DATABASE_URL" ] && [ -z "$PGHOST" ]; then
+    # Only require individual DB vars if neither DATABASE_URL nor Railway vars are available
     required_vars+=(
         "DB_NAME"
         "DB_USER"
-        "DB_PASSWORD"  # nosec - env var name
+        "DB_PASSWORD"
         "DB_HOST"
     )
 fi
@@ -78,36 +58,22 @@ fi
 
 echo -e "${GREEN}✅ Environment validation passed${NC}"
 
-# -------------------------------------------------------------------
 # Show configuration (without sensitive data)
-# -------------------------------------------------------------------
 echo -e "${BLUE}📊 Configuration:${NC}"
 echo "   Environment: ${DJANGO_ENVIRONMENT}"
 echo "   Port: ${PORT}"
+echo "   Database: $([ -n "$DATABASE_URL" ] && echo "DATABASE_URL configured" || ([ -n "$PGHOST" ] && echo "Railway PG: $PGHOST:${PGPORT:-5432}/$PGDATABASE" || echo "$DB_HOST:${DB_PORT:-5432}/$DB_NAME"))"
 
-if [ -n "$DATABASE_URL" ]; then
-    db_info="DATABASE_URL configured"
-elif [ -n "$DB_HOST" ]; then
-    db_info="${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}"
-elif [ -n "$PGHOST" ]; then
-    # Fallback: Railway-like PG* configuration
-    db_info="PG: ${PGHOST}:${PGPORT:-5432}/${PGDATABASE}"
-else
-    db_info="(no database configured)"
-fi
-echo "   Database: ${db_info}"
-
-# -------------------------------------------------------------------
-# Wait for database to be ready (a bit more generous on the Pi)
-# -------------------------------------------------------------------
+# Wait for database to be ready (with retries but don't fail completely)
 echo -e "${BLUE}🗄️  Waiting for database connection...${NC}"
-timeout=20
+timeout=10  # Reduced timeout - Railway healthcheck will handle retries
 counter=0
 
 while ! python manage.py check --database default --fail-level ERROR >/dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
         echo -e "${YELLOW}⚠️  Database check timeout after ${timeout}s - continuing anyway${NC}"
-        break
+        echo -e "${YELLOW}💡 Railway healthcheck will retry if needed${NC}"
+        break  # Continue instead of exit
     fi
 
     echo -e "${YELLOW}⏳ Waiting for database... (${counter}s/${timeout}s)${NC}"
@@ -119,9 +85,10 @@ if [ $counter -lt $timeout ]; then
     echo -e "${GREEN}✅ Database connection established${NC}"
 fi
 
-# -------------------------------------------------------------------
+# Note: Media directory creation moved to gunicorn startup section
+# to run as root before dropping to django user
+
 # Run database migrations
-# -------------------------------------------------------------------
 echo -e "${BLUE}🔄 Running database migrations...${NC}"
 if python manage.py migrate --noinput; then
     echo -e "${GREEN}✅ Database migrations completed${NC}"
@@ -130,7 +97,7 @@ else
     exit 1
 fi
 
-# Post-migration setup
+# Run post-migration setup
 echo -e "${BLUE}⚙️  Running post-migration setup...${NC}"
 if [ -x "scripts/post-migration.sh" ]; then
     ./scripts/post-migration.sh
@@ -138,7 +105,7 @@ else
     echo -e "${YELLOW}⚠️  Post-migration script not found or not executable${NC}"
 fi
 
-# Collect static files
+# Collect static files (in case they weren't collected during build)
 echo -e "${BLUE}📦 Collecting static files...${NC}"
 if python manage.py collectstatic --noinput --clear; then
     echo -e "${GREEN}✅ Static files collected${NC}"
@@ -146,11 +113,11 @@ else
     echo -e "${YELLOW}⚠️  Static file collection failed (continuing anyway)${NC}"
 fi
 
-# Cache table (if using DB cache)
+# Create cache table if using database cache
 echo -e "${BLUE}🗃️  Setting up cache tables...${NC}"
 python manage.py createcachetable 2>/dev/null || echo -e "${YELLOW}⚠️  Cache table setup skipped (may already exist)${NC}"
 
-# Health checks
+# System health check
 echo -e "${BLUE}🔍 Running system health checks...${NC}"
 if python manage.py check --deploy --fail-level WARNING; then
     echo -e "${GREEN}✅ System health check passed${NC}"
@@ -165,9 +132,7 @@ echo "   Python version: $(python --version)"
 echo "   Working directory: $(pwd)"
 echo "   User: $(whoami)"
 
-# -------------------------------------------------------------------
 # Graceful shutdown handler
-# -------------------------------------------------------------------
 cleanup() {
     echo -e "${YELLOW}🛑 Received shutdown signal, stopping gracefully...${NC}"
     kill $server_pid 2>/dev/null || true
@@ -176,24 +141,29 @@ cleanup() {
     exit 0
 }
 
+# Set up signal handlers for graceful shutdown
 trap cleanup SIGTERM SIGINT
 
-# -------------------------------------------------------------------
 # Start the Django server
-# -------------------------------------------------------------------
 echo -e "${GREEN}🎉 Starting Django server on port ${PORT}...${NC}"
 echo "================================================"
 
+# Use gunicorn for production, runserver for development
 if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
+    # Production: Use Gunicorn with optimized settings
+    # Run as django user for security after directory setup
     echo -e "${BLUE}🏭 Starting Gunicorn (production mode) as django user...${NC}"
 
+    # Check if we're running as root (for Railway volume permissions)
     if [ "$(id -u)" = "0" ]; then
         echo -e "${YELLOW}Running as root - will drop to django user${NC}"
+        # Ensure media directories exist with proper permissions
         mkdir -p /app/media/group_photos /app/media/profile_photos /app/media/message_attachments
         chown -R django:django /app/media
         chmod -R 755 /app/media
         echo -e "${GREEN}✅ Media directory permissions set${NC}"
 
+        # Run gunicorn as django user using runuser (more reliable than su)
         exec runuser -u django -- gunicorn vineyard_group_fellowship.wsgi:application \
             --bind 0.0.0.0:$PORT \
             --workers 2 \
@@ -210,6 +180,7 @@ if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
             --error-logfile - \
             --capture-output &
     else
+        # Already running as non-root user
         exec gunicorn vineyard_group_fellowship.wsgi:application \
             --bind 0.0.0.0:$PORT \
             --workers 2 \
@@ -227,9 +198,12 @@ if [ "$DJANGO_ENVIRONMENT" = "production" ]; then
             --capture-output &
     fi
 else
+    # Development/Staging: Use Django's development server
     echo -e "${BLUE}🔧 Starting Django development server...${NC}"
     exec python manage.py runserver 0.0.0.0:$PORT &
 fi
 
 server_pid=$!
+
+# Wait for the server process
 wait $server_pid
