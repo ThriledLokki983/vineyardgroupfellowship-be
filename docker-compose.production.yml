@@ -121,34 +121,52 @@ services:
       redis:
         condition: service_healthy
 
+    env_file:
+      - .env.docker  # Load all environment variables from .env.docker
+
     environment:
-      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,web
-      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/0
-      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/0
-      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:8002,http://127.0.0.1:8002
-      CSRF_TRUSTED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:8002,http://127.0.0.1:8002
+      # Core Django Settings
+      DJANGO_SETTINGS_MODULE: vineyard_group_fellowship.settings.production
+      DJANGO_ENVIRONMENT: production
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: "${DEBUG:-False}"
+      
+      # Database Configuration
       DB_HOST: pgbouncer
       DB_NAME: ${DB_NAME:-vineyard_group_fellowship_dev}
       DB_PASSWORD: ${DB_PASSWORD:-vineyard_group_fellowship_dev_password}
       DB_PORT: "5432"
       DB_USER: ${DB_USER:-vineyard_group_fellowship}
-      DEBUG: "${DEBUG:-False}"
-      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Vineyard Group Fellowship <noreply@vineyardgroupfellowship.org>}
-      DJANGO_ENVIRONMENT: production
+      
+      # Redis Configuration
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/1
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/0
+      
+      # Security Configuration
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,web}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8002,http://127.0.0.1:8002}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8002,http://127.0.0.1:8002}
+      
+      # Email Configuration
       EMAIL_BACKEND: ${EMAIL_BACKEND:-core.email_backends.SendGridWebAPIBackend}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Vineyard Group Fellowship <noreply@vineyardgroupfellowship.org>}
+      USE_MAILHOG: "${USE_MAILHOG:-false}"
+      
+      # Monitoring & Performance
       ENABLE_DEBUG_TOOLBAR: "${ENABLE_DEBUG_TOOLBAR:-false}"
       ENABLE_PERFORMANCE_MONITORING: "${ENABLE_PERFORMANCE_MONITORING:-true}"
       ENABLE_SILK_PROFILING: "${ENABLE_SILK_PROFILING:-false}"
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       MONITORING_SAMPLE_RATE: "${MONITORING_SAMPLE_RATE:-0.1}"
+      STRUCTURED_LOGGING: "${STRUCTURED_LOGGING:-true}"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # Server Configuration
       PORT: "8002"
+      SERVER_PORT: "8002"
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}
-      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_dev_password}@redis:6379/1
-      SERVER_PORT: "8002"
-      STRUCTURED_LOGGING: "${STRUCTURED_LOGGING:-true}"
-      USE_MAILHOG: "${USE_MAILHOG:-false}"
 
     networks:
       - vineyard_network
