@@ -39,7 +39,6 @@
       REDIS_PASSWORD: redis_dev_password
       REDIS_URL: redis://:redis_dev_password@redis:6379/1
       SECRET_KEY: django-insecure-development-key-change-in-production
-      SENDGRID_API_KEY: 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
       SERVER_PORT: "8002"
       STRUCTURED_LOGGING: "true"
       USE_MAILHOG: "true"
